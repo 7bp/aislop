@@ -923,7 +923,7 @@
     <!-- Interactive Tour Wizard Panel -->
     <div
       id="tour-wizard"
-      class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-dark-900 border border-brand-500/40 p-5 rounded-2xl shadow-2xl w-full max-w-md z-[80] flex flex-col gap-3.5 opacity-0 pointer-events-none transition-all duration-300"
+      class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-dark-900 border border-brand-500/40 p-5 rounded-2xl shadow-2xl w-full max-w-md z-[80] flex flex-col gap-3.5 opacity-0 pointer-events-none transition-all duration-300 flex-col"
     >
       <div
         class="flex items-center justify-between border-b border-zinc-800 pb-2"
@@ -996,6 +996,22 @@
     </div>
 
     <script>
+      // Declarations of static preset values at top of javascript scope
+      const palettes = [
+        "#f43f5e",
+        "#3b82f6",
+        "#10b981",
+        "#f59e0b",
+        "#8b5cf6",
+        "#ec4899",
+        "#ffffff",
+        "#a1a1aa",
+        "#52525b",
+        "#27272a",
+        "#18181b",
+        "#000000",
+      ];
+
       // Core Animation Application State Management
       let state = {
         currentTool: "pen", // pen, brush, lasso, eraser, bucket, hand
@@ -1142,6 +1158,37 @@
       // Multi-touch gestures variables
       let initialPinchDistance = 0;
       let initialZoomScale = 1.0;
+
+      // Dynamic System Toast Notification (FIXED REFERENCE ERROR)
+      const showNotification = (title, msg, icon = "info") => {
+        const toast = document.getElementById("toast");
+        if (!toast) return;
+        const titleEl = document.getElementById("toast-title");
+        const msgEl = document.getElementById("toast-message");
+        const iconWrapper = document.getElementById("toast-icon-wrapper");
+
+        if (titleEl) titleEl.innerText = title;
+        if (msgEl) msgEl.innerText = msg;
+        if (iconWrapper) {
+          iconWrapper.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i>`;
+        }
+        if (typeof lucide !== "undefined") {
+          lucide.createIcons();
+        }
+
+        toast.classList.remove(
+          "translate-y-20",
+          "opacity-0",
+          "pointer-events-none",
+        );
+        setTimeout(() => {
+          toast.classList.add(
+            "translate-y-20",
+            "opacity-0",
+            "pointer-events-none",
+          );
+        }, 3500);
+      };
 
       // Matrix update transformer
       const updateTransformState = () => {
@@ -1416,39 +1463,45 @@
         const selectGridSize = document.getElementById("select-grid-size");
         const gridOverlay = document.getElementById("grid-guide-overlay");
 
-        btnToggleGrid.onclick = () => {
-          state.gridEnabled = !state.gridEnabled;
-          if (state.gridEnabled) {
-            btnToggleGrid.className =
-              "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand-600 text-white transition";
-            btnToggleGrid.querySelector("span").innerText = "Grid: On";
-            gridOverlay.classList.remove("hidden");
-          } else {
-            btnToggleGrid.className =
-              "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-300 hover:text-white transition";
-            btnToggleGrid.querySelector("span").innerText = "Grid: Off";
-            gridOverlay.classList.add("hidden");
-          }
-        };
+        if (btnToggleGrid) {
+          btnToggleGrid.onclick = () => {
+            state.gridEnabled = !state.gridEnabled;
+            if (state.gridEnabled) {
+              btnToggleGrid.className =
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand-600 text-white transition";
+              btnToggleGrid.querySelector("span").innerText = "Grid: On";
+              if (gridOverlay) gridOverlay.classList.remove("hidden");
+            } else {
+              btnToggleGrid.className =
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-300 hover:text-white transition";
+              btnToggleGrid.querySelector("span").innerText = "Grid: Off";
+              if (gridOverlay) gridOverlay.classList.add("hidden");
+            }
+          };
+        }
 
-        btnToggleSnap.onclick = () => {
-          state.snapToGrid = !state.snapToGrid;
-          if (state.snapToGrid) {
-            btnToggleSnap.className =
-              "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand-600 text-white transition";
-            btnToggleSnap.querySelector("span").innerText = "Snap: On";
-          } else {
-            btnToggleSnap.className =
-              "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-300 hover:text-white transition";
-            btnToggleSnap.querySelector("span").innerText = "Snap: Off";
-          }
-        };
+        if (btnToggleSnap) {
+          btnToggleSnap.onclick = () => {
+            state.snapToGrid = !state.snapToGrid;
+            if (state.snapToGrid) {
+              btnToggleSnap.className =
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand-600 text-white transition";
+              btnToggleSnap.querySelector("span").innerText = "Snap: On";
+            } else {
+              btnToggleSnap.className =
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-300 hover:text-white transition";
+              btnToggleSnap.querySelector("span").innerText = "Snap: Off";
+            }
+          };
+        }
 
-        selectGridSize.onchange = (e) => {
-          state.gridSize = parseInt(e.target.value);
-          gridOverlay.style.setProperty("--grid-size", `${state.gridSize}px`);
-        };
-        gridOverlay.style.setProperty("--grid-size", `32px`);
+        if (selectGridSize && gridOverlay) {
+          selectGridSize.onchange = (e) => {
+            state.gridSize = parseInt(e.target.value);
+            gridOverlay.style.setProperty("--grid-size", `${state.gridSize}px`);
+          };
+          gridOverlay.style.setProperty("--grid-size", `32px`);
+        }
       };
 
       // Pro Ruler Draggable guided lines drawing system
@@ -1456,6 +1509,8 @@
         const ruler = document.getElementById("ruler-tool-overlay");
         const toggleBtn = document.getElementById("btn-toggle-ruler");
         const closeBtn = document.getElementById("btn-close-ruler-tool");
+
+        if (!ruler || !toggleBtn || !closeBtn) return;
 
         toggleBtn.onclick = () => {
           rulerActive = !rulerActive;
@@ -2357,6 +2412,7 @@
       // Layers panel builder
       const buildLayersUI = () => {
         const container = document.getElementById("layers-stack-list");
+        if (!container) return;
         container.innerHTML = "";
 
         [...state.layers].reverse().forEach((lyr, reverseIdx) => {
@@ -2479,6 +2535,7 @@
       const triggerContextMenu = (layerId, event) => {
         activeContextLayerId = layerId;
         const menu = document.getElementById("layer-context-menu");
+        if (!menu) return;
         const targetLayer = state.layers.find((l) => l.id === layerId);
 
         document.getElementById("context-layer-title").innerText = targetLayer
@@ -2497,11 +2554,13 @@
       };
 
       const dismissContextMenu = () => {
-        document.getElementById("layer-context-menu").classList.add("hidden");
+        const menu = document.getElementById("layer-context-menu");
+        if (menu) menu.classList.add("hidden");
       };
 
       const initContextMenuActions = () => {
         const menu = document.getElementById("layer-context-menu");
+        if (!menu) return;
         menu.onclick = (e) => e.stopPropagation();
 
         document.getElementById("ctx-btn-rename").onclick = () => {
@@ -2647,6 +2706,7 @@
       // Timeline elements builder
       const buildTimeline = () => {
         const container = document.getElementById("frames-timeline");
+        if (!container) return;
         container.innerHTML = "";
 
         state.frames.forEach((frame, idx) => {
@@ -2705,6 +2765,7 @@
           localStorage.getItem("flipglide_library") || "[]",
         );
         const container = document.getElementById("dashboard-projects-grid");
+        if (!container) return;
         container.innerHTML = "";
 
         // Add clean default card if library is empty
@@ -2722,10 +2783,13 @@
                     </button>
                 `;
 
-          document.getElementById("btn-create-first-project").onclick = () => {
-            createBlankProject();
-            toggleStudioViews(false);
-          };
+          const startBtn = document.getElementById("btn-create-first-project");
+          if (startBtn) {
+            startBtn.onclick = () => {
+              createBlankProject();
+              toggleStudioViews(false);
+            };
+          }
           lucide.createIcons();
           return;
         }
@@ -2840,8 +2904,10 @@
 
           state.activeLayerId = state.layers[state.layers.length - 1].id;
 
-          document.getElementById("slider-fps").value = state.fps;
-          document.getElementById("lbl-fps").innerText = `${state.fps} FPS`;
+          const fpsSlider = document.getElementById("slider-fps");
+          const fpsLabel = document.getElementById("lbl-fps");
+          if (fpsSlider) fpsSlider.value = state.fps;
+          if (fpsLabel) fpsLabel.innerText = `${state.fps} FPS`;
 
           updateMetadataUI();
           buildLayersUI();
@@ -3188,10 +3254,10 @@
       };
 
       const updateUndoRedoButtons = () => {
-        document.getElementById("btn-undo").disabled =
-          state.undoStack.length <= 1;
-        document.getElementById("btn-redo").disabled =
-          state.redoStack.length === 0;
+        const undoBtn = document.getElementById("btn-undo");
+        const redoBtn = document.getElementById("btn-redo");
+        if (undoBtn) undoBtn.disabled = state.undoStack.length <= 1;
+        if (redoBtn) redoBtn.disabled = state.redoStack.length === 0;
       };
 
       // Toggle Views helper
@@ -3212,35 +3278,39 @@
         const copyBtn = document.getElementById("btn-copy-frame-data");
         const pasteBtn = document.getElementById("btn-paste-frame-data");
 
-        copyBtn.onclick = () => {
-          const frame = state.frames[state.currentFrameIndex];
-          if (frame) {
-            frameClipboardMemory = frame.layers[state.activeLayerId];
-            pasteBtn.disabled = !frameClipboardMemory;
-            showNotification(
-              "Frame Copied",
-              "Drawing saved to local clipboard memory.",
-              "copy",
-            );
-          }
-        };
-
-        pasteBtn.onclick = () => {
-          if (frameClipboardMemory) {
+        if (copyBtn) {
+          copyBtn.onclick = () => {
             const frame = state.frames[state.currentFrameIndex];
             if (frame) {
-              frame.layers[state.activeLayerId] = frameClipboardMemory;
-              renderActiveFrame();
-              saveFrameState();
-              saveStateToHistory();
+              frameClipboardMemory = frame.layers[state.activeLayerId];
+              if (pasteBtn) pasteBtn.disabled = !frameClipboardMemory;
               showNotification(
-                "Frame Pasted",
-                "Pasted successfully onto active layer.",
-                "clipboard",
+                "Frame Copied",
+                "Drawing saved to local clipboard memory.",
+                "copy",
               );
             }
-          }
-        };
+          };
+        }
+
+        if (pasteBtn) {
+          pasteBtn.onclick = () => {
+            if (frameClipboardMemory) {
+              const frame = state.frames[state.currentFrameIndex];
+              if (frame) {
+                frame.layers[state.activeLayerId] = frameClipboardMemory;
+                renderActiveFrame();
+                saveFrameState();
+                saveStateToHistory();
+                showNotification(
+                  "Frame Pasted",
+                  "Pasted successfully onto active layer.",
+                  "clipboard",
+                );
+              }
+            }
+          };
+        }
       };
 
       const deleteFrameAction = () => {
@@ -3265,9 +3335,8 @@
       const stopPlayback = () => {
         if (!state.isPlaying) return;
         state.isPlaying = false;
-        document
-          .getElementById("play-icon")
-          .setAttribute("data-lucide", "play");
+        const playIcon = document.getElementById("play-icon");
+        if (playIcon) playIcon.setAttribute("data-lucide", "play");
         lucide.createIcons();
         clearInterval(playInterval);
         buildTimeline();
@@ -3309,8 +3378,9 @@
         }
 
         const cap = toolName.charAt(0).toUpperCase() + toolName.slice(1);
-        document.getElementById("canvas-indicator-tool").innerHTML =
-          `<i data-lucide="edit-3" class="w-3.5 h-3.5"></i> ${cap}`;
+        const indicator = document.getElementById("canvas-indicator-tool");
+        if (indicator)
+          indicator.innerHTML = `<i data-lucide="edit-3" class="w-3.5 h-3.5"></i> ${cap}`;
         lucide.createIcons();
       };
 
@@ -3332,18 +3402,57 @@
 
         const profile = brushProfiles[profileName];
         state.opacity = profile.opacity;
-        document.getElementById("slider-opacity").value = Math.round(
-          profile.opacity * 100,
-        );
-        document.getElementById("lbl-opacity").innerText =
-          `${Math.round(profile.opacity * 100)}%`;
+        const opacitySlider = document.getElementById("slider-opacity");
+        const opacityLbl = document.getElementById("lbl-opacity");
+        if (opacitySlider)
+          opacitySlider.value = Math.round(profile.opacity * 100);
+        if (opacityLbl)
+          opacityLbl.innerText = `${Math.round(profile.opacity * 100)}%`;
 
-        document.getElementById("canvas-indicator-tool").innerHTML =
-          `<i data-lucide="brush" class="w-3.5 h-3.5"></i> ${profile.label}`;
+        const indicator = document.getElementById("canvas-indicator-tool");
+        if (indicator)
+          indicator.innerHTML = `<i data-lucide="brush" class="w-3.5 h-3.5"></i> ${profile.label}`;
         lucide.createIcons();
       };
 
-      // Dynamic Interactive Tour Wizard controllers
+      // UI Helpers
+      const showCanvasLoader = (show, message = "Working...") => {
+        const loader = document.getElementById("canvas-loader");
+        const msgEl = document.getElementById("loader-message");
+        if (!loader) return;
+        if (show) {
+          if (msgEl) msgEl.innerText = message;
+          loader.classList.remove("opacity-0", "pointer-events-none");
+          loader.classList.add("opacity-100");
+        } else {
+          loader.classList.remove("opacity-100");
+          loader.classList.add("opacity-0", "pointer-events-none");
+        }
+      };
+
+      const openModal = (id) => {
+        const modal = document.getElementById(id);
+        if (modal) {
+          modal.classList.remove("opacity-0", "pointer-events-none");
+          modal.classList.add("opacity-100");
+        }
+      };
+
+      const closeModals = () => {
+        document.querySelectorAll(".fixed").forEach((modal) => {
+          if (
+            modal.id !== "toast" &&
+            modal.id !== "canvas-loader" &&
+            modal.id !== "layer-context-menu" &&
+            modal.id !== "view-dashboard"
+          ) {
+            modal.classList.add("opacity-0", "pointer-events-none");
+            modal.classList.remove("opacity-100");
+          }
+        });
+      };
+
+      // Dynamic Interactive Tour Wizard controllers (DEFINED LOCALLY TO RESOLVE REFERENCE ERRORS)
       const startStudioTutorial = () => {
         currentTourStepIndex = 0;
         showTourStep();
@@ -3366,19 +3475,30 @@
           targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
         }
 
-        document.getElementById("tour-step-title").innerText = step.title;
-        document.getElementById("tour-step-desc").innerText = step.desc;
-        document.getElementById("tour-progress").innerText =
-          `Step ${currentTourStepIndex + 1} of ${tourSteps.length}`;
+        const titleEl = document.getElementById("tour-step-title");
+        const descEl = document.getElementById("tour-step-desc");
+        const progressEl = document.getElementById("tour-progress");
+
+        if (titleEl) titleEl.innerText = step.title;
+        if (descEl) descEl.innerText = step.desc;
+        if (progressEl)
+          progressEl.innerText = `Step ${currentTourStepIndex + 1} of ${tourSteps.length}`;
 
         const tourPanel = document.getElementById("tour-wizard");
-        tourPanel.classList.remove("opacity-0", "pointer-events-none");
+        if (tourPanel) {
+          tourPanel.classList.remove("opacity-0", "pointer-events-none");
+        }
 
         const nextBtn = document.getElementById("btn-next-tour");
-        if (currentTourStepIndex === tourSteps.length - 1) {
-          nextBtn.querySelector("span").innerText = "Finish";
-        } else {
-          nextBtn.querySelector("span").innerText = "Next";
+        if (nextBtn) {
+          const span = nextBtn.querySelector("span");
+          if (span) {
+            if (currentTourStepIndex === tourSteps.length - 1) {
+              span.innerText = "Finish";
+            } else {
+              span.innerText = "Next";
+            }
+          }
         }
       };
 
@@ -3387,7 +3507,9 @@
           el.classList.remove("tutorial-highlight");
         });
         const tourPanel = document.getElementById("tour-wizard");
-        tourPanel.classList.add("opacity-0", "pointer-events-none");
+        if (tourPanel) {
+          tourPanel.classList.add("opacity-0", "pointer-events-none");
+        }
         showNotification(
           "Tour Finished",
           "You're ready to create masterpieces!",
@@ -3395,15 +3517,28 @@
         );
       };
 
-      // Setup Event Listeners
+      // Setup Event Listeners with Bulletproof Defensive Helpers (FIXED TYPEERROR NULL BINDINGS)
       const initEventListeners = () => {
-        document.getElementById("btn-back-to-dash").onclick = () => {
-          saveProjectToLibrary();
-          toggleStudioViews(true);
+        const safeClick = (id, fn) => {
+          const el = document.getElementById(id);
+          if (el) el.onclick = fn;
+        };
+        const safeInput = (id, fn) => {
+          const el = document.getElementById(id);
+          if (el) el.oninput = fn;
+        };
+        const safeChange = (id, fn) => {
+          const el = document.getElementById(id);
+          if (el) el.onchange = fn;
         };
 
+        safeClick("btn-back-to-dash", () => {
+          saveProjectToLibrary();
+          toggleStudioViews(true);
+        });
+
         // New Project button action
-        document.getElementById("btn-create-project-top").onclick = () => {
+        safeClick("btn-create-project-top", () => {
           createBlankProject();
           toggleStudioViews(false);
           showNotification(
@@ -3411,130 +3546,138 @@
             "Have fun animating!",
             "sparkles",
           );
-        };
+        });
 
         // Tutorial Event Toggles
-        document.getElementById("btn-start-tutorial").onclick =
-          startStudioTutorial;
-        document.getElementById("btn-skip-tour").onclick = endStudioTutorial;
-        document.getElementById("btn-next-tour").onclick = () => {
+        safeClick("btn-start-tutorial", startStudioTutorial);
+        safeClick("btn-skip-tour", endStudioTutorial);
+        safeClick("btn-next-tour", () => {
           currentTourStepIndex++;
           showTourStep();
-        };
+        });
 
         // Custom layer event
-        document.getElementById("btn-create-layer").onclick = createNewLayer;
+        safeClick("btn-create-layer", createNewLayer);
 
         // Document rename event trigger
-        document.getElementById("btn-rename-trigger").onclick = () => {
+        safeClick("btn-rename-trigger", () => {
           const updated = prompt("Enter Project Name:", state.projectName);
           if (updated && updated.trim()) {
             state.projectName = updated.trim();
             updateMetadataUI();
             saveProjectToLibrary();
           }
-        };
+        });
 
         // Canvas action buttons
-        document.getElementById("btn-add-frame").onclick = addNewFrame;
-        document.getElementById("btn-duplicate-frame").onclick = duplicateFrame;
-        document.getElementById("btn-delete-frame").onclick = deleteFrameAction;
+        safeClick("btn-add-frame", addNewFrame);
+        safeClick("btn-duplicate-frame", duplicateFrame);
+        safeClick("btn-delete-frame", deleteFrameAction);
 
         // Brushes and palettes sliders
-        document.getElementById("slider-stroke-size").oninput = (e) => {
+        safeInput("slider-stroke-size", (e) => {
           state.brushSize = parseInt(e.target.value);
-          document.getElementById("lbl-stroke-size").innerText =
-            `${state.brushSize}px`;
-          document.getElementById("brush-size-text").innerText =
-            `${state.brushSize}px`;
-          document.getElementById("brush-indicator").style.transform =
-            `scale(${Math.max(0.2, Math.min(2.0, state.brushSize / 15))})`;
-        };
+          const lbl = document.getElementById("lbl-stroke-size");
+          const sizeTxt = document.getElementById("brush-size-text");
+          const indicator = document.getElementById("brush-indicator");
+          if (lbl) lbl.innerText = `${state.brushSize}px`;
+          if (sizeTxt) sizeTxt.innerText = `${state.brushSize}px`;
+          if (indicator)
+            indicator.style.transform = `scale(${Math.max(0.2, Math.min(2.0, state.brushSize / 15))})`;
+        });
 
-        document.getElementById("slider-opacity").oninput = (e) => {
+        safeInput("slider-opacity", (e) => {
           state.opacity = parseFloat(e.target.value) / 100;
-          document.getElementById("lbl-opacity").innerText =
-            `${e.target.value}%`;
-        };
+          const lbl = document.getElementById("lbl-opacity");
+          if (lbl) lbl.innerText = `${e.target.value}%`;
+        });
 
-        document.getElementById("native-color-picker").oninput = (e) => {
+        safeInput("native-color-picker", (e) => {
           state.brushColor = e.target.value;
-          document.getElementById("btn-color-select").style.backgroundColor =
-            state.brushColor;
-          document.getElementById("brush-indicator").style.backgroundColor =
-            state.brushColor;
-        };
+          const selectBtn = document.getElementById("btn-color-select");
+          const indicator = document.getElementById("brush-indicator");
+          if (selectBtn) selectBtn.style.backgroundColor = state.brushColor;
+          if (indicator) indicator.style.backgroundColor = state.brushColor;
+        });
 
-        document.getElementById("slider-fps").oninput = (e) => {
+        safeInput("slider-fps", (e) => {
           state.fps = parseInt(e.target.value);
-          document.getElementById("lbl-fps").innerText = `${state.fps} FPS`;
+          const lbl = document.getElementById("lbl-fps");
+          if (lbl) lbl.innerText = `${state.fps} FPS`;
           if (state.isPlaying) {
             stopPlayback();
             startPlayback();
           }
           autoSaveToCache();
-        };
-
-        // Left tools trigger bindings
-        document.getElementById("tool-pen").onclick = () => {
-          setTool("pen");
-          setBrushProfile("pen");
-        };
-        document.getElementById("tool-brush").onclick = () => {
-          setTool("brush");
-          const popup = document.getElementById("brush-popup");
-          popup.classList.toggle("hidden");
-          popup.classList.toggle("flex");
-        };
-        document.getElementById("tool-lasso").onclick = () => setTool("lasso");
-        document.getElementById("tool-eraser").onclick = () =>
-          setTool("eraser");
-        document.getElementById("tool-bucket").onclick = () =>
-          setTool("bucket");
-        document.getElementById("tool-hand").onclick = () => setTool("hand");
-
-        document.getElementById("btn-stroke-config").onclick = (e) => {
-          e.stopPropagation();
-          const popup = document.getElementById("brush-popup");
-          popup.classList.toggle("hidden");
-          popup.classList.toggle("flex");
-        };
-
-        document.addEventListener("click", () => {
-          document.getElementById("brush-popup").classList.add("hidden");
-          document.getElementById("brush-popup").classList.remove("flex");
         });
 
-        document.getElementById("brush-popup").onclick = (e) =>
+        // Left tools trigger bindings
+        safeClick("tool-pen", () => {
+          setTool("pen");
+          setBrushProfile("pen");
+        });
+        safeClick("tool-brush", () => {
+          setTool("brush");
+          const popup = document.getElementById("brush-popup");
+          if (popup) {
+            popup.classList.toggle("hidden");
+            popup.classList.toggle("flex");
+          }
+        });
+        safeClick("tool-lasso", () => setTool("lasso"));
+        safeClick("tool-eraser", () => setTool("eraser"));
+        safeClick("tool-bucket", () => setTool("bucket"));
+        safeClick("tool-hand", () => setTool("hand"));
+
+        safeClick("btn-stroke-config", (e) => {
           e.stopPropagation();
+          const popup = document.getElementById("brush-popup");
+          if (popup) {
+            popup.classList.toggle("hidden");
+            popup.classList.toggle("flex");
+          }
+        });
 
-        document.getElementById("btn-undo").onclick = performUndo;
-        document.getElementById("btn-redo").onclick = performRedo;
+        document.addEventListener("click", () => {
+          const popup = document.getElementById("brush-popup");
+          if (popup) {
+            popup.classList.add("hidden");
+            popup.classList.remove("flex");
+          }
+        });
 
-        document.getElementById("btn-save-project").onclick = () => {
+        const popupEl = document.getElementById("brush-popup");
+        if (popupEl) {
+          popupEl.onclick = (e) => e.stopPropagation();
+        }
+
+        safeClick("btn-undo", performUndo);
+        safeClick("btn-redo", performRedo);
+
+        safeClick("btn-save-project", () => {
           saveProjectToLibrary();
-        };
-        document.getElementById("btn-export-center").onclick = () => {
+        });
+        safeClick("btn-export-center", () => {
           openModal("modal-export");
-        };
+        });
 
         // Playback elements
-        document.getElementById("btn-play-pause").onclick = () => {
+        safeClick("btn-play-pause", () => {
           if (state.isPlaying) stopPlayback();
           else startPlayback();
-        };
+        });
 
-        document.getElementById("btn-play-prev").onclick = () => {
+        safeClick("btn-play-prev", () => {
           stopPlayback();
           selectFrame(state.currentFrameIndex - 1);
-        };
+        });
 
-        document.getElementById("btn-play-next").onclick = () => {
+        safeClick("btn-play-next", () => {
           stopPlayback();
           selectFrame((state.currentFrameIndex + 1) % state.frames.length);
-        };
+        });
 
-        document.getElementById("btn-clear-frame").onclick = () => {
+        safeClick("btn-clear-frame", () => {
           ctx.clearRect(0, 0, 800, 600);
           saveFrameState();
           saveStateToHistory();
@@ -3543,23 +3686,25 @@
             "Cleared current active layer.",
             "trash",
           );
-        };
+        });
 
         // Onion toggle handler
-        document.getElementById("toggle-onion").onclick = () => {
+        safeClick("toggle-onion", () => {
           state.isOnionActive = !state.isOnionActive;
           const toggle = document.getElementById("toggle-onion");
-          if (state.isOnionActive) {
-            toggle.className =
-              "bg-brand-500 text-white px-2.5 py-1 rounded-md text-xs font-semibold transition";
-            toggle.innerText = "Active";
-          } else {
-            toggle.className =
-              "bg-zinc-800 text-zinc-400 px-2.5 py-1 rounded-md text-xs font-semibold transition hover:bg-zinc-700";
-            toggle.innerText = "Inactive";
+          if (toggle) {
+            if (state.isOnionActive) {
+              toggle.className =
+                "bg-brand-500 text-white px-2.5 py-1 rounded-md text-xs font-semibold transition";
+              toggle.innerText = "Active";
+            } else {
+              toggle.className =
+                "bg-zinc-800 text-zinc-400 px-2.5 py-1 rounded-md text-xs font-semibold transition hover:bg-zinc-700";
+              toggle.innerText = "Inactive";
+            }
           }
           renderActiveFrame();
-        };
+        });
 
         // Keyboard Spacebar and Shortcut controllers
         window.addEventListener("keydown", (e) => {
@@ -3590,38 +3735,37 @@
         });
 
         // Zoom level actions
-        document.getElementById("btn-zoom-in").onclick = () => {
+        safeClick("btn-zoom-in", () => {
           state.zoomScale = Math.min(8.0, state.zoomScale * 1.25);
           updateTransformState();
-        };
-        document.getElementById("btn-zoom-out").onclick = () => {
+        });
+        safeClick("btn-zoom-out", () => {
           state.zoomScale = Math.max(0.15, state.zoomScale * 0.8);
           updateTransformState();
-        };
-        document.getElementById("btn-zoom-reset").onclick =
-          centerWorkspaceViewport;
+        });
+        safeClick("btn-zoom-reset", centerWorkspaceViewport);
 
         // Export Actions Dialog buttons
-        document.getElementById("btn-export-layered-png").onclick = () => {
+        safeClick("btn-export-layered-png", () => {
           closeModals();
           exportLayerStitchedPNG();
-        };
-        document.getElementById("btn-export-webm").onclick = () => {
+        });
+        safeClick("btn-export-webm", () => {
           closeModals();
           exportAnimationToVideo();
-        };
-        document.getElementById("btn-export-spritesheet").onclick = () => {
+        });
+        safeClick("btn-export-spritesheet", () => {
           closeModals();
           exportSpritesheet();
-        };
-        document.getElementById("btn-export-json-project").onclick = () => {
+        });
+        safeClick("btn-export-json-project", () => {
           closeModals();
           exportProjectToJson();
-        };
-        document.getElementById("btn-export-frame").onclick = () => {
+        });
+        safeClick("btn-export-frame", () => {
           closeModals();
           exportSingleFramePNG();
-        };
+        });
 
         // Close Modal bindings
         document.querySelectorAll(".btn-close-modal").forEach((btn) => {
@@ -3629,7 +3773,7 @@
         });
 
         // JSON Dashboard input importer (Full project backup)
-        document.getElementById("input-json-dashboard").onchange = (e) => {
+        safeChange("input-json-dashboard", (e) => {
           const file = e.target.files[0];
           if (file) {
             const reader = new FileReader();
@@ -3683,12 +3827,13 @@
             };
             reader.readAsText(file);
           }
-        };
+        });
       };
 
       // Render premium sub-brush select profiles list
       const buildBrushProfilesSelector = () => {
         const container = document.getElementById("brush-profiles-selector");
+        if (!container) return;
         container.innerHTML = "";
 
         Object.keys(brushProfiles).forEach((key) => {
@@ -3748,9 +3893,8 @@
       const startPlayback = () => {
         if (state.isPlaying) return;
         state.isPlaying = true;
-        document
-          .getElementById("play-icon")
-          .setAttribute("data-lucide", "pause");
+        const playIcon = document.getElementById("play-icon");
+        if (playIcon) playIcon.setAttribute("data-lucide", "pause");
         lucide.createIcons();
 
         const intervalMs = 1000 / state.fps;
@@ -3773,20 +3917,22 @@
 
         // Populate palette options
         const colorPresetGrid = document.getElementById("preset-colors");
-        palettes.forEach((col) => {
-          const btn = document.createElement("button");
-          btn.className =
-            "w-7 h-7 rounded-lg border border-zinc-700/80 shadow-inner flex shrink-0 hover:scale-110 active:scale-95 transition transform";
-          btn.style.backgroundColor = col;
-          btn.onclick = () => {
-            state.brushColor = col;
-            document.getElementById("btn-color-select").style.backgroundColor =
-              col;
-            document.getElementById("brush-indicator").style.backgroundColor =
-              col;
-          };
-          colorPresetGrid.appendChild(btn);
-        });
+        if (colorPresetGrid) {
+          palettes.forEach((col) => {
+            const btn = document.createElement("button");
+            btn.className =
+              "w-7 h-7 rounded-lg border border-zinc-700/80 shadow-inner flex shrink-0 hover:scale-110 active:scale-95 transition transform";
+            btn.style.backgroundColor = col;
+            btn.onclick = () => {
+              state.brushColor = col;
+              const selectBtn = document.getElementById("btn-color-select");
+              const indicator = document.getElementById("brush-indicator");
+              if (selectBtn) selectBtn.style.backgroundColor = col;
+              if (indicator) indicator.style.backgroundColor = col;
+            };
+            colorPresetGrid.appendChild(btn);
+          });
+        }
 
         // Always load dashboard at launch first (Manage Projects Mode)
         toggleStudioViews(true);
