@@ -1,0 +1,2595 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AetherFlow Pro - Focus Forest & Soundscape Suite</title>
+    <!-- Tailwind CSS Play CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            animation: {
+              "spin-slow": "spin 12s linear infinite",
+              "pulse-slow": "pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+              "bounce-gentle": "bounce 2s infinite",
+            },
+          },
+        },
+      };
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Plus Jakarta Sans", sans-serif;
+      }
+      .font-mono {
+        font-family: "JetBrains Mono", monospace;
+      }
+      /* Custom Scrollbar */
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(15, 23, 42, 0.05);
+      }
+      .dark .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(15, 23, 42, 0.3);
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(99, 102, 241, 0.3);
+        border-radius: 9999px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(99, 102, 241, 0.5);
+      }
+    </style>
+  </head>
+  <body
+    class="transition-colors duration-500 overflow-x-hidden min-h-screen bg-slate-950 text-slate-100 dark"
+  >
+    <!-- Background Ambience Orbs (Dynamic blur backdrop) -->
+    <div
+      class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0 opacity-40"
+    >
+      <div
+        id="orb-1"
+        class="absolute top-[8%] left-[15%] w-80 h-80 rounded-full filter blur-[110px] transition-all duration-1000 bg-indigo-600/20 animate-pulse-slow"
+      ></div>
+      <div
+        id="orb-2"
+        class="absolute bottom-[15%] right-[8%] w-[450px] h-[450px] rounded-full filter blur-[160px] transition-all duration-1000 bg-emerald-600/10 animate-pulse-slow"
+        style="animation-delay: 2s"
+      ></div>
+    </div>
+
+    <!-- Global Toast Alert Banner -->
+    <div
+      id="toast"
+      class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 opacity-0 pointer-events-none scale-90"
+    >
+      <div
+        class="flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-indigo-600 border border-indigo-400 text-white shadow-2xl shadow-indigo-600/30 text-sm font-semibold"
+      >
+        <svg
+          class="w-4 h-4 text-indigo-200 animate-bounce"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"
+          ></path>
+        </svg>
+        <span id="toast-text">Alert Message</span>
+      </div>
+    </div>
+
+    <!-- Wither Confirmation Dialog Modal -->
+    <div
+      id="wither-modal"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden"
+    >
+      <div
+        class="w-full max-w-sm p-6 rounded-3xl border bg-slate-900 border-slate-800 text-center shadow-2xl"
+      >
+        <div
+          class="w-16 h-16 mx-auto mb-4 bg-rose-500/10 border border-rose-500/20 text-rose-500 rounded-full flex items-center justify-center text-3xl"
+        >
+          🍂
+        </div>
+        <h3 class="text-lg font-bold text-white">Abandon Your Session?</h3>
+        <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+          If you give up now, your growing plant will wither and die. A withered
+          branch will be logged into your garden plots forever.
+        </p>
+        <div class="flex gap-3 mt-6">
+          <button
+            onclick="confirmWither(true)"
+            class="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-lg shadow-rose-600/25 transition-all"
+          >
+            Yes, Abort Session
+          </button>
+          <button
+            onclick="confirmWither(false)"
+            class="flex-1 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-bold rounded-xl transition-all"
+          >
+            No, Keep Focusing
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- App Wrapper -->
+    <div
+      class="relative z-10 max-w-6xl mx-auto px-4 py-6 md:py-10 flex flex-col min-h-screen justify-between"
+    >
+      <!-- Header Section -->
+      <header
+        class="flex justify-between items-center pb-8 border-b border-slate-800/80"
+      >
+        <div class="flex items-center gap-3">
+          <div
+            class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-xl shadow-emerald-500/20"
+          >
+            <span class="text-2xl">🌱</span>
+          </div>
+          <div>
+            <h1 class="text-xl md:text-2xl font-black tracking-tight">
+              AetherFlow
+              <span
+                class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                >FOREST</span
+              >
+            </h1>
+            <p class="text-xs text-slate-400 font-medium header-subtitle">
+              Procedural Soundscapes & Gamified Focus Forest
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <!-- Seed Wallet Counter -->
+          <div
+            class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold text-sm"
+            title="Your Seed Balance (Earned from focus blocks)"
+          >
+            <span>🪙</span>
+            <span id="seed-wallet">0</span>
+          </div>
+
+          <!-- Master Volume Slider -->
+          <div
+            class="hidden md:flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-900/50 border border-slate-800/80 backdrop-blur"
+          >
+            <button
+              id="master-mute-btn"
+              onclick="toggleMasterMute()"
+              class="text-slate-400 hover:text-indigo-400 transition-colors"
+              title="Mute/Unmute Master"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+                id="master-vol-icon"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"
+                ></path>
+              </svg>
+            </button>
+            <input
+              id="master-volume-slider"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value="0.8"
+              oninput="changeMasterVolume(this.value)"
+              class="w-20 h-1 rounded-lg accent-indigo-500 cursor-pointer bg-slate-700"
+            />
+          </div>
+
+          <!-- Custom Settings Trigger -->
+          <button
+            onclick="toggleSettingsModal(true)"
+            class="p-2.5 rounded-xl border bg-slate-900/50 border-slate-800 hover:scale-105 active:scale-95 transition-all text-slate-400"
+            title="Timer Parameters"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.43l-1.003.828c-.293.242-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.43l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.991l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.645-.869l.214-1.28z"
+              ></path>
+              <circle
+                cx="12"
+                cy="12"
+                r="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              ></circle>
+            </svg>
+          </button>
+
+          <!-- Theme Toggle Button -->
+          <button
+            id="theme-toggle-btn"
+            onclick="toggleTheme()"
+            class="p-2.5 rounded-xl border bg-slate-900/50 border-slate-800 text-amber-400 hover:scale-105 active:scale-95 transition-all"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              id="theme-icon"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.364l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"
+              ></path>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Global Settings Modal Overlay -->
+      <div
+        id="settings-modal"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden"
+      >
+        <div
+          class="w-full max-w-md p-6 rounded-3xl border bg-slate-900 border-slate-800 shadow-2xl modal-container"
+        >
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-bold">Configure Timer Parameters</h3>
+            <button
+              onclick="toggleSettingsModal(false)"
+              class="p-1 rounded-lg hover:bg-slate-500/10"
+            >
+              <svg
+                class="w-5 h-5 text-indigo-500"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M5 13l4 4L19 7"
+                ></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="flex flex-col gap-4 text-slate-100">
+            <div>
+              <label class="text-xs font-semibold text-slate-400 block mb-1"
+                >Deep Work Duration (Minutes)</label
+              >
+              <input
+                id="settings-work"
+                type="number"
+                min="1"
+                max="180"
+                class="w-full px-3 py-2 rounded-xl border bg-slate-950 border-slate-800 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-400 block mb-1"
+                >Short Break Duration (Minutes)</label
+              >
+              <input
+                id="settings-short"
+                type="number"
+                min="1"
+                max="60"
+                class="w-full px-3 py-2 rounded-xl border bg-slate-950 border-slate-800 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+            <div>
+              <label class="text-xs font-semibold text-slate-400 block mb-1"
+                >Long Break Duration (Minutes)</label
+              >
+              <input
+                id="settings-long"
+                type="number"
+                min="1"
+                max="120"
+                class="w-full px-3 py-2 rounded-xl border bg-slate-950 border-slate-800 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div class="border-t border-slate-500/10 pt-4 mt-2">
+              <span class="text-xs font-semibold text-rose-400 block mb-2"
+                >Danger Zone</span
+              >
+              <div class="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onclick="clearFocusHistory()"
+                  class="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl transition-colors border border-rose-500/20"
+                >
+                  <svg
+                    class="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-16v1a3 3 0 003 3h10a3 3 0 003-3V3m-4 4h-8m0 0l-3-3H5"
+                    ></path>
+                  </svg>
+                  Reset Focus History (Wipes Statistics)
+                </button>
+                <button
+                  type="button"
+                  onclick="clearGardenGrid()"
+                  class="flex items-center gap-2 text-xs font-semibold px-4 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 rounded-xl transition-colors border border-amber-500/20"
+                >
+                  <span class="text-xs">🪵</span>
+                  Clear Garden Grid (Deforest plots)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 flex justify-end">
+            <button
+              onclick="saveTimerSettings()"
+              class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-750 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/25"
+            >
+              Apply & Close
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Core Grid Layout -->
+      <div
+        class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 pt-8 items-start"
+      >
+        <!-- Navigation Sidebar -->
+        <nav
+          class="lg:col-span-3 flex lg:flex-col gap-2 overflow-x-auto pb-4 lg:pb-0 border-b lg:border-b-0 lg:border-r border-slate-800/20 lg:pr-4"
+        >
+          <button
+            id="tab-btn-focus"
+            onclick="switchTab('focus')"
+            class="tab-btn flex-1 lg:flex-initial flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 rounded-xl font-semibold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-600/30"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+              ></path>
+            </svg>
+            <span>Focus & Plant</span>
+          </button>
+          <button
+            id="tab-btn-mixer"
+            onclick="switchTab('mixer')"
+            class="tab-btn flex-1 lg:flex-initial flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 rounded-xl font-semibold transition-all bg-slate-900/40 text-slate-400 border border-slate-900 hover:bg-slate-900/80 hover:text-indigo-500"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"
+              ></path>
+            </svg>
+            <span>Ambient Mixer</span>
+          </button>
+          <button
+            id="tab-btn-notes"
+            onclick="switchTab('notes')"
+            class="tab-btn flex-1 lg:flex-initial flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 rounded-xl font-semibold transition-all bg-slate-900/40 text-slate-400 border border-slate-900 hover:bg-slate-900/80 hover:text-indigo-500"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+              ></path>
+            </svg>
+            <span>Workspace Scratch</span>
+          </button>
+          <button
+            id="tab-btn-insights"
+            onclick="switchTab('insights')"
+            class="tab-btn flex-1 lg:flex-initial flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 rounded-xl font-semibold transition-all bg-slate-900/40 text-slate-400 border border-slate-900 hover:bg-slate-900/80 hover:text-indigo-500"
+          >
+            <span class="text-xs">🌳</span>
+            <span>Aether Garden & Stats</span>
+          </button>
+
+          <!-- Diagnostics Box -->
+          <div
+            class="hidden lg:block mt-8 p-4 rounded-2xl border bg-slate-900/30 border-slate-800/60 backdrop-blur-sm"
+          >
+            <div
+              class="flex items-center gap-2 text-indigo-400 text-xs font-bold mb-2"
+            >
+              <svg
+                class="w-3.5 h-3.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                ></path>
+              </svg>
+              <span>Web Audio Core Status</span>
+            </div>
+            <p
+              class="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed mb-3"
+            >
+              Zero-asset synthesis creates seamless waves and noise filters
+              locally on-the-fly.
+            </p>
+            <div
+              class="flex items-center justify-between text-[11px] font-mono border-t border-slate-800/10 pt-2 text-slate-500"
+            >
+              <span>Active Tones:</span>
+              <span id="active-tones-count" class="text-emerald-500 font-bold"
+                >0 / 4</span
+              >
+            </div>
+          </div>
+        </nav>
+
+        <!-- Main Content Viewports -->
+        <main class="lg:col-span-9 flex flex-col gap-6 w-full">
+          <!-- VIEWPORT 1: DEEP FOCUS TIMER -->
+          <div
+            id="viewport-focus"
+            class="viewport-card backdrop-blur-md rounded-2xl border p-6 md:p-8 flex flex-col items-center bg-slate-900/40 border-slate-800/80"
+          >
+            <!-- Timer Mode Selectors -->
+            <div
+              class="flex p-1 rounded-xl border mb-6 max-w-sm w-full bg-slate-950/85 border-slate-850/60 transition-colors"
+            >
+              <button
+                onclick="switchTimerMode('work')"
+                id="timer-mode-work"
+                class="flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all bg-indigo-600 text-white shadow-md"
+              >
+                Deep Work
+              </button>
+              <button
+                onclick="switchTimerMode('short')"
+                id="timer-mode-short"
+                class="flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all text-slate-400 hover:text-white"
+              >
+                Short Break
+              </button>
+              <button
+                onclick="switchTimerMode('long')"
+                id="timer-mode-long"
+                class="flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all text-slate-400 hover:text-white"
+              >
+                Long Break
+              </button>
+            </div>
+
+            <!-- Gamified Species Picker -->
+            <div
+              id="species-picker-container"
+              class="mb-4 w-full max-w-sm text-center"
+            >
+              <label class="text-xs font-bold text-slate-400 block mb-2"
+                >Choose Plant Species to Grow:</label
+              >
+              <div
+                class="flex justify-center gap-2 flex-wrap"
+                id="species-buttons"
+              >
+                <!-- Rendered via JS based on unlocked status -->
+              </div>
+            </div>
+
+            <!-- Animated Radial SVG Timer & Growing Tree Visualizer -->
+            <div
+              class="relative w-64 h-64 md:w-72 md:h-72 flex items-center justify-center my-4"
+            >
+              <svg
+                class="w-full h-full transform -rotate-90"
+                viewBox="0 0 200 200"
+              >
+                <circle
+                  cx="100"
+                  cy="100"
+                  r="80"
+                  class="stroke-slate-800/40"
+                  stroke-width="6"
+                  fill="transparent"
+                ></circle>
+                <circle
+                  id="timer-progress-circle"
+                  cx="100"
+                  cy="100"
+                  r="80"
+                  class="stroke-emerald-500 transition-all duration-300 ease-out"
+                  stroke-width="6"
+                  fill="transparent"
+                  stroke-dasharray="502.65"
+                  stroke-dashoffset="502.65"
+                  stroke-linecap="round"
+                ></circle>
+              </svg>
+              <div class="absolute flex flex-col items-center text-center">
+                <!-- Procedural Growing Plant Display (Emoji / Text) -->
+                <div
+                  id="plant-stage-display"
+                  class="text-4xl md:text-5xl mb-1 animate-bounce-gentle"
+                >
+                  🌳
+                </div>
+                <span
+                  id="timer-display"
+                  class="text-3xl md:text-4xl font-mono font-black tracking-tight mb-1"
+                  >25:00</span
+                >
+                <span
+                  id="timer-mode-label"
+                  class="text-[10px] uppercase tracking-widest font-bold text-slate-400"
+                  >Sapling Growing</span
+                >
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex gap-4 items-center justify-center mt-6">
+              <button
+                id="timer-play-btn"
+                onclick="toggleTimer()"
+                class="w-16 h-16 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-105 active:scale-95 transition-all bg-gradient-to-tr from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-emerald-500/25"
+              >
+                <!-- Play Icon -->
+                <svg
+                  id="play-icon"
+                  class="w-6 h-6 fill-white ml-1"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M8 5v14l11-7z"></path>
+                </svg>
+                <!-- Pause Icon -->
+                <svg
+                  id="pause-icon"
+                  class="w-6 h-6 fill-white hidden"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path>
+                </svg>
+              </button>
+              <button
+                onclick="abortSession()"
+                class="w-12 h-12 rounded-full border flex items-center justify-center hover:scale-105 active:scale-95 transition-all bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
+                title="Give up & wither plant"
+              >
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-16v1a3 3 0 003 3h10a3 3 0 003-3V3m-4 4h-8m0 0l-3-3H5"
+                  ></path>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Daily Stats Micro-Row -->
+            <div
+              class="grid grid-cols-2 gap-8 w-full border-t border-slate-800/60 mt-8 pt-6"
+            >
+              <div class="text-center border-r border-slate-500/10">
+                <span
+                  id="focus-sessions-today"
+                  class="block text-2xl font-black text-emerald-500"
+                  >0</span
+                >
+                <span class="text-xs font-semibold text-slate-400"
+                  >Sessions Completed Today</span
+                >
+              </div>
+              <div class="text-center">
+                <span
+                  id="focus-minutes-today"
+                  class="block text-2xl font-black text-indigo-500"
+                  >0m</span
+                >
+                <span class="text-xs font-semibold text-slate-400"
+                  >Total Minutes Today</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- VIEWPORT 2: AMBIENT SOUND MIXER -->
+          <div
+            id="viewport-mixer"
+            class="viewport-card backdrop-blur-md rounded-2xl border p-6 md:p-8 bg-slate-900/40 border-slate-800/80 hidden"
+          >
+            <div class="mb-6">
+              <h2 class="text-lg md:text-xl font-extrabold mb-1">
+                Aether Mixer Architecture
+              </h2>
+              <p class="text-sm text-slate-400">
+                Overlay multiple procedural environments simultaneously. Volume
+                level changes occur in high precision gain-nodes.
+              </p>
+            </div>
+
+            <!-- Ambient Mixer Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Rain Card -->
+              <div
+                id="card-rain"
+                class="p-5 rounded-2xl border transition-all relative overflow-hidden bg-slate-950/40 border-slate-850/60"
+              >
+                <div
+                  id="ripple-rain"
+                  class="absolute right-4 bottom-4 flex items-end gap-1 pointer-events-none opacity-40 hidden"
+                >
+                  <span
+                    class="w-1 h-3 bg-indigo-500 rounded-full animate-pulse"
+                  ></span>
+                  <span
+                    class="w-1 h-5 bg-indigo-500 rounded-full animate-pulse"
+                    style="animation-delay: 75ms"
+                  ></span>
+                  <span
+                    class="w-1 h-2 bg-indigo-500 rounded-full animate-pulse"
+                    style="animation-delay: 150ms"
+                  ></span>
+                </div>
+                <div class="flex justify-between items-center mb-4">
+                  <div class="flex items-center gap-3">
+                    <span class="text-3xl">🌧️</span>
+                    <div>
+                      <h3 class="font-extrabold text-sm">Gentle Rain</h3>
+                      <span
+                        id="label-rain"
+                        class="text-[10px] font-mono block text-slate-500"
+                        >Offline</span
+                      >
+                    </div>
+                  </div>
+                  <button
+                    id="btn-sound-rain"
+                    onclick="toggleSound('rain')"
+                    class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-indigo-600 text-white"
+                  >
+                    Activate
+                  </button>
+                </div>
+                <p class="text-xs text-slate-400 mb-4">
+                  Procedural noise + synthesized water droplet crackles.
+                </p>
+                <div class="flex items-center gap-3">
+                  <svg
+                    class="w-4 h-4 text-slate-400"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25(0 010 7.424M6.75 8.25H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12z"
+                    ></path>
+                  </svg>
+                  <input
+                    id="slider-rain"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value="0.5"
+                    disabled
+                    oninput="handleVolumeChange('rain', this.value)"
+                    class="w-full h-1.5 rounded-lg accent-indigo-500 bg-slate-800 cursor-pointer opacity-20"
+                  />
+                  <span
+                    id="vol-txt-rain"
+                    class="text-xs text-slate-400 font-mono w-8 text-right"
+                    >50%</span
+                  >
+                </div>
+              </div>
+
+              <!-- Ocean Card -->
+              <div
+                id="card-ocean"
+                class="p-5 rounded-2xl border transition-all relative overflow-hidden bg-slate-950/40 border-slate-850/60"
+              >
+                <div
+                  id="ripple-ocean"
+                  class="absolute right-4 bottom-4 flex items-end gap-1 pointer-events-none opacity-40 hidden"
+                >
+                  <span
+                    class="w-1 h-3 bg-indigo-500 rounded-full animate-pulse"
+                  ></span>
+                  <span
+                    class="w-1 h-5 bg-indigo-500 rounded-full animate-pulse"
+                    style="animation-delay: 75ms"
+                  ></span>
+                  <span
+                    class="w-1 h-2 bg-indigo-500 rounded-full animate-pulse"
+                    style="animation-delay: 150ms"
+                  ></span>
+                </div>
+                <div class="flex justify-between items-center mb-4">
+                  <div class="flex items-center gap-3">
+                    <span class="text-3xl">🌊</span>
+                    <div>
+                      <h3 class="font-extrabold text-sm">Ocean Waves</h3>
+                      <span
+                        id="label-ocean"
+                        class="text-[10px] font-mono block text-slate-500"
+                        >Offline</span
+                      >
+                    </div>
+                  </div>
+                  <button
+                    id="btn-sound-ocean"
+                    onclick="toggleSound('ocean')"
+                    class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-indigo-600 text-white"
+                  >
+                    Activate
+                  </button>
+                </div>
+                <p class="text-xs text-slate-400 mb-4">
+                  LFO-swept lowpass brown noise imitating rolling tides.
+                </p>
+                <div class="flex items-center gap-3">
+                  <svg
+                    class="w-4 h-4 text-slate-400"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12z"
+                    ></path>
+                  </svg>
+                  <input
+                    id="slider-ocean"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value="0.4"
+                    disabled
+                    oninput="handleVolumeChange('ocean', this.value)"
+                    class="w-full h-1.5 rounded-lg accent-indigo-500 bg-slate-800 cursor-pointer opacity-20"
+                  />
+                  <span
+                    id="vol-txt-ocean"
+                    class="text-xs text-slate-400 font-mono w-8 text-right"
+                    >40%</span
+                  >
+                </div>
+              </div>
+
+              <!-- Campfire Card -->
+              <div
+                id="card-fire"
+                class="p-5 rounded-2xl border transition-all relative overflow-hidden bg-slate-950/40 border-slate-850/60"
+              >
+                <div
+                  id="ripple-fire"
+                  class="absolute right-4 bottom-4 flex items-end gap-1 pointer-events-none opacity-40 hidden"
+                >
+                  <span
+                    class="w-1 h-3 bg-indigo-500 rounded-full animate-pulse"
+                  ></span>
+                  <span
+                    class="w-1 h-5 bg-indigo-500 rounded-full animate-pulse"
+                    style="animation-delay: 75ms"
+                  ></span>
+                  <span
+                    class="w-1 h-2 bg-indigo-500 rounded-full animate-pulse"
+                    style="animation-delay: 150ms"
+                  ></span>
+                </div>
+                <div class="flex justify-between items-center mb-4">
+                  <div class="flex items-center gap-3">
+                    <span class="text-3xl">🔥</span>
+                    <div>
+                      <h3 class="font-extrabold text-sm">Campfire</h3>
+                      <span
+                        id="label-fire"
+                        class="text-[10px] font-mono block text-slate-500"
+                        >Offline</span
+                      >
+                    </div>
+                  </div>
+                  <button
+                    id="btn-sound-fire"
+                    onclick="toggleSound('fire')"
+                    class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-indigo-600 text-white"
+                  >
+                    Activate
+                  </button>
+                </div>
+                <p class="text-xs text-slate-400 mb-4">
+                  Deep coal crackle + organic snapping micro-impulses.
+                </p>
+                <div class="flex items-center gap-3">
+                  <svg
+                    class="w-4 h-4 text-slate-400"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12z"
+                    ></path>
+                  </svg>
+                  <input
+                    id="slider-fire"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value="0.3"
+                    disabled
+                    oninput="handleVolumeChange('fire', this.value)"
+                    class="w-full h-1.5 rounded-lg accent-indigo-500 bg-slate-800 cursor-pointer opacity-20"
+                  />
+                  <span
+                    id="vol-txt-fire"
+                    class="text-xs text-slate-400 font-mono w-8 text-right"
+                    >30%</span
+                  >
+                </div>
+              </div>
+
+              <!-- Binaural Card -->
+              <div
+                id="card-binaural"
+                class="p-5 rounded-2xl border transition-all relative overflow-hidden bg-slate-950/40 border-slate-850/60"
+              >
+                <div
+                  id="ripple-binaural"
+                  class="absolute right-4 bottom-4 flex items-end gap-1 pointer-events-none opacity-40 hidden"
+                >
+                  <span
+                    class="w-1 h-3 bg-indigo-500 rounded-full animate-pulse"
+                  ></span>
+                  <span
+                    class="w-1 h-5 bg-indigo-500 rounded-full animate-pulse"
+                    style="animation-delay: 75ms"
+                  ></span>
+                  <span
+                    class="w-1 h-2 bg-indigo-500 rounded-full animate-pulse"
+                    style="animation-delay: 150ms"
+                  ></span>
+                </div>
+                <div class="flex justify-between items-center mb-4">
+                  <div class="flex items-center gap-3">
+                    <span class="text-3xl">🧘</span>
+                    <div>
+                      <h3 class="font-extrabold text-sm">Binaural Focus</h3>
+                      <span
+                        id="label-binaural"
+                        class="text-[10px] font-mono block text-slate-500"
+                        >Offline</span
+                      >
+                    </div>
+                  </div>
+                  <button
+                    id="btn-sound-binaural"
+                    onclick="toggleSound('binaural')"
+                    class="px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-indigo-600 text-white"
+                  >
+                    Activate
+                  </button>
+                </div>
+                <p class="text-xs text-slate-400 mb-4">
+                  40Hz Gamma-wave offset sine tones for neural entrainment.
+                </p>
+                <div class="flex items-center gap-3">
+                  <svg
+                    class="w-4 h-4 text-slate-400"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12z"
+                    ></path>
+                  </svg>
+                  <input
+                    id="slider-binaural"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value="0.2"
+                    disabled
+                    oninput="handleVolumeChange('binaural', this.value)"
+                    class="w-full h-1.5 rounded-lg accent-indigo-500 bg-slate-800 cursor-pointer opacity-20"
+                  />
+                  <span
+                    id="vol-txt-binaural"
+                    class="text-xs text-slate-400 font-mono w-8 text-right"
+                    >20%</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- Mixer Educational Info -->
+            <div
+              class="mt-8 p-4 rounded-xl flex gap-3 items-start border bg-indigo-950/10 border-indigo-500/20"
+            >
+              <svg
+                class="w-5 h-5 text-indigo-400 flex-shrink-0 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M11.25 11.25l.041-.02a.75.75 0 111.063.852l-.708 2.836a.75.75 0 001.063.852l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
+                ></path>
+              </svg>
+              <div class="text-xs leading-relaxed text-indigo-200">
+                <span class="font-bold block mb-0.5"
+                  >Real-time Waveform Assembly</span
+                >
+                AetherFlow uses dynamic sound generators synthesized purely
+                through math. This ensures seamless continuity without looping
+                ticks, network dependency, or assets caching delays.
+              </div>
+            </div>
+          </div>
+
+          <!-- VIEWPORT 3: ZEN WORKSPACE NOTES -->
+          <div
+            id="viewport-notes"
+            class="viewport-card backdrop-blur-md rounded-2xl border p-6 md:p-8 bg-slate-900/40 border-slate-800/80 hidden"
+          >
+            <div class="mb-6">
+              <h2 class="text-lg md:text-xl font-bold mb-1">
+                Focus Workspace Scratchpad
+              </h2>
+              <p class="text-sm text-slate-400">
+                Shed cognitive load by writing down secondary task notifications
+                and fleeting ideas instantly.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+              <!-- Create New Note Form -->
+              <form
+                id="note-form"
+                onsubmit="addNote(event)"
+                class="md:col-span-5 p-5 rounded-2xl border flex flex-col gap-4 bg-slate-950/60 border-slate-850/60"
+              >
+                <h3 class="font-bold text-sm">New scratchpad memo</h3>
+
+                <div>
+                  <input
+                    id="note-title-input"
+                    type="text"
+                    placeholder="Draft Title..."
+                    class="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 bg-slate-900/80 border-slate-850 text-white"
+                    maxlength="40"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <textarea
+                    id="note-content-input"
+                    placeholder="Note down details, ideas, codes..."
+                    rows="4"
+                    class="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 resize-none bg-slate-900/80 border-slate-850 text-white"
+                    maxlength="350"
+                    required
+                  ></textarea>
+                </div>
+
+                <!-- Color Marker Dots -->
+                <div>
+                  <span class="text-xs text-slate-400 block mb-2"
+                    >Category Marker Color</span
+                  >
+                  <div class="flex gap-2" id="color-selectors">
+                    <button
+                      type="button"
+                      onclick="selectNoteColor('indigo')"
+                      class="color-btn w-6 h-6 rounded-full bg-indigo-500 border-2 border-white transition-all"
+                      data-color="indigo"
+                    ></button>
+                    <button
+                      type="button"
+                      onclick="selectNoteColor('emerald')"
+                      class="color-btn w-6 h-6 rounded-full bg-emerald-500 border-2 border-transparent transition-all"
+                      data-color="emerald"
+                    ></button>
+                    <button
+                      type="button"
+                      onclick="selectNoteColor('amber')"
+                      class="color-btn w-6 h-6 rounded-full bg-amber-500 border-2 border-transparent transition-all"
+                      data-color="amber"
+                    ></button>
+                    <button
+                      type="button"
+                      onclick="selectNoteColor('rose')"
+                      class="color-btn w-6 h-6 rounded-full bg-rose-500 border-2 border-transparent transition-all"
+                      data-color="rose"
+                    ></button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-750 font-bold text-xs text-white shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 mt-2"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 4.5v15m7.5-7.5h-15"
+                    ></path>
+                  </svg>
+                  Save scratchpad
+                </button>
+              </form>
+
+              <!-- Notes List Area -->
+              <div
+                class="md:col-span-7 flex flex-col gap-4 max-h-[460px] overflow-y-auto pr-1 custom-scrollbar"
+                id="notes-container"
+              >
+                <!-- Rendered via Javascript -->
+              </div>
+            </div>
+          </div>
+
+          <!-- VIEWPORT 4: GARDEN & INSIGHTS DASHBOARD -->
+          <div
+            id="viewport-insights"
+            class="viewport-card backdrop-blur-md rounded-2xl border p-6 md:p-8 bg-slate-900/40 border-slate-800/80 hidden"
+          >
+            <div class="mb-6">
+              <h2 class="text-lg md:text-xl font-bold mb-1">
+                Aether Garden & Analytics
+              </h2>
+              <p class="text-sm text-slate-400">
+                Unlock exotic species in the nursery, visualize your digital
+                forest, and review daily focus statistics.
+              </p>
+            </div>
+
+            <!-- Forest Plots grid (The isometric garden view) -->
+            <div
+              class="p-6 rounded-2xl border bg-slate-950/40 border-slate-850/60 mb-6"
+            >
+              <div
+                class="flex justify-between items-center mb-4 flex-wrap gap-2"
+              >
+                <span class="text-xs font-bold text-slate-300 block"
+                  >🌳 Focus Garden Plots (Today & History)</span
+                >
+                <span
+                  id="garden-count-label"
+                  class="text-[10px] font-mono bg-slate-850 px-2 py-1 rounded text-slate-400"
+                  >Total Plots: 0</span
+                >
+              </div>
+
+              <div
+                id="garden-grid"
+                class="grid grid-cols-5 sm:grid-cols-7 md:grid-cols-10 gap-3 p-4 bg-slate-950/80 rounded-2xl border border-slate-800/60 justify-center min-h-[180px]"
+              >
+                <!-- Dynamically populated isometric plots via JS -->
+              </div>
+            </div>
+
+            <!-- Garden Species Nursery / Shop -->
+            <div
+              class="p-6 rounded-2xl border bg-slate-950/40 border-slate-850/60 mb-6"
+            >
+              <span class="text-xs font-bold text-slate-300 block mb-4"
+                >🛒 Species Nursery (Unlock New Plant Life)</span
+              >
+              <div
+                class="grid grid-cols-1 md:grid-cols-3 gap-4"
+                id="species-shop-container"
+              >
+                <!-- Rendered dynamically by JS -->
+              </div>
+            </div>
+
+            <!-- Analytical Column Chart Card -->
+            <div
+              class="p-5 rounded-2xl border bg-slate-950/60 border-slate-850/60"
+            >
+              <span class="text-xs font-bold text-slate-400 block mb-4"
+                >Completed Focus (Minutes Timeline)</span
+              >
+              <div
+                id="analytics-chart"
+                class="relative h-48 w-full flex items-end justify-between gap-2 pt-6"
+              >
+                <!-- Dynamically populated via JS -->
+              </div>
+            </div>
+
+            <!-- Cumulative Widgets Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+              <div
+                class="p-4 rounded-xl border bg-slate-950/40 border-slate-850/60"
+              >
+                <span
+                  class="text-[10px] uppercase font-bold tracking-wider text-indigo-400"
+                  >Accumulated Focus Loops</span
+                >
+                <h4
+                  id="accumulated-sessions"
+                  class="text-xl font-extrabold mt-1"
+                >
+                  0 Cycles
+                </h4>
+                <p class="text-[11px] text-slate-400 mt-1">
+                  Aggregated across all focus days
+                </p>
+              </div>
+              <div
+                class="p-4 rounded-xl border bg-slate-950/40 border-slate-850/60"
+              >
+                <span
+                  class="text-[10px] uppercase font-bold tracking-wider text-emerald-400"
+                  >Total Concentration Time</span
+                >
+                <h4
+                  id="accumulated-minutes"
+                  class="text-xl font-extrabold mt-1"
+                >
+                  0 Mins
+                </h4>
+                <p class="text-[11px] text-slate-400 mt-1">
+                  Deep flow activity level
+                </p>
+              </div>
+              <div
+                class="p-4 rounded-xl border bg-slate-950/40 border-slate-850/60"
+              >
+                <span
+                  class="text-[10px] uppercase font-bold tracking-wider text-amber-400"
+                  >Aether Seed Balance</span
+                >
+                <h4
+                  id="shop-wallet-label"
+                  class="text-xl font-extrabold mt-1 text-amber-400"
+                >
+                  0 Seeds
+                </h4>
+                <p class="text-[11px] text-slate-400 mt-1">
+                  Earned at a rate of 1 seed / 1 focus min
+                </p>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      <!-- Footer Section -->
+      <footer
+        class="mt-auto pt-8 border-t border-slate-800/80 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400"
+      >
+        <span
+          >AetherFlow Laboratory &copy; <span id="current-year">2026</span>.
+          Real-time procedural waveforms compiled locally.</span
+        >
+        <div class="flex gap-4">
+          <span class="flex items-center gap-1.5 font-bold text-emerald-500">
+            <span
+              class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"
+            ></span>
+            Core Synthesizer Connected
+          </span>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Vanilla Javascript App Controller -->
+    <script>
+      // --- APP STATE ---
+      let activeTab = "focus";
+      let darkMode = true;
+      let masterVolume = 0.8;
+      let isMuted = false;
+
+      // Timer configs
+      let timerSettings = {
+        work: 25,
+        short: 5,
+        long: 15,
+      };
+      let timerMode = "work"; // 'work', 'short', 'long'
+      let timeLeft = timerSettings.work * 60;
+      let timerRunning = false;
+      let timerInterval = null;
+
+      // --- GAMIFICATION STATE ---
+      let selectedSpecies = "oak";
+      let unlockedSpecies = ["oak"];
+      let seedBalance = 0;
+      let gardenPlots = []; // List of grown or withered species nodes: { id, species, status: 'grown'|'withered', date: YYYY-MM-DD, timestamp: X }
+
+      const speciesDatabase = {
+        oak: {
+          name: "Oak Tree",
+          emoji: "🌳",
+          cost: 0,
+          color: "text-emerald-500",
+        },
+        sakura: {
+          name: "Sakura Blossom",
+          emoji: "🌸",
+          cost: 100,
+          color: "text-pink-400",
+        },
+        cactus: {
+          name: "Saguaro Cactus",
+          emoji: "🌵",
+          cost: 250,
+          color: "text-green-500",
+        },
+        mushroom: {
+          name: "Magic Shroom",
+          emoji: "🍄",
+          cost: 500,
+          color: "text-rose-400",
+        },
+        pine: {
+          name: "Bonsai Pine",
+          emoji: "🌲",
+          cost: 800,
+          color: "text-teal-600",
+        },
+        sunflower: {
+          name: "Solar Sunflower",
+          emoji: "🌻",
+          cost: 1200,
+          color: "text-amber-400",
+        },
+      };
+
+      // Stored structures
+      let dailyLog = {}; // YYYY-MM-DD -> { minutes: X, completedSessions: Y }
+      let notes = [];
+      let selectedColor = "indigo";
+
+      // Sound setups
+      const soundMetadata = {
+        rain: { name: "Gentle Rain", emoji: "🌧️", volume: 0.5, active: false },
+        ocean: { name: "Ocean Waves", emoji: "🌊", volume: 0.4, active: false },
+        fire: { name: "Campfire", emoji: "🔥", volume: 0.3, active: false },
+        binaural: {
+          name: "Binaural Focus",
+          emoji: "🧘",
+          volume: 0.2,
+          active: false,
+        },
+      };
+
+      // --- LOCAL STORAGE KEYS ---
+      const STORAGE_KEYS = {
+        notes: "aetherflow_html_notes",
+        dailyLog: "aetherflow_html_daily_log",
+        timerSettings: "aetherflow_html_timer_settings",
+        soundConfig: "aetherflow_html_sound_config",
+        masterVolume: "aetherflow_html_master_volume",
+        darkMode: "aetherflow_html_darkmode",
+        // Gamified specific keys
+        unlockedSpecies: "aetherflow_unlocked_species_v1",
+        selectedSpecies: "aetherflow_selected_species_v1",
+        seedBalance: "aetherflow_seed_balance_v1",
+        gardenPlots: "aetherflow_garden_plots_v1",
+      };
+
+      const colorThemeMap = {
+        indigo: "bg-indigo-500/10 border-indigo-500/30 text-indigo-100",
+        emerald: "bg-emerald-500/10 border-emerald-500/30 text-emerald-100",
+        amber: "bg-amber-500/10 border-amber-500/30 text-amber-100",
+        rose: "bg-rose-500/10 border-rose-500/30 text-rose-100",
+      };
+
+      // --- DATE & TIMELINE HELPER FUNCTIONS (RESTORED DEFINITIONS) ---
+      function getLocalDateString(date = new Date()) {
+        const offset = date.getTimezoneOffset();
+        const localDate = new Date(date.getTime() - offset * 60 * 1000);
+        return localDate.toISOString().split("T")[0];
+      }
+
+      function getLast7Days() {
+        const list = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          const dateStr = getLocalDateString(d);
+          const dayName = d.toLocaleDateString(undefined, { weekday: "short" });
+          list.push({ dateStr, dayName });
+        }
+        return list;
+      }
+
+      // --- INITIALIZATION ---
+      window.addEventListener("load", () => {
+        document.getElementById("current-year").innerText =
+          new Date().getFullYear();
+
+        // Retrieve Theme
+        const savedDark = localStorage.getItem(STORAGE_KEYS.darkMode);
+        if (savedDark !== null) {
+          darkMode = savedDark === "true";
+          if (!darkMode) {
+            document.body.classList.remove("dark");
+            document.body.classList.add("bg-slate-50", "text-slate-800");
+            document.body.classList.remove("bg-slate-950", "text-slate-100");
+          }
+        }
+        updateThemeUI();
+
+        // Retrieve Master Volume
+        const savedVol = localStorage.getItem(STORAGE_KEYS.masterVolume);
+        if (savedVol !== null) {
+          masterVolume = parseFloat(savedVol);
+          document.getElementById("master-volume-slider").value = masterVolume;
+        }
+
+        // Retrieve Timer Settings
+        const savedTimer = localStorage.getItem(STORAGE_KEYS.timerSettings);
+        if (savedTimer) {
+          timerSettings = JSON.parse(savedTimer);
+        }
+        document.getElementById("settings-work").value = timerSettings.work;
+        document.getElementById("settings-short").value = timerSettings.short;
+        document.getElementById("settings-long").value = timerSettings.long;
+        timeLeft = timerSettings[timerMode] * 60;
+        updateTimerDisplay();
+
+        // Retrieve Gamification Metrics
+        const savedUnlocks = localStorage.getItem(STORAGE_KEYS.unlockedSpecies);
+        if (savedUnlocks) unlockedSpecies = JSON.parse(savedUnlocks);
+
+        const savedSelection = localStorage.getItem(
+          STORAGE_KEYS.selectedSpecies,
+        );
+        if (savedSelection) selectedSpecies = savedSelection;
+
+        const savedSeeds = localStorage.getItem(STORAGE_KEYS.seedBalance);
+        if (savedSeeds) seedBalance = parseInt(savedSeeds) || 0;
+
+        const savedPlots = localStorage.getItem(STORAGE_KEYS.gardenPlots);
+        if (savedPlots) gardenPlots = JSON.parse(savedPlots);
+
+        updateGamifiedUI();
+
+        // Retrieve Notes
+        const savedNotes = localStorage.getItem(STORAGE_KEYS.notes);
+        if (savedNotes) {
+          notes = JSON.parse(savedNotes);
+        } else {
+          notes = [
+            {
+              id: 1,
+              title: "Unleash Your Inner Forest",
+              content:
+                "Plant Oak seeds, gain Aether seeds on work completion, and spend them in the Nursery. Don't abort early or your plant will wither!",
+              color: "emerald",
+              date: "Tutorial",
+            },
+            {
+              id: 2,
+              title: "Deep Concentration Sound Mix",
+              content:
+                "Activating low ocean waves at 40% volume mixed with campfire crackle creates highly immersive audio isolation.",
+              color: "indigo",
+              date: "System",
+            },
+          ];
+          saveNotesToLocalStorage();
+        }
+        renderNotes();
+
+        // Retrieve Daily Logs
+        const savedLogs = localStorage.getItem(STORAGE_KEYS.dailyLog);
+        if (savedLogs) dailyLog = JSON.parse(savedLogs);
+        updateDailyStatsUI();
+
+        // Retrieve Sound Volumes
+        const savedSounds = localStorage.getItem(STORAGE_KEYS.soundConfig);
+        if (savedSounds) {
+          const parsed = JSON.parse(savedSounds);
+          Object.keys(parsed).forEach((key) => {
+            if (soundMetadata[key]) {
+              soundMetadata[key].volume = parsed[key];
+              const slider = document.getElementById(`slider-${key}`);
+              if (slider) slider.value = parsed[key];
+              const volTxt = document.getElementById(`vol-txt-${key}`);
+              if (volTxt)
+                volTxt.innerText = `${Math.round(parsed[key] * 100)}%`;
+            }
+          });
+        }
+      });
+
+      // --- TOAST NOTIFICATIONS ---
+      function showToast(msg) {
+        const toast = document.getElementById("toast");
+        const text = document.getElementById("toast-text");
+        text.innerText = msg;
+        toast.classList.remove("opacity-0", "pointer-events-none", "scale-90");
+        toast.classList.add("opacity-100", "scale-100");
+
+        setTimeout(() => {
+          toast.classList.add("opacity-0", "pointer-events-none", "scale-90");
+          toast.classList.remove("opacity-100", "scale-100");
+        }, 3500);
+      }
+
+      // --- GAMIFICATION / NURSERY LOGIC ---
+      function updateGamifiedUI() {
+        // Wallet labels
+        document.getElementById("seed-wallet").innerText = seedBalance;
+        const shopWallet = document.getElementById("shop-wallet-label");
+        if (shopWallet) shopWallet.innerText = `${seedBalance} Seeds`;
+
+        // Render Focus Species Picker buttons
+        const picker = document.getElementById("species-buttons");
+        picker.innerHTML = Object.keys(speciesDatabase)
+          .map((key) => {
+            const item = speciesDatabase[key];
+            const isUnlocked = unlockedSpecies.includes(key);
+            const isSelected = selectedSpecies === key;
+
+            if (!isUnlocked) {
+              return `
+            <button disabled class="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900/30 border border-slate-800/60 text-slate-500 flex items-center gap-1 opacity-55">
+              <span>🔒</span>
+              <span>${item.name}</span>
+            </button>
+          `;
+            }
+
+            return `
+          <button onclick="selectSpecies('${key}')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 border ${
+            isSelected
+              ? "bg-emerald-600 border-emerald-400 text-white shadow-lg"
+              : "bg-slate-900/60 border-slate-800/80 hover:bg-slate-900 text-slate-300"
+          }">
+            <span>${item.emoji}</span>
+            <span>${item.name}</span>
+          </button>
+        `;
+          })
+          .join("");
+
+        // Update current displayed plant graphic (seed/sapling/tree) based on state
+        updatePlantGraphic();
+
+        // Render Shop / Nursery
+        const shopContainer = document.getElementById("species-shop-container");
+        if (shopContainer) {
+          shopContainer.innerHTML = Object.keys(speciesDatabase)
+            .map((key) => {
+              const item = speciesDatabase[key];
+              const isUnlocked = unlockedSpecies.includes(key);
+
+              if (isUnlocked) {
+                return `
+              <div class="p-4 rounded-xl border bg-slate-950/20 border-slate-850/60 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <span class="text-3xl">${item.emoji}</span>
+                  <div>
+                    <h5 class="font-bold text-sm text-slate-200">${item.name}</h5>
+                    <span class="text-[10px] text-emerald-400 font-semibold flex items-center gap-0.5">
+                      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"></path></svg> Unlocked
+                    </span>
+                  </div>
+                </div>
+              </div>
+            `;
+              }
+
+              const canAfford = seedBalance >= item.cost;
+              return `
+            <div class="p-4 rounded-xl border bg-slate-950/20 border-slate-850/60 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="text-3xl filter grayscale">${item.emoji}</span>
+                <div>
+                  <h5 class="font-bold text-sm text-slate-300">${item.name}</h5>
+                  <span class="text-[10px] text-amber-500 font-extrabold font-mono flex items-center gap-1">🪙 ${item.cost} Seeds</span>
+                </div>
+              </div>
+              <button onclick="buySpecies('${key}')" ${!canAfford ? "disabled" : ""} class="px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${
+                canAfford
+                  ? "bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-md"
+                  : "bg-slate-800 text-slate-500 border border-slate-800 opacity-50 cursor-not-allowed"
+              }">
+                Unlock
+              </button>
+            </div>
+          `;
+            })
+            .join("");
+        }
+
+        // Render Garden Plots
+        renderGardenGrid();
+      }
+
+      function selectSpecies(key) {
+        if (timerRunning) {
+          showToast("⚠️ Cannot switch plant species during active focus.");
+          return;
+        }
+        selectedSpecies = key;
+        localStorage.setItem(STORAGE_KEYS.selectedSpecies, key);
+        updateGamifiedUI();
+      }
+
+      function buySpecies(key) {
+        const item = speciesDatabase[key];
+        if (!item || unlockedSpecies.includes(key)) return;
+
+        if (seedBalance >= item.cost) {
+          seedBalance -= item.cost;
+          unlockedSpecies.push(key);
+          localStorage.setItem(
+            STORAGE_KEYS.seedBalance,
+            seedBalance.toString(),
+          );
+          localStorage.setItem(
+            STORAGE_KEYS.unlockedSpecies,
+            JSON.stringify(unlockedSpecies),
+          );
+
+          showToast(
+            `🎉 Congratulations! You unlocked the ${item.emoji} ${item.name}!`,
+          );
+          updateGamifiedUI();
+        } else {
+          showToast("⚠️ Insufficient Seed balance.");
+        }
+      }
+
+      function updatePlantGraphic() {
+        const display = document.getElementById("plant-stage-display");
+        const label = document.getElementById("timer-mode-label");
+
+        if (timerMode !== "work") {
+          display.innerText = "🧘";
+          label.innerText = "Regen break session";
+          return;
+        }
+
+        if (!timerRunning) {
+          // Show selected fully grown tree as preview when stopped
+          display.innerText = speciesDatabase[selectedSpecies]?.emoji || "🌳";
+          label.innerText = "Plant ready to grow";
+          return;
+        }
+
+        // If active work timer, grow procedurally based on time percent
+        const currentMaxDuration = timerSettings[timerMode] * 60;
+        const percent =
+          ((currentMaxDuration - timeLeft) / currentMaxDuration) * 100;
+
+        if (percent < 15) {
+          display.innerText = "🌱";
+          label.innerText = "Seed planted...";
+        } else if (percent < 55) {
+          display.innerText = "🌿";
+          label.innerText = "Sprout breaking soil!";
+        } else if (percent < 90) {
+          display.innerText = "🪴";
+          label.innerText = "Sapling forming branches...";
+        } else {
+          display.innerText = speciesDatabase[selectedSpecies]?.emoji || "🌳";
+          label.innerText = "Almost fully grown!";
+        }
+      }
+
+      function renderGardenGrid() {
+        const container = document.getElementById("garden-grid");
+        const counterLabel = document.getElementById("garden-count-label");
+        if (!container) return;
+
+        if (gardenPlots.length === 0) {
+          container.innerHTML = `
+          <div class="col-span-full py-8 text-center text-xs text-slate-500">
+            No focus blocks finished yet. Plant your first seed on the Focus Engine tab!
+          </div>
+        `;
+          if (counterLabel) counterLabel.innerText = "Total Plots: 0";
+          return;
+        }
+
+        if (counterLabel)
+          counterLabel.innerText = `Total Plots: ${gardenPlots.length}`;
+
+        container.innerHTML = gardenPlots
+          .map((plot) => {
+            const isGrown = plot.status === "grown";
+            const item = speciesDatabase[plot.species];
+            const emoji = isGrown ? item?.emoji || "🌳" : "🍂";
+            const tooltip = isGrown
+              ? `Grown: ${item?.name || "Oak"} on ${plot.date}`
+              : `Withered plant on ${plot.date}`;
+
+            return `
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl bg-slate-900/80 border border-slate-800/80 shadow-md relative group cursor-help hover:scale-105 transition-all" title="${tooltip}">
+            <span>${emoji}</span>
+            <!-- Simple hover tooltip -->
+            <span class="absolute -top-10 scale-0 transition-all rounded-lg bg-slate-950 border border-slate-800 px-2 py-1 text-[9px] font-bold text-slate-300 w-28 text-center group-hover:scale-100 z-30 pointer-events-none">
+              ${tooltip}
+            </span>
+          </div>
+        `;
+          })
+          .join("");
+      }
+
+      // --- TIMED SESSIONS & PENALTIES ---
+      let witherResolution = null; // promise tracker for modal
+
+      function abortSession() {
+        if (timerMode !== "work" || !timerRunning) {
+          // Safe to reset normally for breaks or paused screens
+          resetTimer();
+          return;
+        }
+
+        // Show high stakes warning modal
+        const modal = document.getElementById("wither-modal");
+        modal.classList.remove("hidden");
+      }
+
+      function confirmWither(shouldAbort) {
+        const modal = document.getElementById("wither-modal");
+        modal.classList.add("hidden");
+
+        if (shouldAbort) {
+          // Enforce Wither Penalty
+          timerRunning = false;
+          clearInterval(timerInterval);
+
+          const today = getLocalDateString();
+          // Append withered plot to garden
+          gardenPlots.push({
+            id: Date.now(),
+            species: selectedSpecies,
+            status: "withered",
+            date: today,
+            timestamp: Date.now(),
+          });
+          localStorage.setItem(
+            STORAGE_KEYS.gardenPlots,
+            JSON.stringify(gardenPlots),
+          );
+
+          timeLeft = timerSettings[timerMode] * 60;
+          updateTimerDisplay();
+          updatePlayButtonUI();
+          updateGamifiedUI();
+
+          showToast("🍂 Focus block abandoned. Your plant withered away.");
+        }
+      }
+
+      function clearGardenGrid() {
+        if (
+          confirm(
+            "Are you sure you want to completely clear your garden? All planted trees and withered branches will be permanently deforested.",
+          )
+        ) {
+          gardenPlots = [];
+          localStorage.setItem(
+            STORAGE_KEYS.gardenPlots,
+            JSON.stringify(gardenPlots),
+          );
+          updateGamifiedUI();
+          toggleSettingsModal(false);
+          showToast("🪵 Garden cleared successfully.");
+        }
+      }
+
+      // --- CHRONOLOGICAL CALENDAR LOGGER ---
+      function updateDailyStatsUI() {
+        const today = getLocalDateString();
+        const todayStats = dailyLog[today] || {
+          minutes: 0,
+          completedSessions: 0,
+        };
+
+        document.getElementById("focus-sessions-today").innerText =
+          todayStats.completedSessions;
+        document.getElementById("focus-minutes-today").innerText =
+          `${todayStats.minutes}m`;
+
+        const totalSessions = Object.values(dailyLog).reduce(
+          (acc, curr) => acc + (curr.completedSessions || 0),
+          0,
+        );
+        const totalMinutes = Object.values(dailyLog).reduce(
+          (acc, curr) => acc + (curr.minutes || 0),
+          0,
+        );
+
+        const sessEl = document.getElementById("accumulated-sessions");
+        const minEl = document.getElementById("accumulated-minutes");
+        if (sessEl) sessEl.innerText = `${totalSessions} Cycles`;
+        if (minEl) minEl.innerText = `${totalMinutes} Mins`;
+      }
+
+      // --- ANALYTICS PLOT GRAPHICS (RESTORED DEFINITIONS) ---
+      function renderAnalyticsChart() {
+        const chartContainer = document.getElementById("analytics-chart");
+        if (!chartContainer) return;
+
+        const timeline = getLast7Days().map((day) => {
+          const stats = dailyLog[day.dateStr] || {
+            minutes: 0,
+            completedSessions: 0,
+          };
+          return {
+            day: day.dayName,
+            dateStr: day.dateStr,
+            minutes: stats.minutes,
+          };
+        });
+
+        const maxLimit = Math.max(...timeline.map((h) => h.minutes), 60);
+        const todayStr = getLocalDateString();
+
+        chartContainer.innerHTML = timeline
+          .map((item) => {
+            const barHeight = `${(item.minutes / maxLimit) * 100}%`;
+            const isToday = item.dateStr === todayStr;
+
+            return `
+          <div class="flex-1 flex flex-col items-center h-full justify-end">
+            <div class="w-full flex justify-center mb-1">
+              <span class="text-[10px] font-mono text-indigo-500 font-extrabold">
+                ${item.minutes > 0 ? `${item.minutes}m` : "0m"}
+              </span>
+            </div>
+            <div style="height: ${item.minutes > 0 ? barHeight : "6px"}"
+              class="w-full rounded-t-lg transition-all duration-1000 ${
+                isToday
+                  ? "bg-gradient-to-t from-indigo-600 to-indigo-400 shadow-lg shadow-indigo-600/30"
+                  : darkMode
+                    ? "bg-slate-800 hover:bg-slate-700"
+                    : "bg-slate-300 hover:bg-slate-400"
+              }">
+            </div>
+            <span class="text-[10px] font-bold mt-2 ${isToday ? "text-indigo-500 font-extrabold" : "text-slate-400"}">
+              ${item.day} ${isToday ? "(Today)" : ""}
+            </span>
+          </div>
+        `;
+          })
+          .join("");
+      }
+
+      // --- TIMER SYSTEM ---
+      function switchTimerMode(mode) {
+        if (timerRunning) {
+          if (
+            !confirm(
+              "Your focus session is running. Abandon block and wither plant?",
+            )
+          ) {
+            return;
+          }
+          // Force wither first
+          confirmWither(true);
+        }
+        timerMode = mode;
+        timerRunning = false;
+        clearInterval(timerInterval);
+        timeLeft = timerSettings[mode] * 60;
+
+        // Update UI Toggles
+        document.querySelectorAll('[id^="timer-mode-"]').forEach((btn) => {
+          btn.className =
+            "flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all text-slate-400 hover:text-white";
+        });
+        const activeBtn = document.getElementById(`timer-mode-${mode}`);
+        activeBtn.className =
+          "flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all bg-indigo-600 text-white shadow-md";
+
+        const orb1 = document.getElementById("orb-1");
+        if (mode === "work") {
+          if (orb1)
+            orb1.className =
+              "absolute top-[8%] left-[15%] w-80 h-80 rounded-full filter blur-[110px] transition-all duration-1000 bg-emerald-600/20";
+        } else {
+          if (orb1)
+            orb1.className =
+              "absolute top-[8%] left-[15%] w-80 h-80 rounded-full filter blur-[110px] transition-all duration-1000 bg-indigo-600/20";
+        }
+
+        updateTimerDisplay();
+        updatePlayButtonUI();
+      }
+
+      function toggleTimer() {
+        initAudio();
+        if (timerRunning) {
+          timerRunning = false;
+          clearInterval(timerInterval);
+        } else {
+          timerRunning = true;
+          timerInterval = setInterval(() => {
+            if (timeLeft > 0) {
+              timeLeft--;
+              updateTimerDisplay();
+            } else {
+              timerRunning = false;
+              clearInterval(timerInterval);
+              handleTimerComplete();
+            }
+          }, 1000);
+        }
+        updatePlayButtonUI();
+      }
+
+      function resetTimer() {
+        timerRunning = false;
+        clearInterval(timerInterval);
+        timeLeft = timerSettings[timerMode] * 60;
+        updateTimerDisplay();
+        updatePlayButtonUI();
+      }
+
+      function updateTimerDisplay() {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        const displayStr = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+        document.getElementById("timer-display").innerText = displayStr;
+
+        // Draw SVG stroke progress
+        const currentMaxDuration = timerSettings[timerMode] * 60;
+        const percent =
+          ((currentMaxDuration - timeLeft) / currentMaxDuration) * 100;
+        const circumference = 502.65;
+        const dashOffset = circumference - (circumference * percent) / 100;
+        const circle = document.getElementById("timer-progress-circle");
+        circle.setAttribute("stroke-dashoffset", dashOffset);
+
+        if (timerMode === "work") {
+          circle.setAttribute(
+            "class",
+            "stroke-emerald-500 transition-all duration-300 ease-out",
+          );
+        } else {
+          circle.setAttribute(
+            "class",
+            "stroke-indigo-500 transition-all duration-300 ease-out",
+          );
+        }
+
+        updatePlantGraphic();
+      }
+
+      function updatePlayButtonUI() {
+        const playIcon = document.getElementById("play-icon");
+        const pauseIcon = document.getElementById("pause-icon");
+        const playBtn = document.getElementById("timer-play-btn");
+
+        if (timerRunning) {
+          playIcon.classList.add("hidden");
+          pauseIcon.classList.remove("hidden");
+        } else {
+          playIcon.classList.remove("hidden");
+          pauseIcon.classList.add("hidden");
+        }
+
+        if (timerMode === "work") {
+          playBtn.className =
+            "w-16 h-16 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-105 active:scale-95 transition-all bg-gradient-to-tr from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-emerald-500/25";
+        } else {
+          playBtn.className =
+            "w-16 h-16 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-105 active:scale-95 transition-all bg-gradient-to-tr from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-indigo-500/25";
+        }
+      }
+
+      function handleTimerComplete() {
+        triggerChimeCelebration();
+
+        if (timerMode === "work") {
+          const addedMinutes = timerSettings.work;
+          const today = getLocalDateString();
+
+          // Storing focus cycles
+          if (!dailyLog[today]) {
+            dailyLog[today] = { minutes: 0, completedSessions: 0 };
+          }
+          dailyLog[today].minutes += addedMinutes;
+          dailyLog[today].completedSessions += 1;
+          localStorage.setItem(STORAGE_KEYS.dailyLog, JSON.stringify(dailyLog));
+
+          // Add grown plant to virtual garden plots
+          gardenPlots.push({
+            id: Date.now(),
+            species: selectedSpecies,
+            status: "grown",
+            date: today,
+            timestamp: Date.now(),
+          });
+          localStorage.setItem(
+            STORAGE_KEYS.gardenPlots,
+            JSON.stringify(gardenPlots),
+          );
+
+          // Distribute Aether seeds as reward (1 focus minute = 1 earned seed)
+          seedBalance += addedMinutes;
+          localStorage.setItem(
+            STORAGE_KEYS.seedBalance,
+            seedBalance.toString(),
+          );
+
+          updateDailyStatsUI();
+          updateGamifiedUI();
+
+          showToast(`🎉 Plant grown! You earned 🪙 ${addedMinutes} Seeds.`);
+          switchTimerMode("short");
+        } else {
+          showToast(`🧘 Break finished! Plant your next tree.`);
+          switchTimerMode("work");
+        }
+      }
+
+      // --- COGNITIVE NOTES ARCHITECTURE ---
+      function selectNoteColor(color) {
+        selectedColor = color;
+        document.querySelectorAll(".color-btn").forEach((btn) => {
+          if (btn.getAttribute("data-color") === color) {
+            btn.classList.add("border-white");
+            btn.classList.remove("border-transparent");
+          } else {
+            btn.classList.remove("border-white");
+            btn.classList.add("border-transparent");
+          }
+        });
+      }
+
+      // Unlocked and updated note mechanics
+      function addNote(event) {
+        event.preventDefault();
+        const titleInput = document.getElementById("note-title-input");
+        const contentInput = document.getElementById("note-content-input");
+
+        const title = titleInput.value.trim();
+        const content = contentInput.value.trim();
+
+        if (!title || !content) return;
+
+        const newNote = {
+          id: Date.now(),
+          title,
+          content,
+          color: selectedColor,
+          date: new Date().toLocaleDateString(undefined, {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        };
+
+        notes.unshift(newNote);
+        saveNotesToLocalStorage();
+        renderNotes();
+
+        titleInput.value = "";
+        contentInput.value = "";
+        showToast("📝 Scratchpad memo successfully pinned.");
+      }
+
+      function deleteNote(id) {
+        notes = notes.filter((n) => n.id !== id);
+        saveNotesToLocalStorage();
+        renderNotes();
+      }
+
+      function saveNotesToLocalStorage() {
+        localStorage.setItem(STORAGE_KEYS.notes, JSON.stringify(notes));
+      }
+
+      function renderNotes() {
+        const container = document.getElementById("notes-container");
+        if (notes.length === 0) {
+          container.innerHTML = `
+          <div class="h-full flex flex-col items-center justify-center text-center p-10 rounded-2xl border-2 border-dashed ${darkMode ? "bg-slate-950/20 border-slate-800" : "bg-slate-100 border-slate-300"}">
+            <svg class="w-10 h-10 text-slate-500 mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"></path></svg>
+            <span class="text-sm font-semibold">Workspace Empty</span>
+            <p class="text-xs text-slate-400 mt-1 max-w-xs">All notifications and memos have been cleanly archived.</p>
+          </div>
+        `;
+          return;
+        }
+
+        container.innerHTML = notes
+          .map(
+            (note) => `
+        <div class="p-4 rounded-xl border flex flex-col justify-between transition-all ${colorThemeMap[note.color] || colorThemeMap.indigo}">
+          <div>
+            <div class="flex justify-between items-start gap-4 mb-2">
+              <h4 class="font-extrabold text-sm">${escapeHTML(note.title)}</h4>
+              <button onclick="deleteNote(${note.id})" class="text-slate-400 hover:text-rose-500 transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-16v1a3 3 0 003 3h10a3 3 0 003-3V3m-4 4h-8m0 0l-3-3H5"></path></svg>
+              </button>
+            </div>
+            <p class="text-xs text-slate-400 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">${escapeHTML(note.content)}</p>
+          </div>
+          <div class="flex justify-between items-center mt-4 border-t border-slate-500/10 pt-2 text-[10px] text-slate-500">
+            <span>${note.date}</span>
+          </div>
+        </div>
+      `,
+          )
+          .join("");
+      }
+
+      function escapeHTML(str) {
+        return str.replace(
+          /[&<>'"]/g,
+          (tag) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              "'": "&#39;",
+              '"': "&quot;",
+            })[tag] || tag,
+        );
+      }
+
+      // --- TAB SYSTEM ---
+      function switchTab(tabId) {
+        activeTab = tabId;
+        document.querySelectorAll(".tab-btn").forEach((btn) => {
+          btn.className =
+            "tab-btn flex-1 lg:flex-initial flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 rounded-xl font-semibold transition-all border border-transparent";
+          if (darkMode) {
+            btn.classList.add(
+              "bg-slate-900/40",
+              "text-slate-400",
+              "border-slate-900",
+              "hover:bg-slate-900/80",
+              "hover:text-indigo-500",
+            );
+          } else {
+            btn.classList.add(
+              "bg-slate-100",
+              "text-slate-600",
+              "border-slate-200",
+              "hover:bg-slate-200/60",
+              "hover:text-indigo-500",
+            );
+          }
+        });
+
+        const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+        activeBtn.className =
+          "tab-btn flex-1 lg:flex-initial flex items-center justify-center lg:justify-start gap-3 px-4 py-3.5 rounded-xl font-semibold transition-all bg-indigo-600 text-white shadow-lg shadow-indigo-600/30";
+
+        document
+          .querySelectorAll(".viewport-card")
+          .forEach((card) => card.classList.add("hidden"));
+        document.getElementById(`viewport-${tabId}`).classList.remove("hidden");
+
+        if (tabId === "insights") {
+          renderAnalyticsChart();
+          updateDailyStatsUI();
+          renderGardenGrid();
+        }
+      }
+
+      // --- THEME LOGIC ---
+      function toggleTheme() {
+        darkMode = !darkMode;
+        localStorage.setItem(STORAGE_KEYS.darkMode, darkMode);
+        updateThemeUI();
+      }
+
+      function updateThemeUI() {
+        const body = document.body;
+        const themeIcon = document.getElementById("theme-icon");
+        const themeBtn = document.getElementById("theme-toggle-btn");
+        const modal = document.querySelector(".modal-container");
+
+        if (darkMode) {
+          body.classList.add("dark", "bg-slate-950", "text-slate-100");
+          body.classList.remove("bg-slate-50", "text-slate-800");
+          themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.364l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z"></path>`;
+          themeBtn.className =
+            "p-2.5 rounded-xl border bg-slate-900/50 border-slate-800 text-amber-400 hover:scale-105 active:scale-95 transition-all";
+          if (modal) modal.classList.add("bg-slate-900", "border-slate-800");
+        } else {
+          body.classList.remove("dark", "bg-slate-950", "text-slate-100");
+          body.classList.add("bg-slate-50", "text-slate-800");
+          themeIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"></path>`;
+          themeBtn.className =
+            "p-2.5 rounded-xl border bg-slate-100 border-slate-300 text-indigo-600 hover:scale-105 active:scale-95 transition-all";
+          if (modal) modal.classList.remove("bg-slate-900", "border-slate-800");
+        }
+      }
+
+      // --- SETTINGS CONTROLLER ---
+      function toggleSettingsModal(show) {
+        const modal = document.getElementById("settings-modal");
+        if (show) {
+          modal.classList.remove("hidden");
+        } else {
+          modal.classList.add("hidden");
+        }
+      }
+
+      function saveTimerSettings() {
+        const workVal = Math.max(
+          1,
+          parseInt(document.getElementById("settings-work").value) || 25,
+        );
+        const shortVal = Math.max(
+          1,
+          parseInt(document.getElementById("settings-short").value) || 5,
+        );
+        const longVal = Math.max(
+          1,
+          parseInt(document.getElementById("settings-long").value) || 15,
+        );
+
+        timerSettings = { work: workVal, short: shortVal, long: longVal };
+        localStorage.setItem(
+          STORAGE_KEYS.timerSettings,
+          JSON.stringify(timerSettings),
+        );
+
+        resetTimer();
+        toggleSettingsModal(false);
+        showToast("⚙️ Timer parameters successfully configured.");
+      }
+
+      function clearFocusHistory() {
+        if (
+          confirm(
+            "Are you sure you want to completely erase your accumulated focus statistics? This action cannot be undone.",
+          )
+        ) {
+          dailyLog = {};
+          seedBalance = 0;
+          localStorage.setItem(STORAGE_KEYS.dailyLog, JSON.stringify(dailyLog));
+          localStorage.setItem(
+            STORAGE_KEYS.seedBalance,
+            seedBalance.toString(),
+          );
+          updateDailyStatsUI();
+          renderAnalyticsChart();
+          updateGamifiedUI();
+          toggleSettingsModal(false);
+          showToast("🗑️ Focus history statistics cleared.");
+        }
+      }
+
+      // --- AUDIO PROCEDURAL GENERATORS (WEB AUDIO API) ---
+      let audioCtx = null;
+      let masterGain = null;
+      let soundNodes = {};
+
+      function initAudio() {
+        if (!audioCtx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          audioCtx = new AudioCtx();
+          masterGain = audioCtx.createGain();
+          masterGain.gain.setValueAtTime(
+            isMuted ? 0 : masterVolume,
+            audioCtx.currentTime,
+          );
+          masterGain.connect(audioCtx.destination);
+        }
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume();
+        }
+      }
+
+      function toggleMasterMute() {
+        initAudio();
+        isMuted = !isMuted;
+        const icon = document.getElementById("master-vol-icon");
+        if (isMuted) {
+          masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
+          icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6L1.5 12m0 0l5.25 5.25M1.5 12h13.5M10.5 6v12"></path>`;
+          showToast("🔇 Master outputs muted");
+        } else {
+          masterGain.gain.setValueAtTime(masterVolume, audioCtx.currentTime);
+          icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z"></path>`;
+          showToast("🔊 Master outputs restored");
+        }
+      }
+
+      function changeMasterVolume(val) {
+        initAudio();
+        masterVolume = parseFloat(val);
+        localStorage.setItem(STORAGE_KEYS.masterVolume, masterVolume);
+        if (!isMuted) {
+          masterGain.gain.setValueAtTime(masterVolume, audioCtx.currentTime);
+        }
+      }
+
+      function toggleSound(soundId) {
+        initAudio();
+        const meta = soundMetadata[soundId];
+        meta.active = !meta.active;
+
+        const card = document.getElementById(`card-${soundId}`);
+        const btn = document.getElementById(`btn-sound-${soundId}`);
+        const label = document.getElementById(`label-${soundId}`);
+        const ripple = document.getElementById(`ripple-${soundId}`);
+        const slider = document.getElementById(`slider-${soundId}`);
+
+        if (meta.active) {
+          startAudioSustain(soundId);
+          btn.innerText = "Deactivate";
+          btn.className =
+            "px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-rose-500/20 text-rose-500 border border-rose-500/30 hover:bg-rose-500/30";
+          label.innerText = "Active Channel";
+          label.classList.add("text-indigo-400");
+          label.classList.remove("text-slate-500");
+          card.className =
+            "p-5 rounded-2xl border transition-all relative overflow-hidden bg-indigo-950/20 border-indigo-500/40 shadow-inner";
+          ripple.classList.remove("hidden");
+          slider.removeAttribute("disabled");
+          slider.className =
+            "w-full h-1.5 rounded-lg accent-indigo-500 bg-slate-800 cursor-pointer";
+        } else {
+          stopAudioSustain(soundId);
+          btn.innerText = "Activate";
+          btn.className =
+            "px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-indigo-600 text-white";
+          label.innerText = "Offline";
+          label.classList.remove("text-indigo-400");
+          label.classList.add("text-slate-500");
+          card.className =
+            "p-5 rounded-2xl border transition-all relative overflow-hidden bg-slate-950/40 border-slate-850/60";
+          ripple.classList.add("hidden");
+          slider.setAttribute("disabled", "true");
+          slider.className =
+            "w-full h-1.5 rounded-lg accent-indigo-500 bg-slate-800 cursor-pointer opacity-20";
+        }
+
+        const activeCount = Object.values(soundMetadata).filter(
+          (s) => s.active,
+        ).length;
+        document.getElementById("active-tones-count").innerText =
+          `${activeCount} / 4`;
+      }
+
+      function handleVolumeChange(soundId, value) {
+        initAudio();
+        const volume = parseFloat(value);
+        soundMetadata[soundId].volume = volume;
+
+        const config = {};
+        Object.keys(soundMetadata).forEach(
+          (k) => (config[k] = soundMetadata[k].volume),
+        );
+        localStorage.setItem(STORAGE_KEYS.soundConfig, JSON.stringify(config));
+
+        document.getElementById(`vol-txt-${soundId}`).innerText =
+          `${Math.round(volume * 100)}%`;
+
+        if (soundNodes[soundId] && soundNodes[soundId].gainNode) {
+          soundNodes[soundId].gainNode.gain.setTargetAtTime(
+            volume,
+            audioCtx.currentTime,
+            0.1,
+          );
+        }
+      }
+
+      function startAudioSustain(soundId) {
+        stopAudioSustain(soundId);
+
+        const channelGain = audioCtx.createGain();
+        channelGain.gain.setValueAtTime(
+          soundMetadata[soundId].volume,
+          audioCtx.currentTime,
+        );
+        channelGain.connect(masterGain);
+
+        soundNodes[soundId] = {
+          gainNode: channelGain,
+          sources: [],
+        };
+
+        const sampleRate = audioCtx.sampleRate;
+
+        if (soundId === "rain") {
+          const bufferSize = sampleRate * 2;
+          const noiseBuffer = audioCtx.createBuffer(1, bufferSize, sampleRate);
+          const output = noiseBuffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
+          }
+          const noiseSource = audioCtx.createBufferSource();
+          noiseSource.buffer = noiseBuffer;
+          noiseSource.loop = true;
+
+          const lowpass = audioCtx.createBiquadFilter();
+          lowpass.type = "lowpass";
+          lowpass.frequency.value = 1100;
+
+          noiseSource.connect(lowpass);
+          lowpass.connect(channelGain);
+          noiseSource.start();
+          soundNodes[soundId].sources.push(noiseSource);
+
+          const dropBuffer = audioCtx.createBuffer(1, bufferSize, sampleRate);
+          const dropData = dropBuffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            dropData[i] = Math.random() < 0.0008 ? Math.random() * 2 - 1 : 0;
+          }
+          const dropSource = audioCtx.createBufferSource();
+          dropSource.buffer = dropBuffer;
+          dropSource.loop = true;
+
+          const highpass = audioCtx.createBiquadFilter();
+          highpass.type = "highpass";
+          highpass.frequency.value = 5500;
+
+          dropSource.connect(highpass);
+          highpass.connect(channelGain);
+          dropSource.start();
+          soundNodes[soundId].sources.push(dropSource);
+        } else if (soundId === "ocean") {
+          const bufferSize = sampleRate * 2;
+          const noiseBuffer = audioCtx.createBuffer(1, bufferSize, sampleRate);
+          const output = noiseBuffer.getChannelData(0);
+          let lastOut = 0.0;
+          for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            output[i] = (lastOut + 0.02 * white) / 1.02;
+            lastOut = output[i];
+            output[i] *= 3.5;
+          }
+          const noiseSource = audioCtx.createBufferSource();
+          noiseSource.buffer = noiseBuffer;
+          noiseSource.loop = true;
+
+          const lowpass = audioCtx.createBiquadFilter();
+          lowpass.type = "lowpass";
+          lowpass.frequency.value = 300;
+
+          const lfo = audioCtx.createOscillator();
+          lfo.type = "sine";
+          lfo.frequency.value = 0.07;
+
+          const lfoGain = audioCtx.createGain();
+          lfoGain.gain.value = 200;
+
+          lfo.connect(lfoGain);
+          lfoGain.connect(lowpass.frequency);
+          lfo.start();
+
+          noiseSource.connect(lowpass);
+          lowpass.connect(channelGain);
+          noiseSource.start();
+
+          soundNodes[soundId].sources.push(noiseSource);
+          soundNodes[soundId].sources.push(lfo);
+        } else if (soundId === "fire") {
+          const bufferSize = sampleRate * 2;
+          const noiseBuffer = audioCtx.createBuffer(1, bufferSize, sampleRate);
+          const output = noiseBuffer.getChannelData(0);
+          let lastOut = 0.0;
+          for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            output[i] = (lastOut + 0.02 * white) / 1.02;
+            lastOut = output[i];
+            output[i] *= 3.0;
+          }
+          const rumbleSource = audioCtx.createBufferSource();
+          rumbleSource.buffer = noiseBuffer;
+          rumbleSource.loop = true;
+
+          const lowpass = audioCtx.createBiquadFilter();
+          lowpass.type = "lowpass";
+          lowpass.frequency.value = 220;
+
+          rumbleSource.connect(lowpass);
+          lowpass.connect(channelGain);
+          rumbleSource.start();
+          soundNodes[soundId].sources.push(rumbleSource);
+
+          const sparkBuffer = audioCtx.createBuffer(1, bufferSize, sampleRate);
+          const sparkData = sparkBuffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            if (Math.random() < 0.0004) {
+              sparkData[i] = (Math.random() > 0.5 ? 1 : -1) * Math.random();
+            } else {
+              sparkData[i] = 0;
+            }
+          }
+          const sparkSource = audioCtx.createBufferSource();
+          sparkSource.buffer = sparkBuffer;
+          sparkSource.loop = true;
+
+          const bandpass = audioCtx.createBiquadFilter();
+          bandpass.type = "bandpass";
+          bandpass.frequency.value = 3500;
+          bandpass.Q.value = 2;
+
+          sparkSource.connect(bandpass);
+          bandpass.connect(channelGain);
+          sparkSource.start();
+          soundNodes[soundId].sources.push(sparkSource);
+        } else if (soundId === "binaural") {
+          const oscL = audioCtx.createOscillator();
+          const oscR = audioCtx.createOscillator();
+          oscL.type = "sine";
+          oscR.type = "sine";
+          oscL.frequency.value = 140;
+          oscR.frequency.value = 180;
+
+          const pannerL = audioCtx.createStereoPanner
+            ? audioCtx.createStereoPanner()
+            : null;
+          const pannerR = audioCtx.createStereoPanner
+            ? audioCtx.createStereoPanner()
+            : null;
+
+          if (pannerL && pannerR) {
+            pannerL.pan.setValueAtTime(-1, audioCtx.currentTime);
+            pannerR.pan.setValueAtTime(1, audioCtx.currentTime);
+            oscL.connect(pannerL).connect(channelGain);
+            oscR.connect(pannerR).connect(channelGain);
+            soundNodes[soundId].sources.push(pannerL);
+            soundNodes[soundId].sources.push(pannerR);
+          } else {
+            oscL.connect(channelGain);
+            oscR.connect(channelGain);
+          }
+
+          oscL.start();
+          oscR.start();
+          soundNodes[soundId].sources.push(oscL);
+          soundNodes[soundId].sources.push(oscR);
+        }
+      }
+
+      function stopAudioSustain(soundId) {
+        const active = soundNodes[soundId];
+        if (active) {
+          active.sources.forEach((src) => {
+            try {
+              src.stop();
+            } catch (e) {}
+            try {
+              src.disconnect();
+            } catch (e) {}
+          });
+          try {
+            active.gainNode.disconnect();
+          } catch (e) {}
+          delete soundNodes[soundId];
+        }
+      }
+
+      function triggerChimeCelebration() {
+        if (!audioCtx) return;
+        const chimeOsc = audioCtx.createOscillator();
+        const chimeGain = audioCtx.createGain();
+        chimeOsc.connect(chimeGain);
+        chimeGain.connect(masterGain);
+
+        chimeOsc.type = "sine";
+        chimeOsc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+        chimeOsc.frequency.exponentialRampToValueAtTime(
+          783.99,
+          audioCtx.currentTime + 0.2,
+        );
+        chimeOsc.frequency.exponentialRampToValueAtTime(
+          1046.5,
+          audioCtx.currentTime + 0.4,
+        );
+
+        chimeGain.gain.setValueAtTime(0.6, audioCtx.currentTime);
+        chimeGain.gain.exponentialRampToValueAtTime(
+          0.001,
+          audioCtx.currentTime + 2.0,
+        );
+
+        chimeOsc.start();
+        chimeOsc.stop(audioCtx.currentTime + 2.0);
+      }
+    </script>
+  </body>
+</html>
