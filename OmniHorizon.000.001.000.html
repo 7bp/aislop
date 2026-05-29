@@ -1,0 +1,2603 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OmniHorizon - Premium GTD Task Engine</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Google Fonts (Geist/Inter-like clean modern fonts) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <script>
+      // Explicitly configure class-based dark mode for the Tailwind CDN compiler
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            animation: {
+              "spin-slow": "spin 8s linear infinite",
+            },
+          },
+        },
+      };
+    </script>
+
+    <style>
+      body {
+        font-family: "Plus Jakarta Sans", sans-serif;
+      }
+      .brand-font {
+        font-family: "Space Grotesk", sans-serif;
+      }
+      /* Custom scrollbar for premium feel */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: rgba(15, 23, 42, 0.05);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(15, 23, 42, 0.2);
+        border-radius: 9999px;
+      }
+      .dark ::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200"
+  >
+    <!-- MAIN APP CONTAINER -->
+    <div id="app" class="flex h-screen w-full overflow-hidden relative">
+      <!-- SIDEBAR BACKDROP (Mobile only) -->
+      <div
+        id="sidebar-overlay"
+        onclick="toggleSidebar(false)"
+        class="fixed inset-0 bg-slate-950/60 z-30 hidden opacity-0 transition-opacity duration-300 lg:hidden"
+      ></div>
+
+      <!-- LEFT SIDEBAR -->
+      <aside
+        id="sidebar-panel"
+        class="fixed lg:static inset-y-0 left-0 w-72 bg-slate-900 text-slate-300 flex flex-col z-40 shrink-0 border-r border-slate-800 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-out h-full"
+      >
+        <!-- Premium Logo / Brand -->
+        <div
+          class="p-6 border-b border-slate-800 flex items-center justify-between"
+        >
+          <div class="flex items-center gap-3">
+            <div
+              class="w-9 h-9 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30"
+            >
+              <i class="fa-solid fa-compass text-lg animate-spin-slow"></i>
+            </div>
+            <div class="flex flex-col">
+              <h1
+                class="brand-font text-lg font-bold text-white tracking-wider leading-none"
+              >
+                OMNI<span class="text-violet-400">HORIZON</span>
+              </h1>
+              <span
+                class="text-[9px] text-slate-500 uppercase tracking-widest font-bold mt-1 leading-none"
+                >GTD Power Engine</span
+              >
+            </div>
+          </div>
+          <button
+            onclick="toggleDarkMode()"
+            class="text-slate-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-slate-800"
+          >
+            <i class="fa-solid fa-moon dark:hidden"></i>
+            <i class="fa-solid fa-sun hidden dark:inline"></i>
+          </button>
+        </div>
+
+        <!-- Quick Action: Quick Capture -->
+        <div class="px-4 py-3">
+          <button
+            onclick="openQuickEntry()"
+            class="w-full bg-violet-600 hover:bg-violet-700 text-white font-medium py-2.5 px-4 rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-violet-600/20 active:scale-[0.98]"
+          >
+            <i class="fa-solid fa-plus-circle text-base"></i>
+            <span>Quick Capture (N)</span>
+          </button>
+        </div>
+
+        <!-- PERSPECTIVES (Navigation) -->
+        <nav class="flex-1 overflow-y-auto px-3 space-y-1 py-1">
+          <div
+            class="text-[10px] uppercase font-bold text-slate-500 tracking-wider px-3 mb-2"
+          >
+            Perspectives
+          </div>
+
+          <button
+            onclick="switchPerspective('inbox')"
+            id="btn-inbox"
+            class="nav-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all hover:bg-slate-800 text-slate-400"
+          >
+            <div class="flex items-center gap-3">
+              <i
+                class="fa-solid fa-tray text-indigo-400 text-base w-5 text-center"
+              ></i>
+              <span>Inbox</span>
+            </div>
+            <span
+              id="badge-inbox"
+              class="bg-indigo-900/50 text-indigo-300 text-xs px-2 py-0.5 rounded-full font-bold"
+              >0</span
+            >
+          </button>
+
+          <button
+            onclick="switchPerspective('forecast')"
+            id="btn-forecast"
+            class="nav-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all hover:bg-slate-800 text-slate-400"
+          >
+            <div class="flex items-center gap-3">
+              <i
+                class="fa-solid fa-calendar text-rose-400 text-base w-5 text-center"
+              ></i>
+              <span>Forecast</span>
+            </div>
+            <span
+              id="badge-forecast"
+              class="bg-rose-950 text-rose-300 text-xs px-2 py-0.5 rounded-full font-bold"
+              >0</span
+            >
+          </button>
+
+          <button
+            onclick="switchPerspective('flagged')"
+            id="btn-flagged"
+            class="nav-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all hover:bg-slate-800 text-slate-400"
+          >
+            <div class="flex items-center gap-3">
+              <i
+                class="fa-solid fa-flag text-amber-500 text-base w-5 text-center"
+              ></i>
+              <span>Flagged</span>
+            </div>
+            <span
+              id="badge-flagged"
+              class="bg-amber-900/50 text-amber-300 text-xs px-2 py-0.5 rounded-full font-bold"
+              >0</span
+            >
+          </button>
+
+          <button
+            onclick="switchPerspective('projects')"
+            id="btn-projects"
+            class="nav-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all hover:bg-slate-800 text-slate-400"
+          >
+            <div class="flex items-center gap-3">
+              <i
+                class="fa-solid fa-diagram-project text-emerald-400 text-base w-5 text-center"
+              ></i>
+              <span>Projects</span>
+            </div>
+            <span
+              id="badge-projects"
+              class="bg-emerald-900/50 text-emerald-300 text-xs px-2 py-0.5 rounded-full font-bold"
+              >0</span
+            >
+          </button>
+
+          <button
+            onclick="switchPerspective('tags')"
+            id="btn-tags"
+            class="nav-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all hover:bg-slate-800 text-slate-400"
+          >
+            <div class="flex items-center gap-3">
+              <i
+                class="fa-solid fa-tags text-sky-400 text-base w-5 text-center"
+              ></i>
+              <span>Tags & Contexts</span>
+            </div>
+          </button>
+
+          <button
+            onclick="switchPerspective('review')"
+            id="btn-review"
+            class="nav-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all hover:bg-slate-800 text-slate-400"
+          >
+            <div class="flex items-center gap-3">
+              <i
+                class="fa-solid fa-clipboard-check text-fuchsia-400 text-base w-5 text-center"
+              ></i>
+              <span>Weekly Review</span>
+            </div>
+            <span
+              id="review-pulse"
+              class="w-2.5 h-2.5 bg-fuchsia-500 rounded-full animate-pulse mr-1 hidden"
+            ></span>
+          </button>
+
+          <button
+            onclick="switchPerspective('completed')"
+            id="btn-completed"
+            class="nav-btn w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all hover:bg-slate-800 text-slate-400"
+          >
+            <div class="flex items-center gap-3">
+              <i
+                class="fa-solid fa-circle-check text-slate-400 text-base w-5 text-center"
+              ></i>
+              <span>Archive / Done</span>
+            </div>
+          </button>
+
+          <div
+            class="pt-4 text-[10px] uppercase font-bold text-slate-500 tracking-wider px-3 mb-1"
+          >
+            Projects List
+          </div>
+          <div id="sidebar-projects-list" class="space-y-1">
+            <!-- Populated by JS -->
+          </div>
+        </nav>
+
+        <!-- Offline Sync, Storage Capacity Meter, Settings Footer -->
+        <div class="p-4 border-t border-slate-800 space-y-3">
+          <!-- Storage usage widget -->
+          <div
+            class="bg-slate-950/45 rounded-xl p-3 border border-slate-800/80 space-y-2"
+          >
+            <div
+              class="flex items-center justify-between text-[10px] font-bold text-slate-400"
+            >
+              <span class="flex items-center gap-1.5"
+                ><i class="fa-solid fa-hard-drive"></i> SYSTEM STORAGE</span
+              >
+              <span id="storage-percentage">0%</span>
+            </div>
+            <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div
+                id="storage-bar"
+                class="h-full bg-violet-500 rounded-full transition-all duration-300"
+                style="width: 0%"
+              ></div>
+            </div>
+            <div
+              class="flex items-center justify-between text-[9px] text-slate-500"
+            >
+              <span id="storage-text">0.0 KB / 5.0 MB</span>
+              <span
+                id="storage-warning"
+                class="text-rose-400 font-semibold hidden animate-pulse"
+                >Critical Limit!</span
+              >
+            </div>
+          </div>
+
+          <div
+            class="flex items-center justify-between text-[10px] text-slate-400 px-1"
+          >
+            <span>Engine v1.3</span>
+            <button
+              onclick="confirmReset()"
+              class="text-slate-500 hover:text-rose-400 transition-colors flex items-center gap-1 text-[10px] font-medium py-1 px-1.5 rounded bg-slate-800/50 hover:bg-rose-950/25 border border-slate-800 hover:border-rose-900/30"
+            >
+              <i class="fa-solid fa-trash-can text-[9px]"></i> Wipe Data
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              onclick="exportData()"
+              class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 px-3 rounded-lg flex items-center justify-center gap-1"
+            >
+              <i class="fa-solid fa-download"></i> Backup
+            </button>
+            <button
+              onclick="triggerImport()"
+              class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 px-3 rounded-lg flex items-center justify-center gap-1"
+            >
+              <i class="fa-solid fa-upload"></i> Restore
+            </button>
+            <input
+              type="file"
+              id="import-file-input"
+              onchange="loadImportWizard(event)"
+              class="hidden"
+              accept=".json"
+            />
+          </div>
+        </div>
+      </aside>
+
+      <!-- MAIN INTERFACE -->
+      <main
+        class="flex-1 flex flex-col bg-slate-50 dark:bg-slate-900 overflow-hidden relative h-full"
+      >
+        <!-- HEADER -->
+        <header
+          class="h-16 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-8 flex items-center justify-between shrink-0 bg-white dark:bg-slate-950 z-10 w-full gap-2"
+        >
+          <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+            <!-- Mobile Sidebar Burger Trigger -->
+            <button
+              onclick="toggleSidebar(true)"
+              class="lg:hidden text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 p-2 -ml-2 rounded-lg"
+            >
+              <i class="fa-solid fa-bars text-lg"></i>
+            </button>
+            <!-- Contextual Flexible Header Details -->
+            <div class="truncate flex flex-col justify-center">
+              <h2
+                id="current-perspective-title"
+                class="brand-font text-base sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white truncate flex items-center gap-2 leading-none"
+              >
+                Inbox
+              </h2>
+              <span
+                id="current-perspective-desc"
+                class="hidden sm:inline text-[11px] text-slate-400 dark:text-slate-500 truncate mt-1 leading-none"
+                >Processing unorganized thoughts and actions.</span
+              >
+            </div>
+          </div>
+
+          <!-- Utility Toolbar -->
+          <div class="flex items-center gap-2 sm:gap-4 shrink-0">
+            <!-- Search -->
+            <div class="relative w-40 sm:w-64">
+              <span
+                class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400"
+              >
+                <i class="fa-solid fa-magnifying-glass text-xs"></i>
+              </span>
+              <input
+                type="text"
+                id="search-input"
+                oninput="handleSearch()"
+                placeholder="Search..."
+                class="w-full text-xs pl-8 pr-4 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500 focus:border-violet-500 text-slate-700 dark:text-slate-300"
+              />
+            </div>
+          </div>
+        </header>
+
+        <!-- VIEW CONTROLLERS (Swappable Content) -->
+        <div class="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6 w-full">
+          <!-- PERSPECTIVE: FORECAST -->
+          <section id="view-forecast-panel" class="hidden space-y-4">
+            <div class="grid grid-cols-1 gap-3">
+              <!-- Dynamically generated days -->
+              <div
+                id="forecast-days-container"
+                class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 w-full"
+              ></div>
+            </div>
+          </section>
+
+          <!-- PERSPECTIVE: WEEKLY REVIEW -->
+          <section id="view-review-panel" class="hidden space-y-6">
+            <div
+              class="bg-gradient-to-r from-violet-900 to-indigo-900 rounded-2xl p-6 text-white shadow-xl"
+            >
+              <h3 class="brand-font text-lg font-bold flex items-center gap-2">
+                <i class="fa-solid fa-clipboard-check"></i> Project Guided
+                Review
+              </h3>
+              <p class="text-slate-200 text-xs mt-1 max-w-xl">
+                OmniFocus demands regular alignment. Review active projects to
+                ensure they are on schedule, have valid next actions, and remain
+                relevant.
+              </p>
+            </div>
+            <div id="review-container" class="space-y-4 w-full">
+              <!-- Managed project cards to review one by one -->
+            </div>
+          </section>
+
+          <!-- PERSPECTIVE: PROJECTS -->
+          <section id="view-projects-panel" class="hidden space-y-6">
+            <div
+              class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+            >
+              <h3 class="text-base font-semibold">Active Projects Workspace</h3>
+              <button
+                onclick="openNewProjectModal()"
+                class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-1.5 active:scale-[0.98]"
+              >
+                <i class="fa-solid fa-folder-plus"></i> New Project
+              </button>
+            </div>
+            <div
+              id="projects-workspace-grid"
+              class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 w-full"
+            >
+              <!-- Dynamic project planning cards -->
+            </div>
+          </section>
+
+          <!-- PERSPECTIVE: TAGS -->
+          <section id="view-tags-panel" class="hidden space-y-6">
+            <div
+              class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            >
+              <h3 class="text-base font-semibold">Tags & Location Contexts</h3>
+              <div class="flex items-center gap-2 w-full sm:w-auto">
+                <input
+                  type="text"
+                  id="new-tag-input"
+                  placeholder="Tag name..."
+                  class="text-xs border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-500 flex-1 sm:flex-none"
+                />
+                <button
+                  onclick="createNewTag()"
+                  class="text-xs bg-sky-600 hover:bg-sky-700 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-1 shrink-0"
+                >
+                  <i class="fa-solid fa-plus"></i> Add Tag
+                </button>
+              </div>
+            </div>
+            <div
+              id="tags-workspace"
+              class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full"
+            >
+              <!-- Tags grid -->
+            </div>
+          </section>
+
+          <!-- ACTION LIST CONTAINER -->
+          <div id="action-list-wrapper" class="space-y-4 w-full">
+            <!-- Dynamic Task Groups -->
+            <div
+              class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-semibold text-slate-500 border-b border-slate-200 dark:border-slate-800 pb-2"
+            >
+              <div class="flex items-center gap-4">
+                <span
+                  id="action-counter"
+                  class="bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-md text-[11px] font-bold"
+                  >0 actions</span
+                >
+                <span id="current-filter-indicator" class="text-slate-400"
+                  >Viewing active next actions</span
+                >
+              </div>
+              <!-- Quick Sort toggle -->
+              <div
+                class="flex items-center gap-2 shrink-0 self-end sm:self-auto"
+              >
+                <span class="text-slate-400">Sort:</span>
+                <select
+                  id="action-sort-select"
+                  onchange="renderMain()"
+                  class="bg-transparent text-slate-600 dark:text-slate-300 font-semibold focus:outline-none cursor-pointer"
+                >
+                  <option value="dueDate">Due Date</option>
+                  <option value="flagged">Flagged First</option>
+                  <option value="project">Project Grouping</option>
+                  <option value="created">Created Date</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Dynamic actions engine -->
+            <div id="actions-list" class="space-y-2.5 w-full">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- INSPECTOR BACKDROP (Mobile only) -->
+      <div
+        id="inspector-overlay"
+        onclick="closeInspector()"
+        class="fixed inset-0 bg-slate-950/60 z-30 hidden opacity-0 transition-opacity duration-300 lg:hidden"
+      ></div>
+
+      <!-- RIGHT INSPECTOR (Detail panel for selected task) -->
+      <aside
+        id="inspector-panel"
+        class="fixed lg:static inset-y-0 right-0 w-full sm:w-80 bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800 flex flex-col z-50 lg:z-10 shrink-0 transform translate-x-full lg:transform-none lg:hidden transition-transform duration-300 ease-out shadow-2xl lg:shadow-none h-full"
+      >
+        <div
+          class="h-16 border-b border-slate-200 dark:border-slate-800 px-6 flex items-center justify-between shrink-0 bg-white dark:bg-slate-950"
+        >
+          <h3
+            class="brand-font text-sm font-bold tracking-wide text-slate-500 uppercase"
+          >
+            Inspector
+          </h3>
+          <button
+            onclick="closeInspector()"
+            class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-2 rounded-lg"
+          >
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+
+        <!-- Inspector Body -->
+        <div
+          class="flex-1 overflow-y-auto p-6 space-y-5 text-xs bg-white dark:bg-slate-950"
+          id="inspector-content"
+        >
+          <!-- Managed dynamically -->
+        </div>
+      </aside>
+    </div>
+
+    <!-- MODAL: QUICK ENTRY -->
+    <div
+      id="quick-entry-modal"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden"
+    >
+      <div
+        class="bg-white dark:bg-slate-950 w-full max-w-xl max-h-[90vh] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col transform scale-95 opacity-0 transition-all duration-200"
+      >
+        <div
+          class="px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0"
+        >
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-bolt text-amber-500 animate-pulse"></i>
+            <h3 class="brand-font font-bold text-sm tracking-wide">
+              QUICK DEPOSIT INBOX
+            </h3>
+          </div>
+          <span
+            class="text-[10px] text-slate-400 bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded-md font-mono hidden sm:inline"
+            >ESC to close</span
+          >
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-6 space-y-4 overflow-y-auto flex-1">
+          <div>
+            <label
+              class="block text-[10px] uppercase font-bold text-slate-400 mb-1"
+              >What's on your mind?</label
+            >
+            <input
+              type="text"
+              id="qe-task-title"
+              placeholder="Buy server racks, review proposal, draft chapter..."
+              class="w-full text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-500 text-slate-800 dark:text-slate-100 font-medium"
+            />
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Project Link -->
+            <div>
+              <label
+                class="block text-[10px] uppercase font-bold text-slate-400 mb-1"
+                >Project Assignment</label
+              >
+              <select
+                id="qe-project-id"
+                class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-violet-500 text-slate-700 dark:text-slate-300"
+              >
+                <option value="">(None / Inbox)</option>
+                <!-- Dynamic -->
+              </select>
+            </div>
+            <!-- Flag -->
+            <div>
+              <label
+                class="block text-[10px] uppercase font-bold text-slate-400 mb-1"
+                >Context Flags</label
+              >
+              <div class="flex items-center h-10">
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="qe-flagged"
+                    class="rounded text-violet-600 focus:ring-violet-500 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 w-4 h-4"
+                  />
+                  <span class="text-xs text-slate-600 dark:text-slate-300"
+                    >Flag for focus</span
+                  >
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Due Date -->
+            <div>
+              <label
+                class="block text-[10px] uppercase font-bold text-slate-400 mb-1"
+                >Due Date</label
+              >
+              <input
+                type="date"
+                id="qe-due-date"
+                class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-violet-500 text-slate-700 dark:text-slate-300"
+              />
+            </div>
+            <!-- Tag Context -->
+            <div>
+              <label
+                class="block text-[10px] uppercase font-bold text-slate-400 mb-1"
+                >Action Context (Tag)</label
+              >
+              <select
+                id="qe-tag"
+                class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-violet-500 text-slate-700 dark:text-slate-300"
+              >
+                <option value="">(No Tag)</option>
+                <!-- Dynamic -->
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label
+              class="block text-[10px] uppercase font-bold text-slate-400 mb-1"
+              >Notes / Specifications</label
+            >
+            <textarea
+              id="qe-notes"
+              rows="3"
+              placeholder="Reference URLs, checklist ideas, secondary ideas..."
+              class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500 text-slate-700 dark:text-slate-300"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Actions Footer -->
+        <div
+          class="px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3 shrink-0"
+        >
+          <button
+            onclick="closeQuickEntry()"
+            class="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 px-4 py-2 rounded-lg"
+          >
+            Discard
+          </button>
+          <button
+            onclick="saveQuickEntry()"
+            class="text-xs bg-violet-600 hover:bg-violet-700 text-white font-medium px-5 py-2.5 rounded-xl shadow-md"
+          >
+            Add Action
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: NEW PROJECT -->
+    <div
+      id="new-project-modal"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden"
+    >
+      <div
+        class="bg-white dark:bg-slate-950 w-full max-w-md max-h-[90vh] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col transform scale-95 opacity-0 transition-all duration-200"
+      >
+        <div
+          class="px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0"
+        >
+          <h3 class="brand-font font-bold text-sm tracking-wide">
+            INITIALIZE NEW PROJECT
+          </h3>
+          <button
+            onclick="closeNewProjectModal()"
+            class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg"
+          >
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+        <div class="p-6 space-y-4 overflow-y-auto flex-1">
+          <div>
+            <label
+              class="block text-[10px] uppercase font-bold text-slate-400 mb-1"
+              >Project Name</label
+            >
+            <input
+              type="text"
+              id="np-title"
+              placeholder="Project codename or title..."
+              class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-violet-500 text-slate-800 dark:text-slate-100"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-[10px] uppercase font-bold text-slate-400 mb-1"
+              >Project Type</label
+            >
+            <select
+              id="np-structure"
+              class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-violet-500 text-slate-700 dark:text-slate-300"
+            >
+              <option value="Sequential">
+                Sequential (Perform tasks in strict order)
+              </option>
+              <option value="Parallel">
+                Parallel (Perform tasks in any order)
+              </option>
+              <option value="SingleActions">
+                Single Actions List (Continuous bucket)
+              </option>
+            </select>
+          </div>
+          <div>
+            <label
+              class="block text-[10px] uppercase font-bold text-slate-400 mb-1"
+              >Status</label
+            >
+            <select
+              id="np-status"
+              class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-violet-500 text-slate-700 dark:text-slate-300"
+            >
+              <option value="Active">Active</option>
+              <option value="OnHold">On Hold</option>
+              <option value="Dropped">Dropped</option>
+            </select>
+          </div>
+          <div>
+            <label
+              class="block text-[10px] uppercase font-bold text-slate-400 mb-1"
+              >Description / Goal</label
+            >
+            <textarea
+              id="np-desc"
+              rows="2"
+              placeholder="What is the successful target of this project?"
+              class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500 text-slate-700 dark:text-slate-300"
+            ></textarea>
+          </div>
+        </div>
+        <div
+          class="px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3 shrink-0"
+        >
+          <button
+            onclick="closeNewProjectModal()"
+            class="text-xs text-slate-500 hover:text-slate-700 px-4 py-2 rounded-lg"
+          >
+            Cancel
+          </button>
+          <button
+            onclick="createNewProject()"
+            class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-md"
+          >
+            Create Project
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: ADVANCED IMPORT WIZARD -->
+    <div
+      id="import-wizard-modal"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden"
+    >
+      <div
+        class="bg-white dark:bg-slate-950 w-full max-w-2xl max-h-[90vh] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col transform scale-95 opacity-0 transition-all duration-200"
+      >
+        <div
+          class="px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0"
+        >
+          <div
+            class="flex items-center gap-2 text-violet-600 dark:text-violet-400"
+          >
+            <i
+              class="fa-solid fa-wand-magic-sparkles text-lg animate-pulse"
+            ></i>
+            <h3 class="brand-font font-bold text-sm tracking-wide">
+              OMNIHORIZON IMPORT WIZARD
+            </h3>
+          </div>
+          <button
+            onclick="closeImportWizard()"
+            class="text-slate-400 hover:text-slate-600"
+          >
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+
+        <!-- Wizard Body -->
+        <div class="p-6 space-y-5 overflow-y-auto flex-1 text-xs">
+          <p class="text-slate-500 dark:text-slate-400">
+            We found compatible GTD database elements. Select whether you wish
+            to wipe and fully restore, or cherry-pick specific elements to merge
+            safely.
+          </p>
+
+          <!-- Mode Select tabs -->
+          <div
+            class="flex border-b border-slate-200 dark:border-slate-800 gap-4 pb-2"
+          >
+            <button
+              id="tab-opt-full"
+              onclick="setWizardMode('full')"
+              class="font-bold pb-2 border-b-2 border-violet-500 text-violet-600 dark:text-violet-400"
+            >
+              Full Restore
+            </button>
+            <button
+              id="tab-opt-selective"
+              onclick="setWizardMode('selective')"
+              class="font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            >
+              Selective Merge
+            </button>
+          </div>
+
+          <!-- Mode: Full Override Message -->
+          <div
+            id="wizard-full-panel"
+            class="space-y-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 p-4 rounded-xl"
+          >
+            <h4
+              class="font-bold text-rose-800 dark:text-rose-400 flex items-center gap-2"
+            >
+              <i class="fa-solid fa-triangle-exclamation"></i> Full System
+              Override Alert
+            </h4>
+            <p
+              class="text-rose-700/80 dark:text-rose-300/80 leading-relaxed text-[11px]"
+            >
+              Restoring the backup will fully wipe out your current tasks, tags,
+              location contexts, attachments, and configurations. It cannot be
+              undone.
+            </p>
+          </div>
+
+          <!-- Mode: Selective Setup -->
+          <div id="wizard-selective-panel" class="hidden space-y-4">
+            <!-- Projects Select -->
+            <div
+              class="space-y-2 border border-slate-200 dark:border-slate-800 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/30"
+            >
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-800 dark:text-slate-200"
+                  ><i class="fa-solid fa-folder text-emerald-500 mr-1.5"></i>
+                  Projects detected (<span id="wiz-proj-count">0</span>)</span
+                >
+                <button
+                  onclick="toggleAllWizCheckboxes('wiz-project-list')"
+                  class="text-violet-600 hover:underline font-semibold text-[10px]"
+                >
+                  Toggle All
+                </button>
+              </div>
+              <div
+                id="wiz-project-list"
+                class="max-h-24 overflow-y-auto space-y-1.5 pt-1"
+              >
+                <!-- Checkboxes dynamically managed -->
+              </div>
+            </div>
+
+            <!-- Tags Select -->
+            <div
+              class="space-y-2 border border-slate-200 dark:border-slate-800 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/30"
+            >
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-800 dark:text-slate-200"
+                  ><i class="fa-solid fa-tag text-sky-500 mr-1.5"></i> Tags &
+                  Contexts (<span id="wiz-tag-count">0</span>)</span
+                >
+                <button
+                  onclick="toggleAllWizCheckboxes('wiz-tag-list')"
+                  class="text-violet-600 hover:underline font-semibold text-[10px]"
+                >
+                  Toggle All
+                </button>
+              </div>
+              <div id="wiz-tag-list" class="flex flex-wrap gap-2 pt-1">
+                <!-- Inline tag selections -->
+              </div>
+            </div>
+
+            <!-- Tasks Select -->
+            <div
+              class="space-y-2 border border-slate-200 dark:border-slate-800 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/30"
+            >
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-800 dark:text-slate-200"
+                  ><i
+                    class="fa-solid fa-circle-check text-indigo-500 mr-1.5"
+                  ></i>
+                  Tasks detected (<span id="wiz-task-count">0</span>)</span
+                >
+                <button
+                  onclick="toggleAllWizCheckboxes('wiz-task-list')"
+                  class="text-violet-600 hover:underline font-semibold text-[10px]"
+                >
+                  Toggle All
+                </button>
+              </div>
+              <div
+                id="wiz-task-list"
+                class="max-h-40 overflow-y-auto space-y-2 pt-1"
+              >
+                <!-- List of tasks with attachments indicator -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions Footer -->
+        <div
+          class="px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3 shrink-0"
+        >
+          <button
+            onclick="closeImportWizard()"
+            class="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 px-4 py-2 rounded-lg"
+          >
+            Cancel
+          </button>
+          <button
+            id="wizard-submit-btn"
+            onclick="executeImportWizard()"
+            class="text-xs bg-violet-600 hover:bg-violet-700 text-white font-medium px-5 py-2.5 rounded-xl shadow-md"
+          >
+            Execute Import
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: WIPE DATA SAFETY CHALLENGE (Multi-layer Confirmation) -->
+    <div
+      id="wipe-data-modal"
+      class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm hidden"
+    >
+      <div
+        class="bg-white dark:bg-slate-950 w-full max-w-md rounded-2xl border border-rose-200 dark:border-rose-900/50 shadow-2xl overflow-hidden flex flex-col transform scale-95 opacity-0 transition-all duration-200"
+      >
+        <!-- Step 1 Layout -->
+        <div id="wipe-step-1" class="p-6 space-y-4">
+          <div
+            class="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/30 flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto"
+          >
+            <i
+              class="fa-solid fa-triangle-exclamation text-xl animate-pulse"
+            ></i>
+          </div>
+          <div class="text-center space-y-1.5">
+            <h3
+              class="brand-font font-bold text-base text-slate-900 dark:text-white"
+            >
+              Dangerous Operation: Wipe Database
+            </h3>
+            <p class="text-xs text-slate-400 dark:text-slate-500">
+              This will permanently delete all your projects, tasks, contexts,
+              and file attachments. This action is irreversible.
+            </p>
+          </div>
+          <div
+            class="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800/80 space-y-2 text-[11px] text-slate-500 dark:text-slate-400"
+          >
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-circle-check text-rose-500"></i> Clear Local
+              Storage keys
+            </div>
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-circle-check text-rose-500"></i> Purge all
+              base64 attachments
+            </div>
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-circle-check text-rose-500"></i> Reset to
+              fresh default setup
+            </div>
+          </div>
+          <div class="flex gap-2.5">
+            <button
+              onclick="closeWipeModal()"
+              class="w-1/2 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800"
+            >
+              Cancel
+            </button>
+            <button
+              onclick="advanceWipeStep()"
+              class="w-1/2 text-xs bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 rounded-xl"
+            >
+              I Understand, Proceed
+            </button>
+          </div>
+        </div>
+        <!-- Step 2 Layout -->
+        <div id="wipe-step-2" class="p-6 space-y-4 hidden">
+          <div
+            class="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/30 flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto"
+          >
+            <i class="fa-solid fa-shield-halved text-xl"></i>
+          </div>
+          <div class="text-center space-y-1.5">
+            <h3
+              class="brand-font font-bold text-base text-slate-900 dark:text-white"
+            >
+              Confirm Safety Challenge
+            </h3>
+            <p class="text-xs text-slate-400 dark:text-slate-500">
+              Type the word
+              <strong class="text-rose-500 font-bold select-all font-mono"
+                >WIPE</strong
+              >
+              below to confirm deletion.
+            </p>
+          </div>
+          <div>
+            <input
+              type="text"
+              id="wipe-challenge-input"
+              oninput="validateWipeChallenge()"
+              placeholder="Type WIPE here..."
+              class="w-full text-center text-sm font-bold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-rose-500 text-slate-800 dark:text-slate-100 font-mono"
+            />
+          </div>
+          <div class="flex gap-2.5">
+            <button
+              onclick="closeWipeModal()"
+              class="w-1/2 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800"
+            >
+              Abort
+            </button>
+            <button
+              id="wipe-execute-btn"
+              disabled
+              onclick="executeCompleteWipe()"
+              class="w-1/2 text-xs bg-slate-300 dark:bg-slate-800 text-slate-400 dark:text-slate-600 font-semibold py-2.5 rounded-xl cursor-not-allowed"
+            >
+              Wipe and Purge
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CORE SCRIPT LOGIC -->
+    <script>
+      // State management
+      let state = {
+        projects: [],
+        tasks: [],
+        tags: [],
+        currentPerspective: "inbox",
+        selectedTaskId: null,
+        searchQuery: "",
+        darkMode: false,
+      };
+
+      // GTD seed default configuration
+      const SEED_DATA = {
+        projects: [
+          {
+            id: "p1",
+            name: "Launch iOS App Setup",
+            desc: "Initialize architecture, configure build triggers, purchase dev accounts.",
+            structure: "Parallel",
+            status: "Active",
+            lastReviewed: new Date().toISOString(),
+          },
+          {
+            id: "p2",
+            name: "OmniHorizon Mastery",
+            desc: "Learn custom configurations and map next horizons of productivity.",
+            structure: "SingleActions",
+            status: "Active",
+            lastReviewed: new Date().toISOString(),
+          },
+        ],
+        tasks: [
+          {
+            id: "t1",
+            title: "Tap here to inspect task details & upload file attachments",
+            projectId: "p2",
+            flagged: true,
+            completed: false,
+            tag: "DeepWork",
+            dueDate: new Date().toISOString().split("T")[0],
+            notes:
+              "Double click or tap this task. On the right hand side of the desktop view, the Inspector will load. You can drag or select files to store here securely in local memory!",
+            created: new Date().toISOString(),
+            attachments: [],
+          },
+          {
+            id: "t2",
+            title: "Map out OmniHorizon perspectives tutorial",
+            projectId: "p2",
+            flagged: false,
+            completed: false,
+            tag: "Office",
+            dueDate: "",
+            notes: "Understand Inbox, Forecast, and Projects views thoroughly.",
+            created: new Date().toISOString(),
+            attachments: [],
+          },
+          {
+            id: "t3",
+            title: "Review unorganized capture notes and files",
+            projectId: "",
+            flagged: false,
+            completed: false,
+            tag: "Review",
+            dueDate: "",
+            notes:
+              "This is a raw inbox item. Since it has no project assigned, it represents unclassified raw inputs. Tap it to designate a project space, context tag, or priority flag.",
+            created: new Date().toISOString(),
+            attachments: [],
+          },
+        ],
+        tags: ["Office", "DeepWork", "Design", "Code", "Errands", "Review"],
+        currentPerspective: "inbox",
+      };
+
+      let tempImportData = null;
+      let wizardMode = "full";
+
+      // Load Data
+      function initData() {
+        const stored = localStorage.getItem("omnihorizon_state");
+        if (stored) {
+          try {
+            const parsed = JSON.parse(stored);
+            state = {
+              projects: parsed.projects || [],
+              tasks: parsed.tasks || [],
+              tags: parsed.tags || [],
+              currentPerspective: parsed.currentPerspective || "inbox",
+              selectedTaskId: parsed.selectedTaskId || null,
+              searchQuery: parsed.searchQuery || "",
+              darkMode: parsed.darkMode || false,
+            };
+          } catch (e) {
+            setupEmptyState();
+          }
+        } else {
+          setupEmptyState();
+        }
+
+        // Initialize system dark mode setup
+        if (
+          localStorage.getItem("omnihorizon_dark") === "true" ||
+          window.matchMedia("(prefers-color-scheme: dark)").matches
+        ) {
+          document.documentElement.classList.add("dark");
+          state.darkMode = true;
+        } else {
+          document.documentElement.classList.remove("dark");
+          state.darkMode = false;
+        }
+
+        populateSelects();
+        switchPerspective(state.currentPerspective || "inbox");
+        updateStorageIndicator();
+      }
+
+      function setupEmptyState() {
+        state = {
+          projects: [],
+          tasks: [],
+          tags: [],
+          currentPerspective: "inbox",
+          selectedTaskId: null,
+          searchQuery: "",
+          darkMode: false,
+        };
+        saveToLocalStorage();
+      }
+
+      function seedDemoDefault() {
+        state.projects = JSON.parse(JSON.stringify(SEED_DATA.projects));
+        state.tasks = JSON.parse(JSON.stringify(SEED_DATA.tasks));
+        state.tags = JSON.parse(JSON.stringify(SEED_DATA.tags));
+        saveToLocalStorage();
+        switchPerspective("inbox");
+      }
+
+      function saveToLocalStorage() {
+        localStorage.setItem("omnihorizon_state", JSON.stringify(state));
+        updateBadges();
+        updateStorageIndicator();
+      }
+
+      // Storage Dashboard calculations
+      function calculateStorageUsage() {
+        const stateStr = JSON.stringify(state);
+        const bytes = new Blob([stateStr]).size;
+        const maxBytes = 5242880; // 5MB limit
+        const percentage = (bytes / maxBytes) * 100;
+
+        const sizeStr =
+          bytes > 1048576
+            ? (bytes / 1048576).toFixed(2) + " MB"
+            : (bytes / 1024).toFixed(1) + " KB";
+
+        return { bytes, percentage, sizeStr };
+      }
+
+      function updateStorageIndicator() {
+        const usage = calculateStorageUsage();
+        const bar = document.getElementById("storage-bar");
+        const text = document.getElementById("storage-text");
+        const pctEl = document.getElementById("storage-percentage");
+        const warning = document.getElementById("storage-warning");
+
+        if (bar && text && pctEl) {
+          const visualPct = Math.min(usage.percentage, 100);
+          bar.style.width = visualPct + "%";
+          text.innerText = `${usage.sizeStr} / 5.0 MB`;
+          pctEl.innerText = `${visualPct.toFixed(1)}%`;
+
+          if (usage.percentage > 80) {
+            bar.className =
+              "h-full bg-rose-500 rounded-full transition-all duration-300";
+            warning.classList.remove("hidden");
+          } else if (usage.percentage > 50) {
+            bar.className =
+              "h-full bg-amber-500 rounded-full transition-all duration-300";
+            warning.classList.add("hidden");
+          } else {
+            bar.className =
+              "h-full bg-violet-500 rounded-full transition-all duration-300";
+            warning.classList.add("hidden");
+          }
+        }
+      }
+
+      // Toggle Dark Mode
+      function toggleDarkMode() {
+        const isDark = document.documentElement.classList.toggle("dark");
+        localStorage.setItem("omnihorizon_dark", isDark);
+        state.darkMode = isDark;
+        saveToLocalStorage();
+      }
+
+      // Toggle Sidebar for mobile viewports
+      function toggleSidebar(show) {
+        const sidebar = document.getElementById("sidebar-panel");
+        const overlay = document.getElementById("sidebar-overlay");
+        if (show) {
+          sidebar.classList.remove("-translate-x-full");
+          overlay.classList.remove("hidden");
+          setTimeout(() => overlay.classList.add("opacity-100"), 10);
+        } else {
+          sidebar.classList.add("-translate-x-full");
+          overlay.classList.remove("opacity-100");
+          setTimeout(() => overlay.classList.add("hidden"), 300);
+        }
+      }
+
+      // Check if project needs review (older than 7 days)
+      function projectNeedsReview(proj) {
+        if (!proj.lastReviewed) return true;
+        const lastRevDate = new Date(proj.lastReviewed);
+        const diffTime = Date.now() - lastRevDate.getTime();
+        const diffDays = diffTime / (1000 * 60 * 60 * 24);
+        return diffDays > 7;
+      }
+
+      // Is Date Overdue helper
+      function isOverdue(dateStr) {
+        if (!dateStr) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return new Date(dateStr) < today;
+      }
+
+      // Perspective Management (Optimized spacing layout alignments)
+      function switchPerspective(perspectiveName) {
+        state.currentPerspective = perspectiveName;
+        state.selectedTaskId = null;
+        closeInspector();
+
+        // Auto-collapse sidebar on mobile after making a choice
+        if (window.innerWidth < 1024) {
+          toggleSidebar(false);
+        }
+
+        // UI Active State highlights
+        document.querySelectorAll(".nav-btn").forEach((btn) => {
+          btn.classList.remove("bg-slate-800", "text-white");
+          btn.classList.add("text-slate-400");
+        });
+
+        const activeBtn = document.getElementById(`btn-${perspectiveName}`);
+        if (activeBtn) {
+          activeBtn.classList.remove("text-slate-400");
+          activeBtn.classList.add("bg-slate-800", "text-white");
+        }
+
+        // Update Header Text & Description (Standardized structures to prevent shifting)
+        const titleEl = document.getElementById("current-perspective-title");
+        const descEl = document.getElementById("current-perspective-desc");
+
+        // Panels toggle visibility
+        document.getElementById("view-forecast-panel").classList.add("hidden");
+        document.getElementById("view-projects-panel").classList.add("hidden");
+        document.getElementById("view-review-panel").classList.add("hidden");
+        document.getElementById("view-tags-panel").classList.add("hidden");
+        document
+          .getElementById("action-list-wrapper")
+          .classList.remove("hidden");
+
+        if (perspectiveName.startsWith("project_")) {
+          const pid = perspectiveName.replace("project_", "");
+          const proj = state.projects.find((p) => p.id === pid);
+          const name = proj ? proj.name : "Unknown Project";
+          titleEl.innerHTML = `<i class="fa-solid fa-folder text-emerald-500"></i><span>${name}</span>`;
+          descEl.innerText =
+            proj && proj.desc
+              ? proj.desc
+              : "Viewing project actions workspace.";
+        } else {
+          switch (perspectiveName) {
+            case "inbox":
+              titleEl.innerHTML =
+                '<i class="fa-solid fa-tray text-indigo-500"></i><span>Inbox</span>';
+              descEl.innerText =
+                "Processing system items and loose next-step actions.";
+              break;
+            case "forecast":
+              titleEl.innerHTML =
+                '<i class="fa-solid fa-calendar text-rose-500"></i><span>Forecast</span>';
+              descEl.innerText =
+                "Visualizing critical deadlines and context plans.";
+              document
+                .getElementById("view-forecast-panel")
+                .classList.remove("hidden");
+              renderForecast();
+              break;
+            case "flagged":
+              titleEl.innerHTML =
+                '<i class="fa-solid fa-flag text-amber-500"></i><span>Flagged</span>';
+              descEl.innerText =
+                "Top priorities requiring immediate real-time attention.";
+              break;
+            case "projects":
+              titleEl.innerHTML =
+                '<i class="fa-solid fa-diagram-project text-emerald-500"></i><span>Projects Dashboard</span>';
+              descEl.innerText = "Hierarchical, multi-outcome commitments.";
+              document
+                .getElementById("view-projects-panel")
+                .classList.remove("hidden");
+              document
+                .getElementById("action-list-wrapper")
+                .classList.add("hidden");
+              renderProjectsWorkspace();
+              break;
+            case "tags":
+              titleEl.innerHTML =
+                '<i class="fa-solid fa-tags text-sky-500"></i><span>Context Engine</span>';
+              descEl.innerText =
+                "Mapping actions relative to environment, energy, or location constraints.";
+              document
+                .getElementById("view-tags-panel")
+                .classList.remove("hidden");
+              document
+                .getElementById("action-list-wrapper")
+                .classList.add("hidden");
+              renderTagsWorkspace();
+              break;
+            case "review":
+              titleEl.innerHTML =
+                '<i class="fa-solid fa-clipboard-check text-fuchsia-500"></i><span>Weekly Review Process</span>';
+              descEl.innerText =
+                "Systematic review of active components to establish system confidence.";
+              document
+                .getElementById("view-review-panel")
+                .classList.remove("hidden");
+              document
+                .getElementById("action-list-wrapper")
+                .classList.add("hidden");
+              renderReviewPanel();
+              break;
+            case "completed":
+              titleEl.innerHTML =
+                '<i class="fa-solid fa-circle-check text-slate-500"></i><span>Completed Archive</span>';
+              descEl.innerText =
+                "A history of tasks crossed off and archived actions.";
+              break;
+          }
+        }
+
+        renderMain();
+        saveToLocalStorage();
+      }
+
+      // Render the standard list view for actions
+      function renderMain() {
+        const listEl = document.getElementById("actions-list");
+        const counterEl = document.getElementById("action-counter");
+        const filterIndicatorEl = document.getElementById(
+          "current-filter-indicator",
+        );
+        const sortVal = document.getElementById("action-sort-select").value;
+
+        let filtered = [...state.tasks];
+
+        // Step 1: filter query based on perspective
+        if (state.currentPerspective === "inbox") {
+          filtered = filtered.filter(
+            (t) => !t.completed && (!t.projectId || t.projectId === ""),
+          );
+          filterIndicatorEl.innerText =
+            "Viewing loose actions without a designated project workspace";
+        } else if (state.currentPerspective === "flagged") {
+          filtered = filtered.filter((t) => !t.completed && t.flagged);
+          filterIndicatorEl.innerText =
+            "Viewing active flagged tasks prioritized for action";
+        } else if (state.currentPerspective === "forecast") {
+          filtered = filtered.filter((t) => !t.completed && t.dueDate);
+          filterIndicatorEl.innerText =
+            "Scheduled deadlines needing precise management";
+        } else if (state.currentPerspective === "completed") {
+          filtered = filtered.filter((t) => t.completed);
+          filterIndicatorEl.innerText =
+            "Complete history of actions crossed off your horizon";
+        } else if (state.currentPerspective.startsWith("project_")) {
+          const pid = state.currentPerspective.replace("project_", "");
+          filtered = filtered.filter((t) => t.projectId === pid);
+          const proj = state.projects.find((p) => p.id === pid);
+          filterIndicatorEl.innerText = `Viewing all actions belonging to: ${proj ? proj.name : "Unknown project"}`;
+        } else {
+          filtered = filtered.filter((t) => !t.completed);
+        }
+
+        // Step 2: Global text search matching
+        if (state.searchQuery && state.searchQuery.trim() !== "") {
+          const q = state.searchQuery.toLowerCase();
+          filtered = filtered.filter((t) => {
+            const matchTitle = t.title.toLowerCase().includes(q);
+            const matchNotes = t.notes && t.notes.toLowerCase().includes(q);
+            const matchFiles =
+              t.attachments &&
+              t.attachments.some((att) => att.name.toLowerCase().includes(q));
+            return matchTitle || matchNotes || matchFiles;
+          });
+          filterIndicatorEl.innerText = `Search Results matching: "${state.searchQuery}"`;
+        }
+
+        // Step 3: Sort logic
+        if (sortVal === "dueDate") {
+          filtered.sort((a, b) => {
+            if (!a.dueDate) return 1;
+            if (!b.dueDate) return -1;
+            return new Date(a.dueDate) - new Date(b.dueDate);
+          });
+        } else if (sortVal === "flagged") {
+          filtered.sort((a, b) => (b.flagged ? 1 : 0) - (a.flagged ? 1 : 0));
+        } else if (sortVal === "project") {
+          filtered.sort((a, b) =>
+            (a.projectId || "").localeCompare(b.projectId || ""),
+          );
+        } else if (sortVal === "created") {
+          filtered.sort((a, b) => new Date(b.created) - new Date(a.created));
+        }
+
+        counterEl.innerText = `${filtered.length} actions`;
+
+        // Step 4: Intelligent Empty States
+        if (filtered.length === 0) {
+          const isSystemCompletelyEmpty =
+            state.tasks.length === 0 && state.projects.length === 0;
+
+          if (isSystemCompletelyEmpty) {
+            // Absolute blank state onboarding
+            listEl.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-slate-600 space-y-5 max-w-lg mx-auto text-center animate-fade-in">
+              <div class="w-16 h-16 rounded-full bg-violet-100 dark:bg-violet-950/40 flex items-center justify-center text-violet-600 dark:text-violet-400 animate-bounce">
+                <i class="fa-solid fa-compass text-3xl"></i>
+              </div>
+              <div>
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-200">Welcome to OmniHorizon</p>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1.5 leading-relaxed">
+                  Your GTD workspace is empty. Create your first task using the <strong>Quick Capture</strong> button, or seed the interactive demo portfolio to explore the workflows immediately.
+                </p>
+              </div>
+              <div class="flex flex-col sm:flex-row gap-3 w-full justify-center pt-2">
+                <button onclick="openQuickEntry()" class="text-xs bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2.5 px-5 rounded-xl transition-all">
+                  <i class="fa-solid fa-plus mr-1"></i> Capture Task
+                </button>
+                <button onclick="seedDemoDefault()" class="text-xs bg-violet-600 hover:bg-violet-700 text-white font-semibold py-2.5 px-5 rounded-xl shadow-lg shadow-violet-500/20 transition-all">
+                  Seed Demo Database
+                </button>
+              </div>
+            </div>
+          `;
+          } else {
+            // Perspective specific clean empty states
+            let title = "Perspective Clear";
+            let icon = "fa-circle-check text-slate-300 dark:text-slate-800";
+            let message = "No actions match your current view filters.";
+
+            if (state.currentPerspective === "inbox") {
+              title = "Inbox Zero!";
+              icon = "fa-tray text-emerald-500 dark:text-emerald-500/80";
+              message =
+                "Your raw inbox is fully cleared. All random thoughts have been successfully clarified and filed.";
+            } else if (state.currentPerspective === "flagged") {
+              title = "Nothing Flagged";
+              icon = "fa-flag text-slate-300 dark:text-slate-800";
+              message =
+                "Flag high-importance actions from the inspector panel to track immediate next actions here.";
+            } else if (state.currentPerspective === "forecast") {
+              title = "Schedule Clear";
+              icon = "fa-calendar-check text-indigo-400";
+              message =
+                "No deadlines are looming or scheduled in this upcoming weekly horizon.";
+            } else if (state.currentPerspective === "completed") {
+              title = "Archive Empty";
+              icon = "fa-box-archive text-slate-300 dark:text-slate-800";
+              message =
+                "Check off tasks on the main list to archive completed actions securely here.";
+            } else if (state.currentPerspective.startsWith("project_")) {
+              title = "Project Clean State";
+              icon = "fa-folder-open text-emerald-500";
+              message =
+                "There are no tasks linked with this workspace project. Use Quick Capture to assign new ones.";
+            }
+
+            listEl.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-slate-600 space-y-4 max-w-md mx-auto text-center">
+              <div class="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center">
+                <i class="fa-solid ${icon} text-2xl"></i>
+              </div>
+              <div>
+                <p class="text-sm font-bold text-slate-700 dark:text-slate-300">${title}</p>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 leading-normal">${message}</p>
+              </div>
+            </div>
+          `;
+          }
+          return;
+        }
+
+        // Step 5: Map elements to DOM
+        listEl.innerHTML = filtered
+          .map((task) => {
+            const projectObj = state.projects.find(
+              (p) => p.id === task.projectId,
+            );
+            const projectBadge = projectObj
+              ? `<span onclick="event.stopPropagation(); switchPerspective('project_${projectObj.id}')" class="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:underline border border-emerald-200 dark:border-emerald-900/30 text-[10px] font-semibold px-2 py-0.5 rounded-md cursor-pointer"><i class="fa-solid fa-folder-open mr-1"></i>${projectObj.name}</span>`
+              : `<span class="bg-slate-100 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500 text-[10px] font-medium px-2 py-0.5 rounded-md"><i class="fa-solid fa-tray mr-1"></i>Inbox</span>`;
+
+            const tagBadge = task.tag
+              ? `<span class="bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-900/30 text-[10px] px-2 py-0.5 rounded-md"><i class="fa-solid fa-tag mr-1 text-[9px]"></i>${task.tag}</span>`
+              : "";
+
+            const dateBadge = task.dueDate
+              ? `<span class="text-[10px] font-semibold flex items-center gap-1 ${isOverdue(task.dueDate) ? "text-rose-500 animate-pulse" : "text-slate-500 dark:text-slate-400"}">
+              <i class="fa-solid fa-clock"></i> ${task.dueDate}
+             </span>`
+              : "";
+
+            const attachmentsCount = task.attachments
+              ? task.attachments.length
+              : 0;
+            const attachmentBadge =
+              attachmentsCount > 0
+                ? `<span class="text-[10px] text-slate-400 dark:text-slate-500 font-semibold flex items-center gap-1 bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded-md" title="${attachmentsCount} file(s) attached">
+              <i class="fa-solid fa-paperclip text-[9px]"></i> ${attachmentsCount}
+             </span>`
+                : "";
+
+            return `
+          <div onclick="selectTask('${task.id}')" class="group flex items-start gap-3 sm:gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-950/60 hover:bg-slate-50 dark:hover:bg-slate-900/40 hover:border-slate-300 dark:hover:border-slate-700 transition-all cursor-pointer ${state.selectedTaskId === task.id ? "ring-2 ring-violet-500/50 border-violet-500 dark:border-violet-500/80 bg-violet-50/10 dark:bg-violet-950/10" : ""}">
+            <!-- Task Checkbox -->
+            <div class="pt-0.5 shrink-0" onclick="event.stopPropagation()">
+              <button onclick="toggleTaskCompletion('${task.id}')" class="w-5 h-5 rounded-full border-2 border-slate-300 dark:border-slate-700 flex items-center justify-center hover:border-violet-500 transition-colors ${task.completed ? "bg-violet-600 border-violet-600 text-white" : ""}">
+                ${task.completed ? '<i class="fa-solid fa-check text-[10px]"></i>' : ""}
+              </button>
+            </div>
+
+            <!-- Task Main Title / Body -->
+            <div class="flex-1 min-w-0 space-y-1.5">
+              <div class="flex items-center gap-2">
+                <span class="text-xs sm:text-sm font-medium leading-snug break-words ${task.completed ? "line-through text-slate-400 dark:text-slate-500" : "text-slate-800 dark:text-slate-200"}">${task.title}</span>
+                ${task.flagged ? '<i class="fa-solid fa-flag text-amber-500 text-xs shrink-0 animate-pulse"></i>' : ""}
+              </div>
+              
+              <!-- Badges Area -->
+              <div class="flex flex-wrap items-center gap-2.5">
+                ${projectBadge}
+                ${tagBadge}
+                ${dateBadge}
+                ${attachmentBadge}
+                ${task.notes ? `<i class="fa-solid fa-align-left text-slate-400 dark:text-slate-500 text-[10px]" title="${task.notes}"></i>` : ""}
+              </div>
+            </div>
+
+            <!-- Inline controls visible on hover/touch -->
+            <div class="opacity-0 group-hover:opacity-100 flex items-center gap-1 sm:gap-2 shrink-0 transition-opacity" onclick="event.stopPropagation()">
+              <button onclick="toggleFlag('${task.id}')" class="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-amber-500 transition-all" title="Flag Task">
+                <i class="fa-solid fa-flag"></i>
+              </button>
+              <button onclick="deleteTask('${task.id}')" class="p-1.5 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-950/50 text-slate-400 hover:text-rose-600 transition-all" title="Delete Task">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        `;
+          })
+          .join("");
+      }
+
+      // Sidebar & Navigation update routines
+      function updateBadges() {
+        const inboxCount = state.tasks.filter(
+          (t) => !t.completed && (!t.projectId || t.projectId === ""),
+        ).length;
+        document.getElementById("badge-inbox").innerText = inboxCount;
+
+        const forecastCount = state.tasks.filter(
+          (t) => !t.completed && t.dueDate,
+        ).length;
+        document.getElementById("badge-forecast").innerText = forecastCount;
+
+        const flaggedCount = state.tasks.filter(
+          (t) => !t.completed && t.flagged,
+        ).length;
+        document.getElementById("badge-flagged").innerText = flaggedCount;
+
+        const projectsActive = state.projects.filter(
+          (p) => p.status === "Active",
+        ).length;
+        document.getElementById("badge-projects").innerText = projectsActive;
+
+        // Pulse review indicator if any project is past 7 days review window
+        const reviewPulse = document.getElementById("review-pulse");
+        if (reviewPulse) {
+          const anyNeedsReview = state.projects.some((p) =>
+            projectNeedsReview(p),
+          );
+          if (anyNeedsReview) {
+            reviewPulse.classList.remove("hidden");
+          } else {
+            reviewPulse.classList.add("hidden");
+          }
+        }
+
+        const sidebarProjContainer = document.getElementById(
+          "sidebar-projects-list",
+        );
+        if (state.projects.length === 0) {
+          sidebarProjContainer.innerHTML = `<span class="text-[10px] text-slate-600 px-3 italic py-1 block">No active projects</span>`;
+        } else {
+          sidebarProjContainer.innerHTML = state.projects
+            .map((proj) => {
+              const pTasks = state.tasks.filter(
+                (t) => !t.completed && t.projectId === proj.id,
+              );
+              const isActive =
+                state.currentPerspective === `project_${proj.id}`;
+              return `
+            <button onclick="switchPerspective('project_${proj.id}')" class="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs transition-all hover:bg-slate-800 ${isActive ? "bg-slate-800 text-emerald-400" : "text-slate-500 hover:text-slate-300"}">
+              <span class="truncate pr-2 font-medium flex items-center gap-2">
+                <i class="fa-solid fa-folder text-emerald-500 text-[10px]"></i> ${proj.name}
+              </span>
+              <span class="bg-slate-800 text-slate-400 text-[10px] px-1.5 py-0.5 rounded-full font-bold">${pTasks.length}</span>
+            </button>
+          `;
+            })
+            .join("");
+        }
+      }
+
+      // Action Selection & Detail Inspector
+      function selectTask(taskId) {
+        state.selectedTaskId = taskId;
+        renderMain();
+        openInspector();
+      }
+
+      // Inspector Engine
+      function openInspector() {
+        const panel = document.getElementById("inspector-panel");
+        const content = document.getElementById("inspector-content");
+        const overlay = document.getElementById("inspector-overlay");
+
+        panel.classList.remove("translate-x-full", "lg:hidden");
+        if (window.innerWidth < 1024) {
+          overlay.classList.remove("hidden");
+          setTimeout(() => overlay.classList.add("opacity-100"), 10);
+        }
+
+        const task = state.tasks.find((t) => t.id === state.selectedTaskId);
+        if (!task) {
+          closeInspector();
+          return;
+        }
+
+        if (!task.attachments) task.attachments = [];
+
+        const projectOptions = state.projects
+          .map(
+            (p) => `
+        <option value="${p.id}" ${task.projectId === p.id ? "selected" : ""}>${p.name}</option>
+      `,
+          )
+          .join("");
+
+        const tagOptions = state.tags
+          .map(
+            (tag) => `
+        <option value="${tag}" ${task.tag === tag ? "selected" : ""}>${tag}</option>
+      `,
+          )
+          .join("");
+
+        const attachmentsHtml =
+          task.attachments.length > 0
+            ? task.attachments
+                .map((att) => {
+                  const sizeStr =
+                    att.size > 1048576
+                      ? (att.size / 1048576).toFixed(1) + " MB"
+                      : (att.size / 1024).toFixed(1) + " KB";
+                  return `
+              <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2 gap-2 text-[11px]">
+                <div class="flex items-center gap-2 min-w-0">
+                  <i class="fa-solid ${getFileIconClass(att.type)} text-slate-400 text-xs shrink-0"></i>
+                  <div class="truncate">
+                    <div class="font-semibold text-slate-700 dark:text-slate-300 truncate" title="${att.name}">${att.name}</div>
+                    <div class="text-[9px] text-slate-400">${sizeStr}</div>
+                  </div>
+                </div>
+                <div class="flex gap-1.5 shrink-0">
+                  <a href="${att.data}" download="${att.name}" class="p-1 text-slate-500 hover:text-violet-600 dark:hover:text-violet-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md" title="Download File">
+                    <i class="fa-solid fa-download"></i>
+                  </a>
+                  <button onclick="removeFileAttachment('${att.id}')" class="p-1 text-slate-500 hover:text-rose-500 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md" title="Delete File">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                </div>
+              </div>
+            `;
+                })
+                .join("")
+            : `<div class="text-center py-4 text-slate-400 border border-dashed border-slate-200 dark:border-slate-800 rounded-xl">No files attached to this action.</div>`;
+
+        content.innerHTML = `
+        <div class="space-y-4">
+          <!-- Title Editable -->
+          <div>
+            <label class="block text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 mb-1">Action Name</label>
+            <input type="text" id="insp-title" onchange="updateSelectedTaskField('title', this.value)" value="${task.title}" class="w-full text-xs font-semibold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-violet-500 text-slate-800 dark:text-slate-100">
+          </div>
+
+          <!-- Project Association -->
+          <div>
+            <label class="block text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 mb-1">Project Assignment</label>
+            <select id="insp-project" onchange="updateSelectedTaskField('projectId', this.value)" class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2.5 focus:outline-none text-slate-700 dark:text-slate-300">
+              <option value="">(Unassigned - Inbox)</option>
+              ${projectOptions}
+            </select>
+          </div>
+
+          <!-- Tags Context -->
+          <div>
+            <label class="block text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 mb-1">Context Tag</label>
+            <select id="insp-tag" onchange="updateSelectedTaskField('tag', this.value)" class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2.5 focus:outline-none text-slate-700 dark:text-slate-300">
+              <option value="">(None)</option>
+              ${tagOptions}
+            </select>
+          </div>
+
+          <!-- Due Date -->
+          <div>
+            <label class="block text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 mb-1">Target Due Date</label>
+            <input type="date" id="insp-duedate" onchange="updateSelectedTaskField('dueDate', this.value)" value="${task.dueDate || ""}" class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2.5 focus:outline-none text-slate-700 dark:text-slate-300">
+          </div>
+
+          <!-- Flagged Switch -->
+          <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200 dark:border-slate-800/80">
+            <span class="font-medium text-slate-600 dark:text-slate-400 font-bold">Flag for Focus</span>
+            <button onclick="toggleFlag('${task.id}'); openInspector();" class="text-base">
+              <i class="fa-solid fa-flag ${task.flagged ? "text-amber-500" : "text-slate-300 dark:text-slate-700"} hover:scale-110 transition-transform"></i>
+            </button>
+          </div>
+
+          <!-- Notes Area -->
+          <div>
+            <label class="block text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 mb-1">Notes & Specifications</label>
+            <textarea id="insp-notes" onchange="updateSelectedTaskField('notes', this.value)" rows="3" class="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-violet-500 text-slate-700 dark:text-slate-300" placeholder="URLs, details...">${task.notes || ""}</textarea>
+          </div>
+
+          <!-- Attachments System Interface -->
+          <div class="border-t border-slate-100 dark:border-slate-900 pt-3 space-y-2">
+            <div class="flex items-center justify-between">
+              <label class="block text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">Attachments (${task.attachments.length})</label>
+              <button onclick="triggerFileAttachmentUpload()" class="text-violet-600 hover:text-violet-700 font-bold text-[10px] flex items-center gap-1">
+                <i class="fa-solid fa-paperclip"></i> Add File
+              </button>
+              <input type="file" id="inspector-file-attachment" onchange="processFileAttachment(event)" class="hidden">
+            </div>
+            
+            <div class="space-y-2 max-h-48 overflow-y-auto">
+              ${attachmentsHtml}
+            </div>
+            <p class="text-[9px] text-slate-400 text-center leading-normal">
+              Attachments consume your 5.0 MB offline sandbox limit. Keep individual files small.
+            </p>
+          </div>
+
+          <!-- Metadata & Trash Operations -->
+          <div class="pt-2 border-t border-slate-100 dark:border-slate-900 text-[10px] text-slate-400 space-y-1">
+            <div>Created: ${new Date(task.created).toLocaleString()}</div>
+            <div>Action ID: ${task.id}</div>
+            <button onclick="deleteTask('${task.id}')" class="w-full mt-3 text-center text-rose-500 hover:text-white border border-rose-300 hover:bg-rose-500 dark:border-rose-900/40 dark:hover:bg-rose-950/20 py-2 rounded-xl font-medium transition-colors">
+              <i class="fa-solid fa-trash mr-1"></i> Delete Action Item
+            </button>
+          </div>
+        </div>
+      `;
+      }
+
+      function closeInspector() {
+        const panel = document.getElementById("inspector-panel");
+        const overlay = document.getElementById("inspector-overlay");
+
+        panel.classList.add("translate-x-full");
+        setTimeout(() => panel.classList.add("lg:hidden"), 300);
+
+        overlay.classList.remove("opacity-100");
+        setTimeout(() => overlay.classList.add("hidden"), 300);
+
+        state.selectedTaskId = null;
+      }
+
+      function updateSelectedTaskField(fieldName, value) {
+        if (!state.selectedTaskId) return;
+        const taskIndex = state.tasks.findIndex(
+          (t) => t.id === state.selectedTaskId,
+        );
+        if (taskIndex !== -1) {
+          state.tasks[taskIndex][fieldName] = value;
+          saveToLocalStorage();
+          renderMain();
+        }
+      }
+
+      // Attachment Handlers
+      function triggerFileAttachmentUpload() {
+        document.getElementById("inspector-file-attachment").click();
+      }
+
+      function processFileAttachment(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (file.size > 1258291) {
+          alert(
+            "Maximum attachment file size threshold is 1.2 MB. Please select a smaller text, PDF, or compressed image.",
+          );
+          return;
+        }
+
+        const currentUsage = calculateStorageUsage();
+        const projectWithAttachmentBytes = currentUsage.bytes + file.size;
+        if (projectWithAttachmentBytes > 5000000) {
+          alert(
+            "This attachment will exceed the 5.0 MB LocalStorage boundary limit. Please free up some capacity.",
+          );
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const task = state.tasks.find((t) => t.id === state.selectedTaskId);
+          if (task) {
+            if (!task.attachments) task.attachments = [];
+
+            task.attachments.push({
+              id: "att_" + Date.now(),
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              data: e.target.result,
+            });
+
+            saveToLocalStorage();
+            openInspector();
+            renderMain();
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function removeFileAttachment(attId) {
+        const task = state.tasks.find((t) => t.id === state.selectedTaskId);
+        if (task && task.attachments) {
+          task.attachments = task.attachments.filter((att) => att.id !== attId);
+          saveToLocalStorage();
+          openInspector();
+          renderMain();
+        }
+      }
+
+      // Toggle Handlers
+      function toggleTaskCompletion(id) {
+        const task = state.tasks.find((t) => t.id === id);
+        if (task) {
+          task.completed = !task.completed;
+          saveToLocalStorage();
+          renderMain();
+          updateBadges();
+        }
+      }
+
+      function toggleFlag(id) {
+        const task = state.tasks.find((t) => t.id === id);
+        if (task) {
+          task.flagged = !task.flagged;
+          saveToLocalStorage();
+          renderMain();
+          updateBadges();
+        }
+      }
+
+      function deleteTask(id) {
+        state.tasks = state.tasks.filter((t) => t.id !== id);
+        if (state.selectedTaskId === id) {
+          closeInspector();
+        }
+        saveToLocalStorage();
+        renderMain();
+        updateBadges();
+      }
+
+      // SEARCH HANDLER
+      function handleSearch() {
+        state.searchQuery = document.getElementById("search-input").value;
+        renderMain();
+      }
+
+      // Dynamic Select drop-down populations
+      function populateSelects() {
+        const qeProj = document.getElementById("qe-project-id");
+        const qeTag = document.getElementById("qe-tag");
+
+        let projHtml = '<option value="">(None / Inbox)</option>';
+        projHtml += state.projects
+          .map((p) => `<option value="${p.id}">${p.name}</option>`)
+          .join("");
+        qeProj.innerHTML = projHtml;
+
+        let tagHtml = '<option value="">(No Tag)</option>';
+        tagHtml += state.tags
+          .map((t) => `<option value="${t}">${t}</option>`)
+          .join("");
+        qeTag.innerHTML = tagHtml;
+      }
+
+      // QUICK ENTRY MODAL (GTD engine core)
+      function openQuickEntry() {
+        const modal = document.getElementById("quick-entry-modal");
+        const box = modal.querySelector("div");
+
+        modal.classList.remove("hidden");
+        setTimeout(() => {
+          box.classList.remove("scale-95", "opacity-0");
+          document.getElementById("qe-task-title").focus();
+        }, 50);
+
+        // Reset values
+        document.getElementById("qe-task-title").value = "";
+        document.getElementById("qe-project-id").value = "";
+        document.getElementById("qe-flagged").checked = false;
+        document.getElementById("qe-due-date").value = "";
+        document.getElementById("qe-tag").value = "";
+        document.getElementById("qe-notes").value = "";
+
+        populateSelects();
+      }
+
+      function closeQuickEntry() {
+        const modal = document.getElementById("quick-entry-modal");
+        const box = modal.querySelector("div");
+
+        box.classList.add("scale-95", "opacity-0");
+        setTimeout(() => {
+          modal.classList.add("hidden");
+        }, 150);
+      }
+
+      function saveQuickEntry() {
+        const title = document.getElementById("qe-task-title").value.trim();
+        if (!title) {
+          alert("Action name must have detailed text.");
+          return;
+        }
+
+        const newTask = {
+          id: "t_" + Date.now(),
+          title: title,
+          projectId: document.getElementById("qe-project-id").value,
+          flagged: document.getElementById("qe-flagged").checked,
+          completed: false,
+          tag: document.getElementById("qe-tag").value,
+          dueDate: document.getElementById("qe-due-date").value,
+          notes: document.getElementById("qe-notes").value,
+          attachments: [],
+          created: new Date().toISOString(),
+        };
+
+        state.tasks.push(newTask);
+        saveToLocalStorage();
+        closeQuickEntry();
+        renderMain();
+        updateBadges();
+      }
+
+      // NEW PROJECT PLANNING
+      function openNewProjectModal() {
+        const modal = document.getElementById("new-project-modal");
+        const box = modal.querySelector("div");
+        modal.classList.remove("hidden");
+        setTimeout(() => {
+          box.classList.remove("scale-95", "opacity-0");
+        }, 50);
+      }
+
+      function closeNewProjectModal() {
+        const modal = document.getElementById("new-project-modal");
+        const box = modal.querySelector("div");
+        box.classList.add("scale-95", "opacity-0");
+        setTimeout(() => {
+          modal.classList.add("hidden");
+        }, 150);
+      }
+
+      function createNewProject() {
+        const name = document.getElementById("np-title").value.trim();
+        if (!name) {
+          alert("Enter project name.");
+          return;
+        }
+
+        const newProj = {
+          id: "p_" + Date.now(),
+          name: name,
+          desc: document.getElementById("np-desc").value,
+          structure: document.getElementById("np-structure").value,
+          status: document.getElementById("np-status").value,
+          lastReviewed: new Date().toISOString(),
+        };
+
+        state.projects.push(newProj);
+        saveToLocalStorage();
+        closeNewProjectModal();
+
+        if (state.currentPerspective === "projects") {
+          renderProjectsWorkspace();
+        }
+        updateBadges();
+        populateSelects();
+      }
+
+      // PERSPECTIVE: FORECAST CONTROLLER
+      function renderForecast() {
+        const container = document.getElementById("forecast-days-container");
+        const days = [];
+        const now = new Date();
+
+        for (let i = 0; i < 7; i++) {
+          const dateObj = new Date(now.getTime() + i * 24 * 60 * 60 * 1000);
+          const yyyy = dateObj.getFullYear();
+          const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
+          const dd = String(dateObj.getDate()).padStart(2, "0");
+          const dateString = `${yyyy}-${mm}-${dd}`;
+
+          const isToday = i === 0;
+          const dayTasks = state.tasks.filter(
+            (t) => !t.completed && t.dueDate === dateString,
+          );
+
+          days.push(`
+          <div class="p-4 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2 flex flex-col justify-between min-h-[110px] ${isToday ? "ring-2 ring-rose-500" : ""}">
+            <div class="text-center">
+              <div class="text-[10px] uppercase tracking-wider font-extrabold text-slate-400 dark:text-slate-500">
+                ${dateObj.toLocaleDateString("en-US", { weekday: "short" })}
+              </div>
+              <div class="text-xl font-bold mt-0.5 ${isToday ? "text-rose-500" : ""}">
+                ${dateObj.getDate()}
+              </div>
+            </div>
+            
+            <div class="text-center">
+              <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${dayTasks.length > 0 ? "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-400" : "bg-slate-100 text-slate-400 dark:bg-slate-900"}">
+                ${dayTasks.length} Due
+              </span>
+            </div>
+          </div>
+        `);
+        }
+        container.innerHTML = days.join("");
+      }
+
+      // PERSPECTIVE: PROJECTS DESIGN WORKSPACE
+      function renderProjectsWorkspace() {
+        const container = document.getElementById("projects-workspace-grid");
+
+        if (state.projects.length === 0) {
+          container.innerHTML = `
+          <div class="col-span-full py-16 text-center text-slate-400 dark:text-slate-600">
+            No projects registered. Create one to organize actions into folders.
+          </div>
+        `;
+          return;
+        }
+
+        container.innerHTML = state.projects
+          .map((p) => {
+            const pTasks = state.tasks.filter((t) => t.projectId === p.id);
+            const completedCount = pTasks.filter((t) => t.completed).length;
+            const totalCount = pTasks.length;
+            const percent =
+              totalCount > 0
+                ? Math.round((completedCount / totalCount) * 100)
+                : 0;
+
+            return `
+          <div class="p-5 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col justify-between space-y-4 hover:shadow-lg transition-all">
+            <div class="space-y-2">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0 flex-1">
+                  <h4 class="brand-font font-bold text-slate-900 dark:text-slate-100 text-sm hover:underline cursor-pointer truncate" onclick="switchPerspective('project_${p.id}')">${p.name}</h4>
+                  <p class="text-[10px] text-slate-400 leading-normal mt-0.5 line-clamp-2">${p.desc || "No descriptive objective declared."}</p>
+                </div>
+                <span class="text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded shrink-0 ${p.status === "Active" ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400" : "bg-amber-100 text-amber-700"}">
+                  ${p.status}
+                </span>
+              </div>
+
+              <div class="flex items-center gap-1.5 text-[10px] text-slate-400">
+                <i class="fa-solid fa-microchip"></i>
+                <span class="truncate">Planning structure: <strong class="text-slate-600 dark:text-slate-300">${p.structure}</strong></span>
+              </div>
+            </div>
+
+            <!-- Visual Progress bar -->
+            <div class="space-y-1">
+              <div class="flex items-center justify-between text-[10px] text-slate-400">
+                <span>Progress</span>
+                <span>${percent}% (${completedCount}/${totalCount})</span>
+              </div>
+              <div class="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                <div class="bg-emerald-500 h-full transition-all duration-300" style="width: ${percent}%"></div>
+              </div>
+            </div>
+
+            <!-- Operations -->
+            <div class="pt-3 border-t border-slate-100 dark:border-slate-900 flex justify-between items-center text-[10px]">
+              <span class="text-slate-400">Reviewed: ${new Date(p.lastReviewed).toLocaleDateString()}</span>
+              <div class="flex items-center gap-2">
+                <button onclick="deleteProject('${p.id}')" class="text-rose-500 hover:text-rose-700 hover:scale-105 transition-transform"><i class="fa-solid fa-trash-can"></i> Delete</button>
+              </div>
+            </div>
+          </div>
+        `;
+          })
+          .join("");
+      }
+
+      // PERSPECTIVE: TAGS WORKSPACE
+      function renderTagsWorkspace() {
+        const container = document.getElementById("tags-workspace");
+
+        container.innerHTML = state.tags
+          .map((tag) => {
+            const count = state.tasks.filter(
+              (t) => !t.completed && t.tag === tag,
+            ).length;
+            return `
+          <div class="p-4 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-2 min-w-0">
+              <i class="fa-solid fa-tag text-sky-400 text-xs shrink-0"></i>
+              <span class="text-xs font-semibold truncate">${tag}</span>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full">${count} Active</span>
+              <button onclick="deleteTag('${tag}')" class="text-slate-400 hover:text-rose-500 p-0.5 rounded"><i class="fa-solid fa-times-circle"></i></button>
+            </div>
+          </div>
+        `;
+          })
+          .join("");
+      }
+
+      function createNewTag() {
+        const inp = document.getElementById("new-tag-input");
+        const tagVal = inp.value.trim();
+        if (!tagVal) return;
+
+        if (!state.tags.includes(tagVal)) {
+          state.tags.push(tagVal);
+          saveToLocalStorage();
+          inp.value = "";
+          renderTagsWorkspace();
+          populateSelects();
+        }
+      }
+
+      // Delete Tag
+      function deleteTag(tagName) {
+        state.tags = state.tags.filter((t) => t !== tagName);
+        state.tasks = state.tasks.map((t) => {
+          if (t.tag === tagName) t.tag = "";
+          return t;
+        });
+        saveToLocalStorage();
+        renderTagsWorkspace();
+        populateSelects();
+      }
+
+      // PERSPECTIVE: WEEKLY REVIEW
+      function renderReviewPanel() {
+        const container = document.getElementById("review-container");
+
+        if (state.projects.length === 0) {
+          container.innerHTML = `
+          <div class="text-center py-10 text-slate-400">
+            No projects loaded to execute audit reviews on.
+          </div>
+        `;
+          return;
+        }
+
+        container.innerHTML = state.projects
+          .map((p) => {
+            const pTasks = state.tasks.filter(
+              (t) => !t.completed && t.projectId === p.id,
+            );
+            const lastRevDate = new Date(p.lastReviewed);
+            const needsReview = projectNeedsReview(p);
+
+            return `
+          <div class="bg-white dark:bg-slate-950 p-6 rounded-2xl border ${needsReview ? "border-amber-400/70 ring-1 ring-amber-400/20" : "border-slate-200 dark:border-slate-800"} shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all">
+            <div class="space-y-1.5 flex-1 min-w-0">
+              <div class="flex items-center gap-2.5 flex-wrap">
+                <h4 class="font-bold text-sm text-slate-950 dark:text-white truncate">${p.name}</h4>
+                ${needsReview ? '<span class="bg-amber-100 text-amber-800 text-[9px] font-extrabold tracking-wide uppercase px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0"><i class="fa-solid fa-triangle-exclamation animate-pulse"></i> Overdue Review</span>' : ""}
+              </div>
+              <p class="text-xs text-slate-400 leading-normal max-w-xl">${p.desc || "No continuous operational goals set."}</p>
+              
+              <div class="flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-slate-400 pt-1">
+                <span>Active Next Steps: <strong class="text-slate-700 dark:text-slate-300">${pTasks.length} tasks</strong></span>
+                <span>Last system audit: <strong class="text-slate-500">${lastRevDate.toLocaleDateString()}</strong></span>
+              </div>
+            </div>
+
+            <div class="shrink-0 flex items-center gap-2">
+              <button onclick="markProjectReviewed('${p.id}')" class="text-xs bg-violet-600 hover:bg-violet-700 text-white font-medium py-2 px-4 rounded-xl flex items-center gap-1.5 transition-all active:scale-[0.98]">
+                <i class="fa-solid fa-check-double"></i> Mark Reviewed
+              </button>
+            </div>
+          </div>
+        `;
+          })
+          .join("");
+      }
+
+      function markProjectReviewed(pid) {
+        const pIdx = state.projects.findIndex((p) => p.id === pid);
+        if (pIdx !== -1) {
+          state.projects[pIdx].lastReviewed = new Date().toISOString();
+          saveToLocalStorage();
+          renderReviewPanel();
+          updateBadges();
+        }
+      }
+
+      // MULTI-LAYER SAFETY WIPE ROUTINES
+      function confirmReset() {
+        const modal = document.getElementById("wipe-data-modal");
+        const box = modal.querySelector("div");
+
+        document.getElementById("wipe-step-1").classList.remove("hidden");
+        document.getElementById("wipe-step-2").classList.add("hidden");
+        document.getElementById("wipe-challenge-input").value = "";
+
+        modal.classList.remove("hidden");
+        setTimeout(() => {
+          box.classList.remove("scale-95", "opacity-0");
+        }, 50);
+      }
+
+      function closeWipeModal() {
+        const modal = document.getElementById("wipe-data-modal");
+        const box = modal.querySelector("div");
+        box.classList.add("scale-95", "opacity-0");
+        setTimeout(() => {
+          modal.classList.add("hidden");
+        }, 150);
+      }
+
+      function advanceWipeStep() {
+        document.getElementById("wipe-step-1").classList.add("hidden");
+        document.getElementById("wipe-step-2").classList.remove("hidden");
+        document.getElementById("wipe-challenge-input").focus();
+      }
+
+      function validateWipeChallenge() {
+        const val = document
+          .getElementById("wipe-challenge-input")
+          .value.trim();
+        const executeBtn = document.getElementById("wipe-execute-btn");
+        if (val === "WIPE") {
+          executeBtn.disabled = false;
+          executeBtn.className =
+            "w-1/2 text-xs bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2.5 rounded-xl shadow-lg shadow-rose-600/25 cursor-pointer";
+        } else {
+          executeBtn.disabled = true;
+          executeBtn.className =
+            "w-1/2 text-xs bg-slate-300 dark:bg-slate-800 text-slate-400 dark:text-slate-600 font-semibold py-2.5 rounded-xl cursor-not-allowed";
+        }
+      }
+
+      function executeCompleteWipe() {
+        localStorage.removeItem("omnihorizon_state");
+        closeWipeModal();
+        setupEmptyState();
+        initData();
+      }
+
+      // DATA EXPORT / IMPORT
+      function exportData() {
+        const dataStr =
+          "data:text/json;charset=utf-8," +
+          encodeURIComponent(JSON.stringify(state, null, 2));
+        const downloadAnchor = document.createElement("a");
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute(
+          "download",
+          `OmniHorizon_Backup_${new Date().toISOString().split("T")[0]}.json`,
+        );
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+      }
+
+      function triggerImport() {
+        document.getElementById("import-file-input").click();
+      }
+
+      function loadImportWizard(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            tempImportData = JSON.parse(e.target.result);
+            if (
+              tempImportData.tasks &&
+              tempImportData.projects &&
+              tempImportData.tags
+            ) {
+              openImportWizard();
+            } else {
+              alert(
+                "File structure is not compatible with OmniHorizon GTD files.",
+              );
+              tempImportData = null;
+            }
+          } catch (err) {
+            alert(
+              "Selected file has formatting errors. Verify JSON authenticity.",
+            );
+            tempImportData = null;
+          }
+        };
+        reader.readAsText(file);
+        event.target.value = "";
+      }
+
+      function openImportWizard() {
+        if (!tempImportData) return;
+
+        const modal = document.getElementById("import-wizard-modal");
+        const box = modal.querySelector("div");
+
+        modal.classList.remove("hidden");
+        setTimeout(() => {
+          box.classList.remove("scale-95", "opacity-0");
+        }, 50);
+
+        document.getElementById("wiz-proj-count").innerText =
+          tempImportData.projects.length;
+        document.getElementById("wiz-tag-count").innerText =
+          tempImportData.tags.length;
+        document.getElementById("wiz-task-count").innerText =
+          tempImportData.tasks.length;
+
+        const projContainer = document.getElementById("wiz-project-list");
+        projContainer.innerHTML = tempImportData.projects
+          .map(
+            (p) => `
+        <label class="flex items-center gap-2.5 p-1.5 hover:bg-slate-100 dark:hover:bg-slate-900 rounded cursor-pointer">
+          <input type="checkbox" name="wiz-projects" value="${p.id}" checked class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4">
+          <div class="min-w-0">
+            <span class="font-bold text-[11px] block text-slate-800 dark:text-slate-200 truncate">${p.name}</span>
+            <span class="text-[9px] text-slate-400 block truncate">${p.desc || "No description."}</span>
+          </div>
+        </label>
+      `,
+          )
+          .join("");
+
+        const tagContainer = document.getElementById("wiz-tag-list");
+        tagContainer.innerHTML = tempImportData.tags
+          .map(
+            (t) => `
+        <label class="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg cursor-pointer text-[10px]">
+          <input type="checkbox" name="wiz-tags" value="${t}" checked class="rounded text-violet-600 focus:ring-violet-500 w-3.5 h-3.5">
+          <span class="font-semibold text-slate-700 dark:text-slate-300">${t}</span>
+        </label>
+      `,
+          )
+          .join("");
+
+        const taskContainer = document.getElementById("wiz-task-list");
+        taskContainer.innerHTML = tempImportData.tasks
+          .map((t) => {
+            const attCount = t.attachments ? t.attachments.length : 0;
+            const attachmentText =
+              attCount > 0
+                ? `<span class="bg-indigo-100 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-extrabold px-1 py-0.5 rounded text-[8px] shrink-0"><i class="fa-solid fa-paperclip"></i> ${attCount} files</span>`
+                : "";
+            const projName = t.projectId
+              ? tempImportData.projects.find((p) => p.id === t.projectId)
+                  ?.name || "Unknown Project"
+              : "Inbox";
+
+            return `
+          <label class="flex items-start gap-2.5 p-2 bg-slate-50 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800/40 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors">
+            <input type="checkbox" name="wiz-tasks" value="${t.id}" checked class="rounded text-violet-600 focus:ring-violet-500 w-4 h-4 mt-0.5">
+            <div class="min-w-0 flex-1">
+              <span class="font-semibold text-slate-800 dark:text-slate-200 block truncate leading-tight">${t.title}</span>
+              <div class="flex items-center gap-2 mt-0.5 text-[9px] text-slate-400">
+                <span class="truncate">Workspace: <strong>${projName}</strong></span>
+                ${attachmentText}
+              </div>
+            </div>
+          </label>
+        `;
+          })
+          .join("");
+
+        setWizardMode("full");
+      }
+
+      function closeImportWizard() {
+        const modal = document.getElementById("import-wizard-modal");
+        const box = modal.querySelector("div");
+        box.classList.add("scale-95", "opacity-0");
+        setTimeout(() => {
+          modal.classList.add("hidden");
+          tempImportData = null;
+        }, 150);
+      }
+
+      function setWizardMode(mode) {
+        wizardMode = mode;
+        const tabFull = document.getElementById("tab-opt-full");
+        const tabSelective = document.getElementById("tab-opt-selective");
+        const fullPanel = document.getElementById("wizard-full-panel");
+        const selectivePanel = document.getElementById(
+          "wizard-selective-panel",
+        );
+        const submitBtn = document.getElementById("wizard-submit-btn");
+
+        if (mode === "full") {
+          tabFull.className =
+            "font-bold pb-2 border-b-2 border-violet-500 text-violet-600 dark:text-violet-400";
+          tabSelective.className =
+            "font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200";
+          fullPanel.classList.remove("hidden");
+          selectivePanel.classList.add("hidden");
+          submitBtn.innerText = "Overwrite & Restore All";
+        } else {
+          tabFull.className =
+            "font-bold pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200";
+          tabSelective.className =
+            "font-bold pb-2 border-b-2 border-violet-500 text-violet-600 dark:text-violet-400";
+          fullPanel.classList.add("hidden");
+          selectivePanel.classList.remove("hidden");
+          submitBtn.innerText = "Merge Selected Data";
+        }
+      }
+
+      function toggleAllWizCheckboxes(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+        const allChecked = Array.from(checkboxes).every((cb) => cb.checked);
+        checkboxes.forEach((cb) => (cb.checked = !allChecked));
+      }
+
+      function executeImportWizard() {
+        if (!tempImportData) return;
+
+        if (wizardMode === "full") {
+          state = {
+            projects: tempImportData.projects || [],
+            tasks: tempImportData.tasks || [],
+            tags: tempImportData.tags || [],
+            currentPerspective: "inbox",
+            selectedTaskId: null,
+            searchQuery: "",
+            darkMode: state.darkMode,
+          };
+        } else {
+          const selectedProjIds = Array.from(
+            document.querySelectorAll('input[name="wiz-projects"]:checked'),
+          ).map((cb) => cb.value);
+          const selectedTags = Array.from(
+            document.querySelectorAll('input[name="wiz-tags"]:checked'),
+          ).map((cb) => cb.value);
+          const selectedTaskIds = Array.from(
+            document.querySelectorAll('input[name="wiz-tasks"]:checked'),
+          ).map((cb) => cb.value);
+
+          selectedTags.forEach((tag) => {
+            if (!state.tags.includes(tag)) {
+              state.tags.push(tag);
+            }
+          });
+
+          selectedProjIds.forEach((id) => {
+            const importProj = tempImportData.projects.find((p) => p.id === id);
+            if (importProj) {
+              state.projects = state.projects.filter((p) => p.id !== id);
+              state.projects.push(importProj);
+            }
+          });
+
+          selectedTaskIds.forEach((id) => {
+            const importTask = tempImportData.tasks.find((t) => t.id === id);
+            if (importTask) {
+              if (
+                importTask.projectId &&
+                !state.projects.some((p) => p.id === importTask.projectId)
+              ) {
+                importTask.projectId = "";
+              }
+              state.tasks = state.tasks.filter((t) => t.id !== id);
+              state.tasks.push(importTask);
+            }
+          });
+        }
+
+        saveToLocalStorage();
+        closeImportWizard();
+        initData();
+        alert("GTD engine data import processed successfully!");
+      }
+
+      // Global key binds
+      window.addEventListener("keydown", (e) => {
+        if (
+          e.key.toLowerCase() === "n" &&
+          document.activeElement.tagName !== "INPUT" &&
+          document.activeElement.tagName !== "TEXTAREA"
+        ) {
+          e.preventDefault();
+          openQuickEntry();
+        }
+        if (e.key === "Escape") {
+          closeQuickEntry();
+          closeNewProjectModal();
+          closeInspector();
+          closeImportWizard();
+          closeWipeModal();
+        }
+      });
+
+      window.onload = function () {
+        initData();
+      };
+    </script>
+  </body>
+</html>
