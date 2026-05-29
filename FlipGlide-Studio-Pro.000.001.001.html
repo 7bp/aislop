@@ -1,0 +1,3799 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no"
+    />
+    <title>FlipGlide Studio - Ultimate Pro 2D Animation Engine</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: "#fff1f2",
+                100: "#ffe4e6",
+                500: "#f43f5e",
+                600: "#e11d48",
+                700: "#be123c",
+                900: "#881337",
+              },
+              dark: {
+                800: "#1e1e24",
+                900: "#121216",
+                950: "#0a0a0d",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+      body {
+        user-select: none;
+        -webkit-user-select: none;
+        overscroll-behavior-y: contain;
+        touch-action: none;
+        height: 100vh;
+        height: -webkit-fill-available;
+      }
+      html {
+        height: 100vh;
+        height: -webkit-fill-available;
+      }
+      .transparent-pattern {
+        background-color: #1a1a20;
+        background-image:
+          linear-gradient(45deg, #141418 25%, transparent 25%),
+          linear-gradient(-45deg, #141418 25%, transparent 25%),
+          linear-gradient(45deg, transparent 75%, #141418 75%),
+          linear-gradient(-45deg, transparent 75%, #141418 75%);
+        background-size: 20px 20px;
+        background-position:
+          0 0,
+          0 10px,
+          10px -10px,
+          -10px 0px;
+      }
+      .grid-guide {
+        background-size: var(--grid-size, 32px) var(--grid-size, 32px);
+        background-image:
+          linear-gradient(
+            to right,
+            rgba(244, 63, 94, 0.08) 1px,
+            transparent 1px
+          ),
+          linear-gradient(
+            to bottom,
+            rgba(244, 63, 94, 0.08) 1px,
+            transparent 1px
+          );
+      }
+      .layer-drag-over {
+        border-color: #f43f5e !important;
+        background-color: rgba(244, 63, 94, 0.05) !important;
+      }
+      .tutorial-highlight {
+        position: relative;
+        z-index: 60 !important;
+        box-shadow:
+          0 0 0 9999px rgba(10, 10, 13, 0.85),
+          0 0 15px 5px #f43f5e !important;
+        pointer-events: auto !important;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-dark-950 text-slate-100 flex flex-col font-sans overflow-hidden"
+  >
+    <!-- MAIN PROJECTS MANAGER DASHBOARD (Initial Entry Screen View) -->
+    <div
+      id="view-dashboard"
+      class="fixed inset-0 bg-dark-950 z-50 flex flex-col p-6 overflow-y-auto"
+    >
+      <div class="max-w-5xl w-full mx-auto flex flex-col gap-6 h-full">
+        <!-- Dashboard Topbar -->
+        <div
+          class="flex items-center justify-between border-b border-zinc-800 pb-4"
+        >
+          <div class="flex items-center gap-3">
+            <div
+              class="bg-brand-600 p-3 rounded-2xl text-white shadow-xl shadow-brand-600/20"
+            >
+              <i data-lucide="layers-3" class="w-8 h-8"></i>
+            </div>
+            <div>
+              <h1
+                class="text-xl font-black tracking-tight text-white flex items-center gap-2"
+              >
+                FlipGlide
+                <span
+                  class="text-xs bg-brand-500/10 text-brand-500 px-2 py-0.5 rounded-full font-semibold border border-brand-500/20"
+                  >Studio Pro</span
+                >
+              </h1>
+              <p class="text-xs text-zinc-400">
+                Offline-first high performance 2D frame-by-frame animation suite
+              </p>
+            </div>
+          </div>
+
+          <!-- Quick Imports / Create -->
+          <div class="flex items-center gap-2">
+            <label
+              class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold py-2 px-4 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer transition"
+            >
+              <i data-lucide="upload" class="w-4 h-4"></i> Import Project
+              (.json)
+              <input
+                type="file"
+                id="input-json-dashboard"
+                class="hidden"
+                accept=".json"
+              />
+            </label>
+            <button
+              id="btn-create-project-top"
+              class="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 px-5 rounded-xl text-xs flex items-center gap-1.5 transition shadow-lg shadow-brand-500/20 active:scale-95"
+            >
+              <i data-lucide="plus" class="w-4 h-4"></i> New Project
+            </button>
+          </div>
+        </div>
+
+        <!-- Library Grid -->
+        <div class="flex-1 flex flex-col gap-4">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-zinc-500">
+            My Animations Workspace
+          </h2>
+
+          <div
+            id="dashboard-projects-grid"
+            class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"
+          >
+            <!-- Dynamic project cards go here -->
+          </div>
+        </div>
+
+        <!-- Footer / Version info -->
+        <div
+          class="border-t border-zinc-800 pt-4 flex justify-between text-[11px] text-zinc-600"
+        >
+          <span>FlipGlide v3.4 Pro • Local Storage Sandbox</span>
+          <span>Active Resolution Support: Multi-DPI 800x600 Scaled</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- STUDIO CREATIVE EDITOR VIEW (Hidden on initial load) -->
+    <div
+      id="view-editor"
+      class="hidden flex-1 flex flex-col min-h-0 overflow-hidden relative"
+    >
+      <!-- Editor Topbar -->
+      <header
+        class="bg-dark-900 border-b border-zinc-800 px-4 py-2 flex items-center justify-between z-10 shrink-0 select-none"
+      >
+        <div class="flex items-center gap-3">
+          <button
+            id="btn-back-to-dash"
+            class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white p-2 rounded-xl transition"
+            title="Back to Dashboard"
+          >
+            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+          </button>
+          <div>
+            <div
+              class="flex items-center gap-1.5 cursor-pointer group"
+              id="btn-rename-trigger"
+            >
+              <p
+                id="current-project-name"
+                class="text-xs font-bold text-white group-hover:text-brand-500 transition"
+              >
+                Untitled Animation
+              </p>
+              <i
+                data-lucide="pencil"
+                class="w-3 h-3 text-zinc-500 group-hover:text-zinc-300 transition"
+              ></i>
+            </div>
+            <p class="text-[10px] text-zinc-500">Workspace Editor Stage</p>
+          </div>
+        </div>
+
+        <!-- Center Tools: Zoom Control Hub -->
+        <div
+          class="hidden sm:flex items-center gap-3 bg-zinc-950/50 border border-zinc-800 px-3 py-1 rounded-full text-zinc-300"
+        >
+          <button
+            id="btn-zoom-out"
+            class="text-zinc-400 hover:text-white transition"
+          >
+            <i data-lucide="zoom-out" class="w-4 h-4"></i>
+          </button>
+          <span
+            id="lbl-zoom-factor"
+            class="text-xs font-mono font-bold min-w-12 text-center"
+            >100%</span
+          >
+          <button
+            id="btn-zoom-in"
+            class="text-zinc-400 hover:text-white transition"
+          >
+            <i data-lucide="zoom-in" class="w-4 h-4"></i>
+          </button>
+          <button
+            id="btn-zoom-reset"
+            class="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-0.5 rounded transition"
+          >
+            Reset
+          </button>
+        </div>
+
+        <!-- Project Actions -->
+        <div class="flex items-center gap-2">
+          <!-- Copy / Paste Clipboard Utilities -->
+          <button
+            id="btn-copy-frame-data"
+            class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 p-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+            title="Copy Current Layer Frame"
+          >
+            <i data-lucide="copy" class="w-4 h-4"></i>
+          </button>
+          <button
+            id="btn-paste-frame-data"
+            class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 p-2 rounded-lg text-xs font-semibold flex items-center gap-1 transition disabled:opacity-30 disabled:pointer-events-none"
+            title="Paste Frame"
+            disabled
+          >
+            <i data-lucide="clipboard" class="w-4 h-4"></i>
+          </button>
+          <div class="h-6 w-[1px] bg-zinc-800 mx-1"></div>
+          <button
+            id="btn-save-project"
+            class="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition"
+            title="Save Project"
+          >
+            <i data-lucide="save" class="w-5 h-5"></i>
+          </button>
+          <button
+            id="btn-export-center"
+            class="bg-brand-600 hover:bg-brand-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition shadow-lg shadow-brand-500/10 hover:shadow-brand-500/20"
+          >
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Export / Share</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Editor Mid Workspace Shell -->
+      <div class="flex-1 flex min-h-0 overflow-hidden relative">
+        <!-- Left Toolbar -->
+        <aside
+          id="toolbar-left"
+          class="bg-dark-900 border-r border-zinc-800 w-16 flex flex-col items-center py-4 justify-between shrink-0 select-none"
+        >
+          <div class="flex flex-col items-center gap-3.5 w-full px-2">
+            <button
+              id="tool-pen"
+              class="tool-btn w-11 h-11 rounded-xl flex items-center justify-center transition text-brand-500 bg-brand-500/10 border border-brand-500/20"
+              title="Pen Tool"
+            >
+              <i data-lucide="pen-tool" class="w-5 h-5"></i>
+            </button>
+            <button
+              id="tool-brush"
+              class="tool-btn w-11 h-11 rounded-xl flex items-center justify-center transition text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+              title="Brush Styles Panel"
+            >
+              <i data-lucide="brush" class="w-5 h-5"></i>
+            </button>
+            <button
+              id="tool-lasso"
+              class="tool-btn w-11 h-11 rounded-xl flex items-center justify-center transition text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+              title="Lasso Transform Select Tool"
+            >
+              <i data-lucide="scissors" class="w-5 h-5"></i>
+            </button>
+            <button
+              id="tool-eraser"
+              class="tool-btn w-11 h-11 rounded-xl flex items-center justify-center transition text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+              title="Eraser Tool"
+            >
+              <i data-lucide="eraser" class="w-5 h-5"></i>
+            </button>
+            <button
+              id="tool-bucket"
+              class="tool-btn w-11 h-11 rounded-xl flex items-center justify-center transition text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+              title="Fill Bucket"
+            >
+              <i data-lucide="paint-bucket" class="w-5 h-5"></i>
+            </button>
+            <button
+              id="tool-hand"
+              class="tool-btn w-11 h-11 rounded-xl flex items-center justify-center transition text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
+              title="Hand Pan Tool"
+            >
+              <i data-lucide="hand" class="w-5 h-5"></i>
+            </button>
+
+            <div class="h-[1px] w-8 bg-zinc-800 my-1"></div>
+
+            <!-- Stroke Size Controller -->
+            <div class="relative group flex flex-col items-center">
+              <button
+                id="btn-stroke-config"
+                class="w-11 h-11 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 flex flex-col items-center justify-center text-zinc-300 transition"
+              >
+                <span
+                  id="brush-indicator"
+                  class="w-3 h-3 bg-white rounded-full transition-all"
+                ></span>
+                <span
+                  id="brush-size-text"
+                  class="text-[9px] mt-1 font-bold text-zinc-400"
+                  >12px</span
+                >
+              </button>
+              <!-- Popover Panel for sub-brushes and size variables -->
+              <div
+                id="brush-popup"
+                class="hidden absolute left-14 top-0 bg-dark-900 border border-zinc-800 p-4 rounded-xl shadow-2xl w-64 flex-col gap-3 z-30"
+              >
+                <div>
+                  <span
+                    class="text-[10px] font-bold uppercase tracking-wider text-zinc-400"
+                    >Brush Style</span
+                  >
+                  <div
+                    class="grid grid-cols-2 gap-1 mt-1.5"
+                    id="brush-profiles-selector"
+                  >
+                    <!-- Dynamic brush types go here -->
+                  </div>
+                </div>
+                <hr class="border-zinc-800 my-1" />
+                <div>
+                  <div class="flex justify-between text-xs text-zinc-400 mb-1">
+                    <span>Brush Size</span>
+                    <span id="lbl-stroke-size" class="text-white font-bold"
+                      >12px</span
+                    >
+                  </div>
+                  <input
+                    type="range"
+                    id="slider-stroke-size"
+                    min="1"
+                    max="100"
+                    value="12"
+                    class="w-full accent-brand-500 cursor-pointer h-1.5 bg-zinc-800 rounded-lg appearance-none"
+                  />
+                </div>
+                <div>
+                  <div class="flex justify-between text-xs text-zinc-400 mb-1">
+                    <span>Opacity</span>
+                    <span id="lbl-opacity" class="text-white font-bold"
+                      >100%</span
+                    >
+                  </div>
+                  <input
+                    type="range"
+                    id="slider-opacity"
+                    min="1"
+                    max="100"
+                    value="100"
+                    class="w-full accent-brand-500 cursor-pointer h-1.5 bg-zinc-800 rounded-lg appearance-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Color Selector Trigger -->
+            <div class="relative flex flex-col items-center">
+              <button
+                id="btn-color-select"
+                class="w-10 h-10 rounded-xl border border-zinc-700 shadow-md flex items-center justify-center overflow-hidden transition transform active:scale-95"
+                style="background-color: #f43f5e"
+              >
+                <input
+                  type="color"
+                  id="native-color-picker"
+                  class="opacity-0 absolute inset-0 cursor-pointer w-full h-full scale-150"
+                />
+              </button>
+              <span class="text-[9px] text-zinc-500 mt-1 font-medium"
+                >Color</span
+              >
+            </div>
+          </div>
+
+          <!-- Undo / Redo elements -->
+          <div class="flex flex-col items-center gap-3 w-full px-2">
+            <button
+              id="btn-undo"
+              class="w-11 h-11 rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 disabled:opacity-30 disabled:pointer-events-none transition"
+              title="Undo (Ctrl+Z)"
+            >
+              <i data-lucide="undo-2" class="w-5 h-5"></i>
+            </button>
+            <button
+              id="btn-redo"
+              class="w-11 h-11 rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 disabled:opacity-30 disabled:pointer-events-none transition"
+              title="Redo (Ctrl+Y)"
+            >
+              <i data-lucide="redo-2" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </aside>
+
+        <!-- Creative Stage Viewport Area -->
+        <main class="flex-1 flex flex-col bg-dark-950 overflow-hidden relative">
+          <!-- Alignment Guide Options Bar -->
+          <section
+            class="absolute top-3 left-4 right-4 flex items-center justify-between z-10 pointer-events-none select-none"
+          >
+            <div
+              class="flex items-center gap-2 bg-dark-900/95 border border-zinc-800/80 p-1.5 rounded-xl backdrop-blur-md shadow-xl pointer-events-auto"
+            >
+              <button
+                id="btn-toggle-grid"
+                class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-300 hover:text-white transition"
+              >
+                <i data-lucide="grid-3x3" class="w-3.5 h-3.5"></i>
+                <span>Grid: Off</span>
+              </button>
+              <button
+                id="btn-toggle-snap"
+                class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-300 hover:text-white transition"
+              >
+                <i data-lucide="magnet" class="w-3.5 h-3.5"></i>
+                <span>Snap: Off</span>
+              </button>
+              <select
+                id="select-grid-size"
+                class="bg-zinc-950 text-zinc-400 text-xs rounded-lg px-2 py-1 outline-none border border-zinc-800"
+              >
+                <option value="16">16px</option>
+                <option value="32" selected>32px</option>
+                <option value="64">64px</option>
+              </select>
+              <div class="w-[1px] h-4 bg-zinc-800 mx-1"></div>
+              <!-- Pro Drawing Ruler Guides Toggle -->
+              <button
+                id="btn-toggle-ruler"
+                class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-300 hover:text-white transition"
+              >
+                <i data-lucide="ruler" class="w-3.5 h-3.5"></i>
+                <span>Ruler: Off</span>
+              </button>
+            </div>
+
+            <!-- Direct Canvas Clearance / Photo Layer file loaders -->
+            <div class="flex items-center gap-2 pointer-events-auto">
+              <button
+                id="btn-clear-frame"
+                class="bg-zinc-950/80 hover:bg-zinc-900 text-zinc-400 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-md border border-zinc-800/50 flex items-center gap-1 transition"
+              >
+                <i data-lucide="trash-2" class="w-4 h-4 text-brand-500"></i>
+                <span>Clear Active</span>
+              </button>
+              <label
+                class="bg-zinc-950/80 hover:bg-zinc-900 text-zinc-300 px-3 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-md border border-zinc-800/50 flex items-center gap-1.5 cursor-pointer transition"
+              >
+                <i data-lucide="image-plus" class="w-4 h-4 text-brand-500"></i>
+                <span>Import Asset</span>
+                <input
+                  type="file"
+                  id="input-layer-image-file"
+                  class="hidden"
+                  accept="image/*"
+                />
+              </label>
+            </div>
+          </section>
+
+          <!-- Centered viewport container -->
+          <div
+            id="canvas-viewport"
+            class="flex-1 flex items-center justify-center p-4 overflow-hidden relative touch-none select-none"
+          >
+            <!-- Dynamic Stage container (Locked to 800x600 matrix resolution internally) -->
+            <div
+              id="canvas-stage"
+              class="w-[800px] h-[600px] bg-zinc-900 rounded-2xl shadow-2xl relative overflow-hidden transform-gpu origin-top-left flex-none"
+            >
+              <!-- Translucent guide patterns and grid systems -->
+              <div
+                id="bg-canvas-pattern"
+                class="absolute inset-0 rounded-2xl pointer-events-none transparent-pattern"
+              ></div>
+              <div
+                id="grid-guide-overlay"
+                class="absolute inset-0 rounded-2xl pointer-events-none grid-guide hidden"
+              ></div>
+
+              <!-- Layers Stack Container (Renders active frame background elements) -->
+              <div
+                id="layers-canvas-stack"
+                class="absolute inset-0 pointer-events-none"
+              ></div>
+
+              <!-- Color Tinted Onion Skin layout layer -->
+              <canvas
+                id="onion-skin-canvas"
+                width="800"
+                height="600"
+                class="absolute inset-0 w-full h-full pointer-events-none opacity-40 z-[10]"
+              ></canvas>
+
+              <!-- Interactive Canvas Overlay Drawing/Lasso Board -->
+              <canvas
+                id="draw-canvas"
+                width="800"
+                height="600"
+                class="absolute inset-0 w-full h-full z-[20] cursor-crosshair touch-none"
+              ></canvas>
+
+              <!-- Floating Canvas Draggable Ruler Tool overlay -->
+              <div
+                id="ruler-tool-overlay"
+                class="absolute left-1/4 top-1/3 w-64 h-6 bg-brand-500/20 border border-brand-500/50 rounded-full cursor-move z-[25] hidden flex items-center justify-between px-3 text-[10px] text-white select-none"
+              >
+                <span class="font-bold flex items-center gap-1"
+                  ><i data-lucide="move" class="w-3.5 h-3.5"></i> STROKE GUIDE
+                  RULER</span
+                >
+                <button id="btn-close-ruler-tool" class="hover:text-brand-500">
+                  <i data-lucide="x" class="w-3.5 h-3.5 text-brand-500"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Helper Tags -->
+          <div
+            class="absolute bottom-20 left-4 bg-zinc-950/80 text-zinc-300 px-3 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-md border border-zinc-800/50 flex items-center gap-2 z-10 pointer-events-none select-none"
+          >
+            <span
+              id="canvas-indicator-tool"
+              class="flex items-center gap-1 text-brand-500"
+            >
+              <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Pen
+            </span>
+            <div class="w-[1px] h-3 bg-zinc-700"></div>
+            <span id="canvas-indicator-frame">Frame 1/1</span>
+            <div class="w-[1px] h-3 bg-zinc-700"></div>
+            <span class="flex items-center gap-1"
+              ><i data-lucide="layers" class="w-3 h-3 text-brand-500"></i>
+              <span id="lbl-active-layer-span">Layer: Base</span></span
+            >
+          </div>
+
+          <!-- Footer Timeline Timeline & Playback Controllers -->
+          <footer
+            id="timeline-area"
+            class="bg-dark-900 border-t border-zinc-800 flex flex-col p-4 gap-3 shrink-0 z-10 select-none"
+          >
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <!-- Playback Speed / Keyframes managers -->
+              <div class="flex items-center gap-2">
+                <button
+                  id="btn-play-prev"
+                  class="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition"
+                  title="Previous Frame"
+                >
+                  <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                </button>
+                <button
+                  id="btn-play-pause"
+                  class="bg-brand-600 hover:bg-brand-700 text-white p-3 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/20 active:scale-95 transition"
+                  title="Play / Pause Spacebar"
+                >
+                  <i
+                    id="play-icon"
+                    data-lucide="play"
+                    class="w-5 h-5 fill-white"
+                  ></i>
+                </button>
+                <button
+                  id="btn-play-next"
+                  class="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition"
+                  title="Next Frame"
+                >
+                  <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                </button>
+                <div class="h-6 w-[1px] bg-zinc-800 mx-2"></div>
+                <button
+                  id="btn-add-frame"
+                  class="bg-zinc-800 hover:bg-zinc-700 text-slate-100 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
+                >
+                  <i data-lucide="plus" class="w-4 h-4"></i> Add Frame
+                </button>
+                <button
+                  id="btn-duplicate-frame"
+                  class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
+                >
+                  <i data-lucide="copy" class="w-4 h-4"></i> Duplicate
+                </button>
+                <button
+                  id="btn-delete-frame"
+                  class="hover:bg-red-500/10 hover:text-red-400 text-zinc-400 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
+                >
+                  <i data-lucide="trash-2" class="w-4 h-4"></i> Delete
+                </button>
+              </div>
+
+              <!-- Onion Skin and FPS slider values -->
+              <div class="flex items-center gap-4">
+                <div
+                  class="flex items-center gap-2 bg-zinc-950/40 p-1 rounded-lg border border-zinc-800"
+                >
+                  <span class="text-xs text-zinc-400 pl-2">Onion Skin</span>
+                  <button
+                    id="toggle-onion"
+                    class="bg-brand-500 text-white px-2.5 py-1 rounded-md text-xs font-semibold transition"
+                  >
+                    Active
+                  </button>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs text-zinc-400">FPS</span>
+                  <input
+                    type="range"
+                    id="slider-fps"
+                    min="1"
+                    max="24"
+                    value="12"
+                    class="w-24 accent-brand-500 cursor-pointer h-1 bg-zinc-800 rounded-lg appearance-none"
+                  />
+                  <span id="lbl-fps" class="text-xs font-bold w-10 text-white"
+                    >12 FPS</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- Horizontally scrollable visual list -->
+            <div
+              class="flex items-center gap-2 bg-dark-950 p-2 rounded-xl border border-zinc-800/80 overflow-x-auto scrollbar-thin scroll-smooth"
+              id="timeline-scroll-container"
+            >
+              <div id="frames-timeline" class="flex items-center gap-3 py-1">
+                <!-- Dynamic keyframes -->
+              </div>
+            </div>
+          </footer>
+        </main>
+
+        <!-- Right Sidebar Panel: Layers stack list -->
+        <aside
+          id="sidebar-right"
+          class="bg-dark-900 border-l border-zinc-800 w-64 p-4 hidden lg:flex flex-col gap-5 shrink-0 z-10 select-none"
+        >
+          <div class="flex flex-col gap-3 flex-1 overflow-hidden">
+            <div class="flex items-center justify-between pb-1">
+              <h3
+                class="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1"
+              >
+                <i data-lucide="layers" class="w-4 h-4 text-brand-500"></i>
+                Layers
+              </h3>
+              <button
+                id="btn-create-layer"
+                class="bg-brand-600/15 hover:bg-brand-600 text-brand-500 hover:text-white p-1 rounded transition"
+                title="Add Layer"
+              >
+                <i data-lucide="plus-square" class="w-4.5 h-4.5"></i>
+              </button>
+            </div>
+
+            <!-- Scrollable drag and drop layout elements -->
+            <div
+              id="layers-stack-list"
+              class="flex flex-col gap-2 flex-1 overflow-y-auto scrollbar-thin pr-1"
+            >
+              <!-- Dynamic rows injected here -->
+            </div>
+          </div>
+
+          <!-- Palette Selectors -->
+          <div class="border-t border-zinc-800 pt-4">
+            <h3
+              class="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2.5"
+            >
+              Preset Palette
+            </h3>
+            <div class="grid grid-cols-6 gap-2" id="preset-colors">
+              <!-- Dynamic colors go here -->
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- UI Modal: EXPORT HUB (Layered PNG, WebM video, backups) -->
+    <div
+      id="modal-export"
+      class="fixed inset-0 bg-dark-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300"
+    >
+      <div
+        class="bg-dark-900 border border-zinc-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl flex flex-col gap-5 select-none"
+      >
+        <div
+          class="flex items-center justify-between border-b border-zinc-800 pb-3"
+        >
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="download-cloud" class="w-5 h-5 text-brand-500"></i>
+            Export & Share Hub
+          </h2>
+          <button class="btn-close-modal text-zinc-400 hover:text-white">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <!-- Export smart Layer Stitched PNG file -->
+          <button
+            id="btn-export-layered-png"
+            class="p-4 bg-gradient-to-br from-brand-500/10 to-transparent hover:from-brand-500/20 border border-brand-500/30 rounded-xl text-left flex flex-col gap-2 transition group relative overflow-hidden"
+          >
+            <div
+              class="p-2 bg-brand-500/20 text-brand-500 rounded-lg inline-flex w-fit"
+            >
+              <i data-lucide="file-image" class="w-5 h-5 animate-pulse"></i>
+            </div>
+            <span
+              class="absolute right-3 top-3 bg-brand-500 text-[9px] text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wide"
+              >Layer Aware</span
+            >
+            <h4 class="text-sm font-bold text-white">Layer-Stitched PNG</h4>
+            <p class="text-[11px] text-zinc-400">
+              Stores both the composite preview and raw unflattened layers
+              stacked vertically in one image.
+            </p>
+          </button>
+
+          <!-- Save current Frame transparent background PNG -->
+          <button
+            id="btn-export-frame"
+            class="p-4 bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700/50 hover:border-brand-500/40 rounded-xl text-left flex flex-col gap-2 transition"
+          >
+            <div
+              class="p-2 bg-teal-500/10 text-teal-400 rounded-lg inline-flex w-fit"
+            >
+              <i data-lucide="image" class="w-5 h-5"></i>
+            </div>
+            <h4 class="text-sm font-bold text-white">Save Current Frame PNG</h4>
+            <p class="text-[11px] text-zinc-400">
+              Capture and download the combined visual frame layers as a
+              transparent background PNG.
+            </p>
+          </button>
+
+          <!-- Record WebM Video stream -->
+          <button
+            id="btn-export-webm"
+            class="p-4 bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700/50 hover:border-brand-500/40 rounded-xl text-left flex flex-col gap-2 transition"
+          >
+            <div
+              class="p-2 bg-pink-500/10 text-pink-500 rounded-lg inline-flex w-fit"
+            >
+              <i data-lucide="video" class="w-5 h-5"></i>
+            </div>
+            <h4 class="text-sm font-bold text-white">Record WebM Video</h4>
+            <p class="text-[11px] text-zinc-400">
+              Capture the full timeline into a playable video stream for direct
+              browser-only playback.
+            </p>
+          </button>
+
+          <!-- Export Project backup (.json) file -->
+          <button
+            id="btn-export-json-project"
+            class="p-4 bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700/50 hover:border-brand-500/40 rounded-xl text-left flex flex-col gap-2 transition"
+          >
+            <div
+              class="p-2 bg-blue-500/10 text-blue-400 rounded-lg inline-flex w-fit"
+            >
+              <i data-lucide="file-json" class="w-5 h-5"></i>
+            </div>
+            <h4 class="text-sm font-bold text-white">
+              Download Project (.json)
+            </h4>
+            <p class="text-[11px] text-zinc-400">
+              Saves all dynamic frames, opacities, and layer assets. Re-import
+              anywhere to resume editing.
+            </p>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- UI Modal: SMART LAYER-STITCHED DETECTED PROMPT -->
+    <div
+      id="modal-smart-import"
+      class="fixed inset-0 bg-dark-950/90 backdrop-blur-md z-[60] flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300"
+    >
+      <div
+        class="bg-dark-900 border border-brand-500/40 rounded-2xl p-6 w-full max-w-md shadow-2xl flex flex-col gap-5 select-none"
+      >
+        <div class="flex items-center gap-3 border-b border-zinc-800 pb-3">
+          <div class="p-2 bg-brand-500/15 text-brand-500 rounded-xl">
+            <i data-lucide="file-image" class="w-6 h-6 animate-bounce"></i>
+          </div>
+          <div>
+            <h2 class="text-md font-bold text-white">
+              Smart Layered PNG Detected
+            </h2>
+            <p class="text-[11px] text-zinc-400">
+              This file was built with unflattened layout elements!
+            </p>
+          </div>
+        </div>
+
+        <p class="text-xs text-zinc-300 leading-relaxed">
+          Choose how you want to load this asset. We can unpack the vertical
+          template back into independent editable layers, or merge everything
+          onto your active drawing layer.
+        </p>
+
+        <div class="flex flex-col gap-2.5">
+          <button
+            id="btn-import-smart-layers"
+            class="w-full p-3.5 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl text-xs flex items-center justify-between transition shadow-lg shadow-brand-600/10"
+          >
+            <span class="flex items-center gap-2"
+              ><i data-lucide="layers" class="w-4.5 h-4.5"></i> Restore with
+              Editable Layers</span
+            >
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+          <button
+            id="btn-import-flat-only"
+            class="w-full p-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-semibold rounded-xl text-xs flex items-center justify-between transition"
+          >
+            <span class="flex items-center gap-2"
+              ><i data-lucide="image" class="w-4.5 h-4.5"></i> Load Flattened
+              Preview only</span
+            >
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <button
+          class="btn-close-modal text-zinc-500 hover:text-white text-xs py-1 transition"
+        >
+          Cancel Import
+        </button>
+      </div>
+    </div>
+
+    <!-- UI Dynamic Floating Layer Context Option Popover Menu -->
+    <div
+      id="layer-context-menu"
+      class="fixed hidden bg-zinc-900 border border-zinc-700/80 rounded-xl shadow-2xl py-2 px-1 z-[100] w-48 transition-opacity duration-150 select-none"
+    >
+      <div class="px-3 py-1.5 border-b border-zinc-800 mb-1.5">
+        <p
+          id="context-layer-title"
+          class="text-[10px] font-bold text-zinc-400 uppercase tracking-wide truncate"
+        >
+          Layer Action
+        </p>
+      </div>
+      <button
+        id="ctx-btn-rename"
+        class="w-full text-left px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-800 rounded-lg flex items-center gap-2 transition"
+      >
+        <i data-lucide="edit-3" class="w-3.5 h-3.5 text-blue-400"></i> Rename
+        Layer
+      </button>
+      <button
+        id="ctx-btn-duplicate"
+        class="w-full text-left px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-800 rounded-lg flex items-center gap-2 transition"
+      >
+        <i data-lucide="copy" class="w-3.5 h-3.5 text-brand-500"></i> Duplicate
+        Layer
+      </button>
+      <button
+        id="ctx-btn-export-isolated"
+        class="w-full text-left px-3 py-1.5 text-xs text-zinc-200 hover:bg-zinc-800 rounded-lg flex items-center gap-2 transition"
+      >
+        <i data-lucide="download" class="w-3.5 h-3.5 text-teal-400"></i> Export
+        Layer Frame PNG
+      </button>
+      <hr class="border-zinc-800 my-1.5" />
+      <button
+        id="ctx-btn-delete"
+        class="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:bg-red-500/10 rounded-lg flex items-center gap-2 transition"
+      >
+        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete Layer
+      </button>
+    </div>
+
+    <!-- Interactive Tour Wizard Panel -->
+    <div
+      id="tour-wizard"
+      class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-dark-900 border border-brand-500/40 p-5 rounded-2xl shadow-2xl w-full max-w-md z-[80] flex flex-col gap-3.5 opacity-0 pointer-events-none transition-all duration-300"
+    >
+      <div
+        class="flex items-center justify-between border-b border-zinc-800 pb-2"
+      >
+        <div class="flex items-center gap-1.5 text-brand-500">
+          <i data-lucide="sparkles" class="w-4 h-4 animate-bounce"></i>
+          <h4
+            id="tour-step-title"
+            class="text-xs font-bold uppercase tracking-wider"
+          >
+            Guided Studio Tour
+          </h4>
+        </div>
+        <button
+          id="btn-skip-tour"
+          class="text-zinc-500 hover:text-white text-xs font-semibold"
+        >
+          Skip
+        </button>
+      </div>
+      <p id="tour-step-desc" class="text-xs text-zinc-300 leading-relaxed">
+        Let's walk you through the canvas layers and professional workspace!
+      </p>
+      <div class="flex items-center justify-between pt-1">
+        <span id="tour-progress" class="text-[10px] font-bold text-zinc-500"
+          >Step 1 of 5</span
+        >
+        <button
+          id="btn-next-tour"
+          class="bg-brand-600 hover:bg-brand-700 text-white font-bold px-3.5 py-1.5 rounded-lg text-xs flex items-center gap-1 transition"
+        >
+          <span>Next</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Project Loading Loader Overlay -->
+    <div
+      id="canvas-loader"
+      class="absolute inset-0 bg-dark-950/85 flex flex-col items-center justify-center gap-4 z-[200] opacity-0 pointer-events-none transition-all duration-300 select-none"
+    >
+      <div
+        class="animate-spin rounded-full h-12 w-12 border-4 border-brand-500 border-t-transparent"
+      ></div>
+      <p id="loader-message" class="text-zinc-300 text-sm font-semibold">
+        Deploying Animation Stage...
+      </p>
+    </div>
+
+    <!-- Custom Floating Toast Box -->
+    <div
+      id="toast"
+      class="fixed bottom-6 right-6 bg-zinc-900 border border-zinc-800 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 z-[200] transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300 select-none"
+    >
+      <div
+        id="toast-icon-wrapper"
+        class="p-1.5 rounded-lg bg-brand-500/10 text-brand-500"
+      >
+        <i data-lucide="info" class="w-4 h-4"></i>
+      </div>
+      <div>
+        <p id="toast-title" class="text-xs font-bold text-white">
+          Status Update
+        </p>
+        <p id="toast-message" class="text-[10px] text-zinc-400">
+          Everything up to date.
+        </p>
+      </div>
+    </div>
+
+    <script>
+      // Core Animation Application State Management
+      let state = {
+        currentTool: "pen", // pen, brush, lasso, eraser, bucket, hand
+        brushStyle: "pen", // pen, pencil, marker, airbrush, crayon, pixel
+        brushColor: "#f43f5e",
+        brushSize: 12,
+        opacity: 1,
+
+        frames: [],
+        currentFrameIndex: 0,
+
+        // Dynamic Unlimited Layer definitions
+        layers: [
+          { id: "layer-1", name: "Background", visible: true, opacity: 1.0 },
+          { id: "layer-2", name: "Foreground", visible: true, opacity: 1.0 },
+        ],
+        activeLayerId: "layer-2",
+
+        isPlaying: false,
+        fps: 12,
+        isOnionActive: true,
+
+        undoStack: [],
+        redoStack: [],
+        projectId: null,
+        projectName: "Untitled Animation",
+
+        gridEnabled: false,
+        gridSize: 32,
+        snapToGrid: false,
+
+        // Workspace Zoom/Pan parameters
+        zoomScale: 1.0,
+        panOffsetX: 0,
+        panOffsetY: 0,
+      };
+
+      // Pro Ruler guide parameters
+      let rulerActive = false;
+      let rulerPosX = 200;
+      let rulerPosY = 200;
+      let isDraggingRuler = false;
+
+      // Clipboard Copy Frame Memory Slot
+      let frameClipboardMemory = null;
+
+      // Lasso Transform Selection state variable slot
+      let lassoActive = false;
+      let lassoPoints = [];
+      let lassoBounds = null; // { minX, minY, maxX, maxY }
+      let lassoSelectionCanvas = null; // Temporary buffer holding dragged pixels
+      let isDraggingLassoSelection = false;
+      let dragStartMouseX = 0;
+      let dragStartMouseY = 0;
+      let dragOffsetOffsetX = 0;
+      let dragOffsetOffsetY = 0;
+
+      // Context menus storage
+      let activeContextLayerId = null;
+      let pendingImportImageObj = null;
+
+      // Tour Step configurations
+      const tourSteps = [
+        {
+          element: "toolbar-left",
+          title: "Brush & Design Tools",
+          desc: "Switch between Pen, soft Brush, Eraser, and Paint Bucket tools here. Tap the gear icon to customize thickness and choose advanced sub-brushes!",
+        },
+        {
+          element: "canvas-stage",
+          title: "The Creative Stage",
+          desc: "This is your multi-layer animation stage. Zoom and pan around anytime using mouse scrolling or double-finger pinch zoom gestures on iPad.",
+        },
+        {
+          element: "sidebar-right",
+          title: "Dynamic Layers Manager",
+          desc: "Create, reorder, and duplicate layers. Drag and drop layers directly to rearrange their stacking order instantly!",
+        },
+        {
+          element: "timeline-area",
+          title: "Frames Timeline & FPS",
+          desc: "Add, duplicate, or delete frames in your animation stream. Control standard playback and modify FPS speed parameters on the fly!",
+        },
+        {
+          element: "btn-export-center",
+          title: "Multi-Format Export",
+          desc: "Export as video WebM streams, spritesheets, dynamic Layer-Stitched PNGs, or raw project backup JSONs!",
+        },
+      ];
+      let currentTourStepIndex = 0;
+
+      // Sub-Brush presets configuration settings
+      const brushProfiles = {
+        pen: { label: "Solid Pen", icon: "pen-tool", blur: 0, opacity: 1 },
+        pencil: {
+          label: "Sketch Pencil",
+          icon: "edit-2",
+          blur: 0.8,
+          opacity: 0.35,
+        },
+        marker: {
+          label: "Flat Marker",
+          icon: "highlighter",
+          blur: 0.2,
+          opacity: 0.6,
+        },
+        airbrush: {
+          label: "Soft Airbrush",
+          icon: "wind",
+          blur: 8,
+          opacity: 0.12,
+        },
+        crayon: {
+          label: "Wax Crayon",
+          icon: "brush",
+          blur: 1.5,
+          opacity: 0.75,
+        },
+        pixel: { label: "Retro Pixel", icon: "cpu", blur: 0, opacity: 1 },
+      };
+
+      // UI View targets
+      const viewDashboard = document.getElementById("view-dashboard");
+      const viewEditor = document.getElementById("view-editor");
+
+      // Drawing Board canvas targets
+      const drawCanvas = document.getElementById("draw-canvas");
+      const ctx = drawCanvas.getContext("2d", { willReadFrequently: true });
+      const onionCanvas = document.getElementById("onion-skin-canvas");
+      const onionCtx = onionCanvas.getContext("2d");
+      const viewport = document.getElementById("canvas-viewport");
+      const stage = document.getElementById("canvas-stage");
+      const layersCanvasStack = document.getElementById("layers-canvas-stack");
+
+      // Mouse/Stylus/Touch tracking positions
+      let isDrawing = false;
+      let isPanning = false;
+      let lastX = 0;
+      let lastY = 0;
+      let lastPanX = 0;
+      let lastPanY = 0;
+      let isSpacebarHeld = false;
+
+      // Multi-touch gestures variables
+      let initialPinchDistance = 0;
+      let initialZoomScale = 1.0;
+
+      // Matrix update transformer
+      const updateTransformState = () => {
+        stage.style.transform = `translate(${state.panOffsetX}px, ${state.panOffsetY}px) scale(${state.zoomScale})`;
+        const percent = Math.round(state.zoomScale * 100);
+        document.getElementById("lbl-zoom-factor").innerText = `${percent}%`;
+      };
+
+      // Resolution Alignment Mapper system (Centering bug fix)
+      const getCanvasCoords = (e) => {
+        const stageRect = stage.getBoundingClientRect();
+        let clientX, clientY;
+
+        if (e.touches && e.touches.length > 0) {
+          clientX = e.touches[0].clientX;
+          clientY = e.touches[0].clientY;
+        } else {
+          clientX = e.clientX;
+          clientY = e.clientY;
+        }
+
+        // Maps coordinates regarding resolution transformations
+        let x = (clientX - stageRect.left) * (800 / stageRect.width);
+        let y = (clientY - stageRect.top) * (600 / stageRect.height);
+
+        if (state.snapToGrid && state.currentTool !== "hand") {
+          x = Math.round(x / state.gridSize) * state.gridSize;
+          y = Math.round(y / state.gridSize) * state.gridSize;
+        }
+
+        return { x, y };
+      };
+
+      // Viewport interaction listeners
+      const initViewportGestures = () => {
+        viewport.addEventListener(
+          "wheel",
+          (e) => {
+            e.preventDefault();
+            const zoomFactor = 1.1;
+            const rect = viewport.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const xInStage = (mouseX - state.panOffsetX) / state.zoomScale;
+            const yInStage = (mouseY - state.panOffsetY) / state.zoomScale;
+
+            if (e.deltaY < 0) {
+              state.zoomScale = Math.min(8.0, state.zoomScale * zoomFactor);
+            } else {
+              state.zoomScale = Math.max(0.15, state.zoomScale / zoomFactor);
+            }
+
+            state.panOffsetX = mouseX - xInStage * state.zoomScale;
+            state.panOffsetY = mouseY - yInStage * state.zoomScale;
+
+            updateTransformState();
+          },
+          { passive: false },
+        );
+
+        // Mouse gestures triggers
+        viewport.addEventListener("mousedown", (e) => {
+          dismissContextMenu();
+
+          if (
+            e.button === 1 ||
+            state.currentTool === "hand" ||
+            isSpacebarHeld
+          ) {
+            isPanning = true;
+            lastPanX = e.clientX;
+            lastPanY = e.clientY;
+            viewport.style.cursor = "grabbing";
+          } else if (e.button === 0) {
+            const coords = getCanvasCoords(e);
+
+            // Lasso Transform selection check
+            if (
+              state.currentTool === "lasso" &&
+              lassoBounds &&
+              isPointInLassoBounds(coords.x, coords.y)
+            ) {
+              isDraggingLassoSelection = true;
+              dragStartMouseX = coords.x;
+              dragStartMouseY = coords.y;
+              e.preventDefault();
+              return;
+            }
+
+            isDrawing = true;
+            lastX = coords.x;
+            lastY = coords.y;
+
+            if (state.currentTool === "bucket") {
+              floodFillEngine(
+                Math.round(coords.x),
+                Math.round(coords.y),
+                state.brushColor,
+              );
+              isDrawing = false;
+              saveFrameState();
+            } else if (state.currentTool === "lasso") {
+              // Restart new lasso path
+              lassoActive = true;
+              lassoPoints = [[coords.x, coords.y]];
+              clearLassoSelectionVisuals();
+            } else {
+              ctx.beginPath();
+              ctx.moveTo(lastX, lastY);
+            }
+          }
+        });
+
+        viewport.addEventListener("mousemove", (e) => {
+          const coords = getCanvasCoords(e);
+
+          if (isPanning) {
+            const dx = e.clientX - lastPanX;
+            const dy = e.clientY - lastPanY;
+            state.panOffsetX += dx;
+            state.panOffsetY += dy;
+            lastPanX = e.clientX;
+            lastPanY = e.clientY;
+            updateTransformState();
+          } else if (isDraggingLassoSelection) {
+            // Compute transform translate offsets
+            dragOffsetOffsetX = coords.x - dragStartMouseX;
+            dragOffsetOffsetY = coords.y - dragStartMouseY;
+            drawLassoOverlaySelection();
+          } else if (isDrawing) {
+            if (state.currentTool === "lasso") {
+              lassoPoints.push([coords.x, coords.y]);
+              drawLassoPathGuide();
+            } else {
+              drawStroke(lastX, lastY, coords.x, coords.y);
+              lastX = coords.x;
+              lastY = coords.y;
+            }
+          }
+        });
+
+        const handleInputEnd = () => {
+          if (isDraggingLassoSelection) {
+            isDraggingLassoSelection = false;
+            applyLassoTranslation();
+          } else if (isDrawing) {
+            isDrawing = false;
+            if (state.currentTool === "lasso") {
+              closeLassoPathAndCrop();
+            } else {
+              ctx.closePath();
+              saveFrameState();
+              saveStateToHistory();
+            }
+          }
+          isPanning = false;
+          viewport.style.cursor = "default";
+        };
+
+        window.addEventListener("mouseup", handleInputEnd);
+        window.addEventListener("touchend", handleInputEnd);
+
+        // Dynamic iPad & iOS tablet multi-touch pinch handlers
+        viewport.addEventListener(
+          "touchstart",
+          (e) => {
+            dismissContextMenu();
+
+            if (e.touches.length === 2) {
+              isDrawing = false;
+              isPanning = true;
+              const dx = e.touches[0].clientX - e.touches[1].clientX;
+              const dy = e.touches[0].clientY - e.touches[1].clientY;
+              initialPinchDistance = Math.sqrt(dx * dx + dy * dy);
+              initialZoomScale = state.zoomScale;
+            } else if (e.touches.length === 1) {
+              if (state.currentTool === "hand") {
+                isPanning = true;
+                lastPanX = e.touches[0].clientX;
+                lastPanY = e.touches[0].clientY;
+              } else {
+                isDrawing = true;
+                const coords = getCanvasCoords(e);
+                lastX = coords.x;
+                lastY = coords.y;
+
+                if (state.currentTool === "bucket") {
+                  floodFillEngine(
+                    Math.round(coords.x),
+                    Math.round(coords.y),
+                    state.brushColor,
+                  );
+                  isDrawing = false;
+                  saveFrameState();
+                } else if (state.currentTool === "lasso") {
+                  lassoActive = true;
+                  lassoPoints = [[coords.x, coords.y]];
+                  clearLassoSelectionVisuals();
+                } else {
+                  ctx.beginPath();
+                  ctx.moveTo(lastX, lastY);
+                }
+              }
+            }
+          },
+          { passive: false },
+        );
+
+        viewport.addEventListener(
+          "touchmove",
+          (e) => {
+            e.preventDefault();
+            const coords = getCanvasCoords(e);
+
+            if (e.touches.length === 2 && isPanning) {
+              const dx = e.touches[0].clientX - e.touches[1].clientX;
+              const dy = e.touches[0].clientY - e.touches[1].clientY;
+              const currentDist = Math.sqrt(dx * dx + dy * dy);
+              const zoomFactor = currentDist / initialPinchDistance;
+
+              state.zoomScale = Math.max(
+                0.15,
+                Math.min(8.0, initialZoomScale * zoomFactor),
+              );
+              updateTransformState();
+            } else if (e.touches.length === 1) {
+              if (isPanning && state.currentTool === "hand") {
+                const tx = e.touches[0].clientX;
+                const ty = e.touches[0].clientY;
+                state.panOffsetX += tx - lastPanX;
+                state.panOffsetY += ty - lastPanY;
+                lastPanX = tx;
+                lastPanY = ty;
+                updateTransformState();
+              } else if (isDraggingLassoSelection) {
+                dragOffsetOffsetX = coords.x - dragStartMouseX;
+                dragOffsetOffsetY = coords.y - dragStartMouseY;
+                drawLassoOverlaySelection();
+              } else if (isDrawing) {
+                if (state.currentTool === "lasso") {
+                  lassoPoints.push([coords.x, coords.y]);
+                  drawLassoPathGuide();
+                } else {
+                  drawStroke(lastX, lastY, coords.x, coords.y);
+                  lastX = coords.x;
+                  lastY = coords.y;
+                }
+              }
+            }
+          },
+          { passive: false },
+        );
+      };
+
+      const centerWorkspaceViewport = () => {
+        const vRect = viewport.getBoundingClientRect();
+        state.zoomScale = Math.min(
+          (vRect.width - 40) / 800,
+          (vRect.height - 40) / 600,
+          1.0,
+        );
+        state.panOffsetX = (vRect.width - 800 * state.zoomScale) / 2;
+        state.panOffsetY = (vRect.height - 600 * state.zoomScale) / 2;
+        updateTransformState();
+      };
+
+      // Guidelines Grid configurations
+      const initGuidesAndSnapping = () => {
+        const btnToggleGrid = document.getElementById("btn-toggle-grid");
+        const btnToggleSnap = document.getElementById("btn-toggle-snap");
+        const selectGridSize = document.getElementById("select-grid-size");
+        const gridOverlay = document.getElementById("grid-guide-overlay");
+
+        btnToggleGrid.onclick = () => {
+          state.gridEnabled = !state.gridEnabled;
+          if (state.gridEnabled) {
+            btnToggleGrid.className =
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand-600 text-white transition";
+            btnToggleGrid.querySelector("span").innerText = "Grid: On";
+            gridOverlay.classList.remove("hidden");
+          } else {
+            btnToggleGrid.className =
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-300 hover:text-white transition";
+            btnToggleGrid.querySelector("span").innerText = "Grid: Off";
+            gridOverlay.classList.add("hidden");
+          }
+        };
+
+        btnToggleSnap.onclick = () => {
+          state.snapToGrid = !state.snapToGrid;
+          if (state.snapToGrid) {
+            btnToggleSnap.className =
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand-600 text-white transition";
+            btnToggleSnap.querySelector("span").innerText = "Snap: On";
+          } else {
+            btnToggleSnap.className =
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-300 hover:text-white transition";
+            btnToggleSnap.querySelector("span").innerText = "Snap: Off";
+          }
+        };
+
+        selectGridSize.onchange = (e) => {
+          state.gridSize = parseInt(e.target.value);
+          gridOverlay.style.setProperty("--grid-size", `${state.gridSize}px`);
+        };
+        gridOverlay.style.setProperty("--grid-size", `32px`);
+      };
+
+      // Pro Ruler Draggable guided lines drawing system
+      const initRulerSystems = () => {
+        const ruler = document.getElementById("ruler-tool-overlay");
+        const toggleBtn = document.getElementById("btn-toggle-ruler");
+        const closeBtn = document.getElementById("btn-close-ruler-tool");
+
+        toggleBtn.onclick = () => {
+          rulerActive = !rulerActive;
+          if (rulerActive) {
+            ruler.classList.remove("hidden");
+            ruler.classList.add("flex");
+            toggleBtn.className =
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-brand-600 text-white transition";
+            toggleBtn.querySelector("span").innerText = "Ruler: On";
+          } else {
+            ruler.classList.add("hidden");
+            ruler.classList.remove("flex");
+            toggleBtn.className =
+              "flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-zinc-800 text-zinc-300 hover:text-white transition";
+            toggleBtn.querySelector("span").innerText = "Ruler: Off";
+          }
+        };
+
+        closeBtn.onclick = (e) => {
+          e.stopPropagation();
+          toggleBtn.click();
+        };
+
+        // Dragging calculations of ruler tool guide
+        ruler.addEventListener("mousedown", (e) => {
+          isDraggingRuler = true;
+          lastPanX = e.clientX;
+          lastPanY = e.clientY;
+          e.stopPropagation();
+        });
+
+        window.addEventListener("mousemove", (e) => {
+          if (isDraggingRuler) {
+            const dx = (e.clientX - lastPanX) / state.zoomScale;
+            const dy = (e.clientY - lastPanY) / state.zoomScale;
+
+            rulerPosX += dx;
+            rulerPosY += dy;
+
+            // Bound checks
+            rulerPosX = Math.max(0, Math.min(800 - 256, rulerPosX));
+            rulerPosY = Math.max(0, Math.min(600 - 24, rulerPosY));
+
+            ruler.style.left = `${rulerPosX}px`;
+            ruler.style.top = `${rulerPosY}px`;
+
+            lastPanX = e.clientX;
+            lastPanY = e.clientY;
+          }
+        });
+
+        window.addEventListener("mouseup", () => {
+          isDraggingRuler = false;
+        });
+      };
+
+      // Pro Ruler drawing modifier (Snaps drawing inputs onto ruler guidelines)
+      const applyRulerGuideModification = (yCoordinate) => {
+        if (!rulerActive) return yCoordinate;
+
+        const rulerCenterY = rulerPosY + 12; // Middle height of ruler
+        const distance = Math.abs(yCoordinate - rulerCenterY);
+
+        // Snap stroke to center if within 30px threshold
+        if (distance < 30) {
+          return rulerCenterY;
+        }
+        return yCoordinate;
+      };
+
+      // Dynamic multi-brush profiles compiler
+      const drawStroke = (x1, y1, x2, y2) => {
+        ctx.save();
+        ctx.lineWidth = state.brushSize;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        // Snap strokes to active horizontal ruler guide
+        y1 = applyRulerGuideModification(y1);
+        y2 = applyRulerGuideModification(y2);
+
+        if (state.currentTool === "eraser") {
+          ctx.globalCompositeOperation = "destination-out";
+          ctx.globalAlpha = 1.0;
+          ctx.strokeStyle = "rgba(0,0,0,1)";
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+          ctx.restore();
+          return;
+        }
+
+        ctx.globalCompositeOperation = "source-over";
+        const profile = brushProfiles[state.brushStyle];
+        ctx.globalAlpha = state.opacity * (profile ? profile.opacity : 1);
+        ctx.strokeStyle = state.brushColor;
+
+        if (state.brushStyle === "pencil") {
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+          const steps = Math.hypot(x2 - x1, y2 - y1) / 2;
+          for (let i = 0; i < steps; i++) {
+            const t = i / steps;
+            const cx =
+              x1 +
+              (x2 - x1) * t +
+              (Math.random() - 0.5) * (state.brushSize * 0.4);
+            const cy =
+              y1 +
+              (y2 - y1) * t +
+              (Math.random() - 0.5) * (state.brushSize * 0.4);
+            ctx.fillStyle = state.brushColor;
+            ctx.globalAlpha = state.opacity * 0.2;
+            ctx.fillRect(cx, cy, 1.5, 1.5);
+          }
+        } else if (state.brushStyle === "marker") {
+          ctx.lineCap = "square";
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+        } else if (state.brushStyle === "airbrush") {
+          const steps = Math.hypot(x2 - x1, y2 - y1) / 3;
+          for (let i = 0; i < steps; i++) {
+            const t = i / steps;
+            const cx = x1 + (x2 - x1) * t;
+            const cy = y1 + (y2 - y1) * t;
+            const grad = ctx.createRadialGradient(
+              cx,
+              cy,
+              1,
+              cx,
+              cy,
+              state.brushSize * 1.5,
+            );
+            grad.addColorStop(0, state.brushColor);
+            grad.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = grad;
+            ctx.globalAlpha = state.opacity * 0.08;
+            ctx.beginPath();
+            ctx.arc(cx, cy, state.brushSize * 1.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else if (state.brushStyle === "crayon") {
+          const steps = Math.hypot(x2 - x1, y2 - y1) / 1.5;
+          for (let i = 0; i < steps; i++) {
+            const t = i / steps;
+            const cx = x1 + (x2 - x1) * t;
+            const cy = y1 + (y2 - y1) * t;
+
+            ctx.fillStyle = state.brushColor;
+            for (let d = 0; d < 12; d++) {
+              const rad = Math.random() * (state.brushSize * 0.55);
+              const ang = Math.random() * Math.PI * 2;
+              const px = cx + Math.cos(ang) * rad;
+              const py = cy + Math.sin(ang) * rad;
+              ctx.globalAlpha = state.opacity * (Math.random() * 0.5);
+              ctx.fillRect(px, py, 1.8, 1.8);
+            }
+          }
+        } else if (state.brushStyle === "pixel") {
+          const steps = Math.hypot(x2 - x1, y2 - y1);
+          ctx.fillStyle = state.brushColor;
+          ctx.globalAlpha = state.opacity;
+          for (let i = 0; i <= steps; i++) {
+            const t = steps === 0 ? 0 : i / steps;
+            const cx = Math.round(x1 + (x2 - x1) * t);
+            const cy = Math.round(y1 + (y2 - y1) * t);
+            ctx.fillRect(
+              cx - Math.floor(state.brushSize / 2),
+              cy - Math.floor(state.brushSize / 2),
+              state.brushSize,
+              state.brushSize,
+            );
+          }
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      };
+
+      // Pro Lasso Transform Selection tools
+      const drawLassoPathGuide = () => {
+        renderActiveFrame(); // Keeps layer graphics updated under selection
+        ctx.save();
+        ctx.strokeStyle = "#f43f5e";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(lassoPoints[0][0], lassoPoints[0][1]);
+        for (let i = 1; i < lassoPoints.length; i++) {
+          ctx.lineTo(lassoPoints[i][0], lassoPoints[i][1]);
+        }
+        ctx.stroke();
+        ctx.restore();
+      };
+
+      const closeLassoPathAndCrop = () => {
+        if (lassoPoints.length < 3) {
+          clearLassoSelectionVisuals();
+          return;
+        }
+
+        // Calculate boundary boxes
+        let minX = 800,
+          minY = 600,
+          maxX = 0,
+          maxY = 0;
+        lassoPoints.forEach(([x, y]) => {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        });
+
+        // Expand limits slightly
+        minX = Math.max(0, Math.floor(minX - 2));
+        minY = Math.max(0, Math.floor(minY - 2));
+        maxX = Math.min(800, Math.ceil(maxX + 2));
+        maxY = Math.min(600, Math.ceil(maxY + 2));
+
+        const w = maxX - minX;
+        const h = maxY - minY;
+
+        if (w < 4 || h < 4) {
+          clearLassoSelectionVisuals();
+          return;
+        }
+
+        lassoBounds = { minX, minY, maxX, maxY };
+
+        // Unpack and isolate drawing pixels inside a virtual Canvas container
+        lassoSelectionCanvas = document.createElement("canvas");
+        lassoSelectionCanvas.width = w;
+        lassoSelectionCanvas.height = h;
+        const sCtx = lassoSelectionCanvas.getContext("2d");
+
+        // Set clip layout path matching custom lasso boundaries
+        sCtx.beginPath();
+        sCtx.moveTo(lassoPoints[0][0] - minX, lassoPoints[0][1] - minY);
+        for (let i = 1; i < lassoPoints.length; i++) {
+          sCtx.lineTo(lassoPoints[i][0] - minX, lassoPoints[i][1] - minY);
+        }
+        sCtx.closePath();
+        sCtx.clip();
+
+        // Render current canvas contents into lasso container
+        sCtx.drawImage(drawCanvas, minX, minY, w, h, 0, 0, w, h);
+
+        // Erase selected lasso component from standard drawing board
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(lassoPoints[0][0], lassoPoints[0][1]);
+        for (let i = 1; i < lassoPoints.length; i++) {
+          ctx.lineTo(lassoPoints[i][0], lassoPoints[i][1]);
+        }
+        ctx.closePath();
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.fill();
+        ctx.restore();
+
+        lassoActive = true;
+        dragOffsetOffsetX = 0;
+        dragOffsetOffsetY = 0;
+
+        drawLassoOverlaySelection();
+      };
+
+      const isPointInLassoBounds = (x, y) => {
+        if (!lassoBounds) return false;
+        return (
+          x >= lassoBounds.minX &&
+          x <= lassoBounds.maxX &&
+          y >= lassoBounds.minY &&
+          y <= lassoBounds.maxY
+        );
+      };
+
+      const drawLassoOverlaySelection = () => {
+        renderActiveFrame();
+
+        if (!lassoBounds || !lassoSelectionCanvas) return;
+
+        ctx.save();
+        // Draw translated selection pixels
+        ctx.drawImage(
+          lassoSelectionCanvas,
+          lassoBounds.minX + dragOffsetOffsetX,
+          lassoBounds.minY + dragOffsetOffsetY,
+        );
+
+        // Draw bounding selector visual boxes
+        ctx.strokeStyle = "#3b82f6";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([6, 3]);
+        ctx.strokeRect(
+          lassoBounds.minX + dragOffsetOffsetX,
+          lassoBounds.minY + dragOffsetOffsetY,
+          lassoSelectionCanvas.width,
+          lassoSelectionCanvas.height,
+        );
+
+        // Corner helper indicators
+        ctx.fillStyle = "#3b82f6";
+        const rSize = 6;
+        const lx = lassoBounds.minX + dragOffsetOffsetX;
+        const ly = lassoBounds.minY + dragOffsetOffsetY;
+        const lw = lassoSelectionCanvas.width;
+        const lh = lassoSelectionCanvas.height;
+
+        ctx.fillRect(lx - 3, ly - 3, rSize, rSize);
+        ctx.fillRect(lx + lw - 3, ly - 3, rSize, rSize);
+        ctx.fillRect(lx - 3, ly + lh - 3, rSize, rSize);
+        ctx.fillRect(lx + lw - 3, ly + lh - 3, rSize, rSize);
+
+        ctx.restore();
+      };
+
+      const applyLassoTranslation = () => {
+        if (!lassoBounds || !lassoSelectionCanvas) return;
+
+        // Paint translation permanent layers
+        ctx.save();
+        ctx.drawImage(
+          lassoSelectionCanvas,
+          lassoBounds.minX + dragOffsetOffsetX,
+          lassoBounds.minY + dragOffsetOffsetY,
+        );
+        ctx.restore();
+
+        // Clear old boundary targets
+        clearLassoSelectionVisuals();
+        saveFrameState();
+        saveStateToHistory();
+      };
+
+      const clearLassoSelectionVisuals = () => {
+        lassoActive = false;
+        lassoPoints = [];
+        lassoBounds = null;
+        lassoSelectionCanvas = null;
+        dragOffsetOffsetX = 0;
+        dragOffsetOffsetY = 0;
+        renderActiveFrame();
+      };
+
+      // Standard flood fill bucket
+      const floodFillEngine = (startX, startY, fillColor) => {
+        const imgData = ctx.getImageData(0, 0, 800, 600);
+        const data = imgData.data;
+
+        const startIdx = (startY * 800 + startX) * 4;
+        const startR = data[startIdx];
+        const startG = data[startIdx + 1];
+        const startB = data[startIdx + 2];
+        const startA = data[startIdx + 3];
+
+        const hexToRgb = (hex) => {
+          const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+          return result
+            ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16),
+              }
+            : { r: 244, g: 63, b: 94 };
+        };
+
+        const fillRGB = hexToRgb(fillColor);
+
+        if (
+          Math.abs(startR - fillRGB.r) < 10 &&
+          Math.abs(startG - fillRGB.g) < 10 &&
+          Math.abs(startB - fillRGB.b) < 10 &&
+          startA > 240
+        ) {
+          return;
+        }
+
+        const queue = [[startX, startY]];
+        const visited = new Uint8Array(800 * 600);
+
+        while (queue.length > 0) {
+          const [cx, cy] = queue.shift();
+          const idx = (cy * 800 + cx) * 4;
+
+          if (cx < 0 || cx >= 800 || cy < 0 || cy >= 600) continue;
+          if (visited[cy * 800 + cx]) continue;
+          visited[cy * 800 + cx] = 1;
+
+          const currR = data[idx];
+          const currG = data[idx + 1];
+          const currB = data[idx + 2];
+          const currA = data[idx + 3];
+
+          const colorMatch =
+            Math.abs(currR - startR) < 30 &&
+            Math.abs(currG - startG) < 30 &&
+            Math.abs(currB - startB) < 30 &&
+            Math.abs(currA - startA) < 30;
+
+          if (colorMatch || (startA === 0 && currA < 30)) {
+            data[idx] = fillRGB.r;
+            data[idx + 1] = fillRGB.g;
+            data[idx + 2] = fillRGB.b;
+            data[idx + 3] = 255;
+
+            queue.push([cx + 1, cy]);
+            queue.push([cx - 1, cy]);
+            queue.push([cx, cy + 1]);
+            queue.push([cx, cy - 1]);
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+      };
+
+      // Frame Manipulation Actions
+      const createBlankFrame = () => {
+        const frameLayers = {};
+        state.layers.forEach((lyr) => {
+          frameLayers[lyr.id] = null;
+        });
+        return {
+          layers: frameLayers,
+          duration: 1,
+        };
+      };
+
+      // Core Blank Project Instantiator (FIXED REFERENCE ERROR)
+      const createBlankProject = () => {
+        state.projectId = "proj_" + Math.random().toString(36).substr(2, 9);
+        state.projectName =
+          "Animation Spark " + Math.floor(Math.random() * 1000);
+
+        state.layers = [
+          { id: "layer-1", name: "Background", visible: true, opacity: 1.0 },
+          { id: "layer-2", name: "Foreground", visible: true, opacity: 1.0 },
+        ];
+        state.activeLayerId = "layer-2";
+
+        state.frames = [createBlankFrame()];
+        state.currentFrameIndex = 0;
+
+        updateMetadataUI();
+        saveStateToHistory();
+        buildLayersUI();
+        buildTimeline();
+        renderActiveFrame();
+      };
+
+      const updateMetadataUI = () => {
+        document.getElementById("current-project-name").innerText =
+          state.projectName;
+        const currentActiveLayer = state.layers.find(
+          (l) => l.id === state.activeLayerId,
+        );
+        document.getElementById("lbl-active-layer-span").innerText =
+          currentActiveLayer ? currentActiveLayer.name : "Unknown";
+      };
+
+      const saveFrameState = () => {
+        if (state.frames.length === 0) return;
+        const dataUrl = drawCanvas.toDataURL("image/png");
+        state.frames[state.currentFrameIndex].layers[state.activeLayerId] =
+          dataUrl;
+
+        generateCombinedThumb(state.currentFrameIndex).then((combinedUrl) => {
+          updateTimelineThumb(state.currentFrameIndex, combinedUrl);
+        });
+        autoSaveToCache();
+      };
+
+      // Combine all active layers into a single frame thumbnail
+      const generateCombinedThumb = (frameIndex) => {
+        return new Promise((resolve) => {
+          const tempCanvas = document.createElement("canvas");
+          tempCanvas.width = 160;
+          tempCanvas.height = 120;
+          const tempCtx = tempCanvas.getContext("2d");
+
+          const frame = state.frames[frameIndex];
+          if (!frame) return resolve("");
+
+          const visibleLayers = [...state.layers].filter((l) => l.visible);
+          let loadedCount = 0;
+
+          if (visibleLayers.length === 0) return resolve("");
+
+          visibleLayers.forEach((lyr) => {
+            const data = frame.layers[lyr.id];
+            if (!data) {
+              loadedCount++;
+              if (loadedCount === visibleLayers.length)
+                resolve(tempCanvas.toDataURL());
+              return;
+            }
+
+            const img = new Image();
+            img.onload = () => {
+              tempCtx.globalAlpha = lyr.opacity;
+              tempCtx.drawImage(img, 0, 0, 160, 120);
+              loadedCount++;
+              if (loadedCount === visibleLayers.length)
+                resolve(tempCanvas.toDataURL());
+            };
+            img.src = data;
+          });
+        });
+      };
+
+      // Dynamic Layers Rendering engine
+      const renderActiveFrame = () => {
+        ctx.clearRect(0, 0, 800, 600);
+        onionCtx.clearRect(0, 0, 800, 600);
+        layersCanvasStack.innerHTML = "";
+
+        const frame = state.frames[state.currentFrameIndex];
+        if (!frame) return;
+
+        // Sort layers to render back-to-front
+        state.layers.forEach((lyr) => {
+          const layerData = frame.layers[lyr.id];
+          if (!layerData || !lyr.visible) return;
+
+          const layerImg = document.createElement("img");
+          layerImg.className =
+            "absolute inset-0 w-full h-full object-contain pointer-events-none";
+          layerImg.style.opacity = lyr.opacity;
+          layerImg.src = layerData;
+          layersCanvasStack.appendChild(layerImg);
+
+          // If this is the active drawing layer, load its data directly to interaction canvas
+          if (lyr.id === state.activeLayerId) {
+            const img = new Image();
+            img.onload = () => {
+              ctx.globalCompositeOperation = "source-over";
+              ctx.globalAlpha = lyr.opacity;
+              ctx.drawImage(img, 0, 0);
+            };
+            img.src = layerData;
+          }
+        });
+
+        document.getElementById("canvas-indicator-frame").innerText =
+          `Frame ${state.currentFrameIndex + 1}/${state.frames.length}`;
+        if (state.isOnionActive && !state.isPlaying) {
+          renderOnionSkins();
+        }
+        updateMetadataUI();
+      };
+
+      // Multi-layer tinted onion skin previews
+      const renderOnionSkins = () => {
+        const tintImage = (imgSrc, color, alpha) => {
+          return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+              const tempCanvas = document.createElement("canvas");
+              tempCanvas.width = 800;
+              tempCanvas.height = 600;
+              const tempCtx = tempCanvas.getContext("2d");
+
+              tempCtx.drawImage(img, 0, 0);
+              tempCtx.globalCompositeOperation = "source-in";
+              tempCtx.fillStyle = color;
+              tempCtx.fillRect(0, 0, 800, 600);
+
+              onionCtx.globalAlpha = alpha;
+              onionCtx.drawImage(tempCanvas, 0, 0);
+              resolve();
+            };
+            img.src = imgSrc;
+          });
+        };
+
+        const promises = [];
+        if (state.currentFrameIndex > 0) {
+          const prevFrame = state.frames[state.currentFrameIndex - 1];
+          state.layers.forEach((l) => {
+            if (prevFrame.layers[l.id] && l.visible) {
+              promises.push(
+                tintImage(prevFrame.layers[l.id], "#FF4136", 0.3 * l.opacity),
+              );
+            }
+          });
+        }
+
+        if (state.currentFrameIndex < state.frames.length - 1) {
+          const nextFrame = state.frames[state.currentFrameIndex + 1];
+          state.layers.forEach((l) => {
+            if (nextFrame.layers[l.id] && l.visible) {
+              promises.push(
+                tintImage(nextFrame.layers[l.id], "#2ECC40", 0.3 * l.opacity),
+              );
+            }
+          });
+        }
+
+        Promise.all(promises);
+      };
+
+      // EXPORT SMART LAYER-STITCHED PNG
+      const exportLayerStitchedPNG = () => {
+        showCanvasLoader(true, "Building Layer-Stitched Template...");
+
+        const frame = state.frames[state.currentFrameIndex];
+        if (!frame) {
+          showCanvasLoader(false);
+          return;
+        }
+
+        const numLayers = state.layers.length;
+
+        const stitchCanvas = document.createElement("canvas");
+        stitchCanvas.width = 1000;
+        stitchCanvas.height = 600 * (numLayers + 1);
+        const sCtx = stitchCanvas.getContext("2d");
+
+        sCtx.fillStyle = "#121216";
+        sCtx.fillRect(800, 0, 200, stitchCanvas.height);
+
+        sCtx.strokeStyle = "#27272a";
+        sCtx.lineWidth = 2;
+        sCtx.beginPath();
+        sCtx.moveTo(800, 0);
+        sCtx.lineTo(800, stitchCanvas.height);
+        sCtx.stroke();
+
+        const drawCompositePreview = () => {
+          return new Promise((resolve) => {
+            const visibleLayers = state.layers.filter((l) => l.visible);
+            let processed = 0;
+            if (visibleLayers.length === 0) return resolve();
+
+            visibleLayers.forEach((lyr) => {
+              const data = frame.layers[lyr.id];
+              if (!data) {
+                processed++;
+                if (processed === visibleLayers.length) resolve();
+                return;
+              }
+              const img = new Image();
+              img.onload = () => {
+                sCtx.globalAlpha = lyr.opacity;
+                sCtx.drawImage(img, 0, 0, 800, 600);
+                processed++;
+                if (processed === visibleLayers.length) {
+                  sCtx.globalAlpha = 1.0;
+                  resolve();
+                }
+              };
+              img.src = data;
+            });
+          });
+        };
+
+        const drawRawLayers = () => {
+          const drawPromises = state.layers.map((lyr, index) => {
+            return new Promise((resolve) => {
+              const data = frame.layers[lyr.id];
+              const yPos = 600 * (index + 1);
+
+              sCtx.fillStyle = "#1a1a24";
+              sCtx.fillRect(802, yPos + 4, 196, 592);
+
+              sCtx.strokeStyle = "#27272a";
+              sCtx.beginPath();
+              sCtx.moveTo(0, yPos);
+              sCtx.lineTo(1000, yPos);
+              sCtx.stroke();
+
+              sCtx.fillStyle = "#f43f5e";
+              sCtx.font = "bold 12px sans-serif";
+              sCtx.fillText("FLIPGLIDE LAYER", 820, yPos + 30);
+
+              sCtx.fillStyle = "#ffffff";
+              sCtx.font = "bold 14px sans-serif";
+              sCtx.fillText(lyr.name.toUpperCase(), 820, yPos + 55);
+
+              sCtx.fillStyle = "#a1a1aa";
+              sCtx.font = "10px monospace";
+              sCtx.fillText(
+                `Opacity: ${Math.round(lyr.opacity * 100)}%`,
+                820,
+                yPos + 80,
+              );
+              sCtx.fillText(`Index Position: ${index + 1}`, 820, yPos + 100);
+
+              if (!data) {
+                sCtx.strokeStyle = "rgba(244, 63, 94, 0.2)";
+                sCtx.strokeRect(820, yPos + 120, 160, 100);
+                sCtx.fillStyle = "rgba(244, 63, 94, 0.4)";
+                sCtx.fillText("EMPTY LAYER", 855, yPos + 175);
+                return resolve();
+              }
+
+              const img = new Image();
+              img.onload = () => {
+                sCtx.drawImage(img, 0, yPos, 800, 600);
+                sCtx.drawImage(img, 820, yPos + 120, 160, 120);
+                sCtx.strokeStyle = "#3f3f46";
+                sCtx.strokeRect(820, yPos + 120, 160, 120);
+                resolve();
+              };
+              img.src = data;
+            });
+          });
+          return Promise.all(drawPromises);
+        };
+
+        sCtx.fillStyle = "#f43f5e";
+        sCtx.font = "bold 14px sans-serif";
+        sCtx.fillText("FLIPGLIDE STUDIO", 820, 40);
+
+        sCtx.fillStyle = "#ffffff";
+        sCtx.font = "bold 12px sans-serif";
+        sCtx.fillText("CONSOLIDATED PREVIEW", 820, 65);
+
+        sCtx.fillStyle = "#71717a";
+        sCtx.font = "10px monospace";
+        sCtx.fillText(`Project: ${state.projectName}`, 820, 95);
+        sCtx.fillText(`Frame: ${state.currentFrameIndex + 1}`, 820, 115);
+
+        drawCompositePreview()
+          .then(() => drawRawLayers())
+          .then(() => {
+            const dataUrl = stitchCanvas.toDataURL("image/png");
+            const link = document.createElement("a");
+            link.href = dataUrl;
+            link.download = `${state.projectName.replace(/\s+/g, "_")}_layered_frame_${state.currentFrameIndex + 1}.png`;
+            link.click();
+            showCanvasLoader(false);
+            showNotification(
+              "Layered PNG Saved",
+              "File downloaded. Load back anytime to restore layers!",
+              "check-circle-2",
+            );
+          });
+      };
+
+      // File Import pipeline
+      const initFileImporter = () => {
+        const inputImg = document.getElementById("input-layer-image-file");
+
+        inputImg.addEventListener("change", (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+              if (
+                img.width === 1000 &&
+                img.height % 600 === 0 &&
+                img.height > 600
+              ) {
+                pendingImportImageObj = img;
+                openModal("modal-smart-import");
+              } else {
+                importAsStandardFlat(img);
+              }
+            };
+            img.src = event.target.result;
+          };
+          reader.readAsDataURL(file);
+          inputImg.value = "";
+        });
+
+        document.getElementById("btn-import-smart-layers").onclick = () => {
+          if (pendingImportImageObj) {
+            unpackLayerStitchedPNG(pendingImportImageObj);
+          }
+          closeModals();
+        };
+
+        document.getElementById("btn-import-flat-only").onclick = () => {
+          if (pendingImportImageObj) {
+            importFlatSliceOnly(pendingImportImageObj);
+          }
+          closeModals();
+        };
+      };
+
+      // Unpack Layer-Stitched PNG back into layers
+      const unpackLayerStitchedPNG = (img) => {
+        showCanvasLoader(true, "Unpacking smart layers...");
+
+        const numLayers = img.height / 600 - 1;
+
+        state.layers = [];
+        for (let i = 0; i < numLayers; i++) {
+          state.layers.push({
+            id: `layer-stitch-${i}-${Math.random().toString(36).substr(2, 5)}`,
+            name: `Restored Layer ${i + 1}`,
+            visible: true,
+            opacity: 1.0,
+          });
+        }
+
+        const currentFrame = state.frames[state.currentFrameIndex];
+        currentFrame.layers = {};
+
+        const extractPromises = state.layers.map((lyr, index) => {
+          return new Promise((resolve) => {
+            const tempCanvas = document.createElement("canvas");
+            tempCanvas.width = 800;
+            tempCanvas.height = 600;
+            const tempCtx = tempCanvas.getContext("2d");
+
+            const yPos = 600 * (index + 1);
+            tempCtx.drawImage(img, 0, yPos, 800, 600, 0, 0, 800, 600);
+
+            const dataUrl = tempCanvas.toDataURL("image/png");
+            const pixelBuffer = tempCtx.getImageData(0, 0, 800, 600).data;
+            let hasPixels = false;
+            for (let p = 3; p < pixelBuffer.length; p += 4) {
+              if (pixelBuffer[p] > 0) {
+                hasPixels = true;
+                break;
+              }
+            }
+
+            if (hasPixels) {
+              currentFrame.layers[lyr.id] = dataUrl;
+            } else {
+              currentFrame.layers[lyr.id] = null;
+            }
+            resolve();
+          });
+        });
+
+        Promise.all(extractPromises).then(() => {
+          state.activeLayerId = state.layers[state.layers.length - 1].id;
+
+          saveStateToHistory();
+          buildLayersUI();
+          buildTimeline();
+          renderActiveFrame();
+          showCanvasLoader(false);
+          showNotification(
+            "Layers Restored",
+            `Recovered ${numLayers} layers with editable data!`,
+            "check-circle",
+          );
+          pendingImportImageObj = null;
+        });
+      };
+
+      const importFlatSliceOnly = (img) => {
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = 800;
+        tempCanvas.height = 600;
+        const tempCtx = tempCanvas.getContext("2d");
+
+        tempCtx.drawImage(img, 0, 0, 800, 600, 0, 0, 800, 600);
+
+        ctx.globalCompositeOperation = "source-over";
+        ctx.globalAlpha = 1.0;
+        ctx.drawImage(tempCanvas, 0, 0);
+
+        saveFrameState();
+        saveStateToHistory();
+        showNotification(
+          "Preview Loaded",
+          "Flattened preview loaded into active layer.",
+          "image",
+        );
+        pendingImportImageObj = null;
+      };
+
+      const importAsStandardFlat = (img) => {
+        const scale = Math.min(800 / img.width, 600 / img.height);
+        const w = img.width * scale;
+        const h = img.height * scale;
+        const x = (800 - w) / 2;
+        const y = (600 - h) / 2;
+
+        ctx.globalCompositeOperation = "source-over";
+        ctx.globalAlpha = 1.0;
+        ctx.drawImage(img, x, y, w, h);
+
+        saveFrameState();
+        saveStateToHistory();
+        showNotification(
+          "Image Loaded",
+          "Loaded onto current active layer.",
+          "image",
+        );
+      };
+
+      // Layers panel builder
+      const buildLayersUI = () => {
+        const container = document.getElementById("layers-stack-list");
+        container.innerHTML = "";
+
+        [...state.layers].reverse().forEach((lyr, reverseIdx) => {
+          const actualIdx = state.layers.length - 1 - reverseIdx;
+          const isActive = lyr.id === state.activeLayerId;
+          const layerRow = document.createElement("div");
+
+          layerRow.className = `p-3 rounded-xl border flex flex-col gap-2 transition cursor-grab active:cursor-grabbing ${isActive ? "bg-zinc-800 border-brand-500/50 shadow-md" : "bg-zinc-950/40 border-zinc-800 hover:border-zinc-700"}`;
+          layerRow.setAttribute("draggable", "true");
+          layerRow.dataset.layerId = lyr.id;
+          layerRow.dataset.index = actualIdx;
+
+          layerRow.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 max-w-[65%]">
+                            <i data-lucide="grip-vertical" class="w-3.5 h-3.5 text-zinc-600 shrink-0"></i>
+                            <span class="text-xs font-bold text-white truncate hover:underline" id="label-name-${lyr.id}">${lyr.name}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <button class="btn-vis text-zinc-400 hover:text-white p-1" title="Toggle Visibility">
+                                <i data-lucide="${lyr.visible ? "eye" : "eye-off"}" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button class="btn-options text-zinc-400 hover:text-brand-500 p-1" title="Layer Options">
+                                <i data-lucide="more-vertical" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-[9px] text-zinc-500 font-mono">Opacity</span>
+                        <input type="range" class="slider-layer-opacity flex-1 accent-brand-500 cursor-pointer h-1 bg-zinc-800 rounded-lg appearance-none" min="0" max="100" value="${lyr.opacity * 100}">
+                    </div>
+                `;
+
+          layerRow.onclick = () => {
+            state.activeLayerId = lyr.id;
+            buildLayersUI();
+            renderActiveFrame();
+          };
+
+          layerRow.querySelector(".btn-vis").onclick = (e) => {
+            e.stopPropagation();
+            lyr.visible = !lyr.visible;
+            buildLayersUI();
+            renderActiveFrame();
+          };
+
+          layerRow.querySelector(".btn-options").onclick = (e) => {
+            e.stopPropagation();
+            triggerContextMenu(lyr.id, e);
+          };
+
+          layerRow.oncontextmenu = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            triggerContextMenu(lyr.id, e);
+          };
+
+          layerRow.querySelector(".slider-layer-opacity").onclick = (e) =>
+            e.stopPropagation();
+          layerRow.querySelector(".slider-layer-opacity").oninput = (e) => {
+            lyr.opacity = parseFloat(e.target.value) / 100;
+            renderActiveFrame();
+          };
+
+          layerRow.addEventListener("dragstart", (e) => {
+            e.dataTransfer.setData("text/plain", lyr.id);
+            layerRow.classList.add("opacity-50");
+          });
+
+          layerRow.addEventListener("dragend", () => {
+            layerRow.classList.remove("opacity-50");
+            document
+              .querySelectorAll("#layers-stack-list > div")
+              .forEach((div) => div.classList.remove("layer-drag-over"));
+          });
+
+          layerRow.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            layerRow.classList.add("layer-drag-over");
+          });
+
+          layerRow.addEventListener("dragleave", () => {
+            layerRow.classList.remove("layer-drag-over");
+          });
+
+          layerRow.addEventListener("drop", (e) => {
+            e.preventDefault();
+            const Math_random = e.dataTransfer.getData("text/plain");
+            if (Math_random && Math_random !== lyr.id) {
+              reorderLayers(Math_random, lyr.id);
+            }
+          });
+
+          container.appendChild(layerRow);
+        });
+
+        lucide.createIcons();
+      };
+
+      const reorderLayers = (draggedId, targetId) => {
+        const dragIdx = state.layers.findIndex((l) => l.id === draggedId);
+        const targetIdx = state.layers.findIndex((l) => l.id === targetId);
+
+        if (dragIdx > -1 && targetIdx > -1) {
+          const [removed] = state.layers.splice(dragIdx, 1);
+          state.layers.splice(targetIdx, 0, removed);
+
+          saveStateToHistory();
+          buildLayersUI();
+          renderActiveFrame();
+          buildTimeline();
+          showNotification(
+            "Layers Rearranged",
+            "Stacking order updated.",
+            "arrow-up-down",
+          );
+        }
+      };
+
+      const triggerContextMenu = (layerId, event) => {
+        activeContextLayerId = layerId;
+        const menu = document.getElementById("layer-context-menu");
+        const targetLayer = state.layers.find((l) => l.id === layerId);
+
+        document.getElementById("context-layer-title").innerText = targetLayer
+          ? targetLayer.name
+          : "Layer Options";
+
+        let posX = event.clientX;
+        let posY = event.clientY;
+
+        if (posX + 200 > window.innerWidth) posX = window.innerWidth - 210;
+        if (posY + 250 > window.innerHeight) posY = window.innerHeight - 260;
+
+        menu.style.left = `${posX}px`;
+        menu.style.top = `${posY}px`;
+        menu.classList.remove("hidden");
+      };
+
+      const dismissContextMenu = () => {
+        document.getElementById("layer-context-menu").classList.add("hidden");
+      };
+
+      const initContextMenuActions = () => {
+        const menu = document.getElementById("layer-context-menu");
+        menu.onclick = (e) => e.stopPropagation();
+
+        document.getElementById("ctx-btn-rename").onclick = () => {
+          const lyr = state.layers.find((l) => l.id === activeContextLayerId);
+          if (lyr) {
+            const newName = prompt("Rename layer to:", lyr.name);
+            if (newName && newName.trim()) {
+              lyr.name = newName.trim();
+              buildLayersUI();
+              updateMetadataUI();
+            }
+          }
+          dismissContextMenu();
+        };
+
+        document.getElementById("ctx-btn-duplicate").onclick = () => {
+          const sourceLyr = state.layers.find(
+            (l) => l.id === activeContextLayerId,
+          );
+          if (sourceLyr) {
+            const newId = "layer_" + Math.random().toString(36).substr(2, 9);
+            const newName = `${sourceLyr.name} Copy`;
+
+            state.layers.push({
+              id: newId,
+              name: newName,
+              visible: true,
+              opacity: sourceLyr.opacity,
+            });
+
+            state.frames.forEach((frame) => {
+              frame.layers[newId] = frame.layers[sourceLyr.id];
+            });
+
+            state.activeLayerId = newId;
+            saveStateToHistory();
+            buildLayersUI();
+            renderActiveFrame();
+            buildTimeline();
+            showNotification(
+              "Layer Duplicated",
+              `Cloned "${sourceLyr.name}" across all frames.`,
+              "copy",
+            );
+          }
+          dismissContextMenu();
+        };
+
+        document.getElementById("ctx-btn-export-isolated").onclick = () => {
+          const lyr = state.layers.find((l) => l.id === activeContextLayerId);
+          const frame = state.frames[state.currentFrameIndex];
+
+          if (lyr && frame) {
+            const dataUrl = frame.layers[lyr.id];
+            if (dataUrl) {
+              const link = document.createElement("a");
+              link.href = dataUrl;
+              link.download = `${state.projectName.replace(/\s+/g, "_")}_${lyr.name.replace(/\s+/g, "_")}_isolated.png`;
+              link.click();
+              showNotification(
+                "Export Complete",
+                `Exported isolated layer: "${lyr.name}"`,
+                "image",
+              );
+            } else {
+              showNotification(
+                "Empty Layer",
+                "This layer contains no artwork on this frame.",
+                "alert-circle",
+              );
+            }
+          }
+          dismissContextMenu();
+        };
+
+        document.getElementById("ctx-btn-delete").onclick = () => {
+          if (state.layers.length <= 1) {
+            showNotification(
+              "Cannot Delete",
+              "Your project must contain at least one layer.",
+              "alert-triangle",
+            );
+            dismissContextMenu();
+            return;
+          }
+
+          const lyr = state.layers.find((l) => l.id === activeContextLayerId);
+          if (
+            lyr &&
+            confirm(`Are you sure you want to delete layer "${lyr.name}"?`)
+          ) {
+            state.layers = state.layers.filter((l) => l.id !== lyr.id);
+            if (state.activeLayerId === lyr.id) {
+              state.activeLayerId = state.layers[state.layers.length - 1].id;
+            }
+
+            state.frames.forEach((frame) => {
+              delete frame.layers[lyr.id];
+            });
+
+            saveStateToHistory();
+            buildLayersUI();
+            renderActiveFrame();
+            buildTimeline();
+            showNotification(
+              "Layer Deleted",
+              `"${lyr.name}" removed.`,
+              "trash-2",
+            );
+          }
+          dismissContextMenu();
+        };
+
+        window.addEventListener("click", dismissContextMenu);
+      };
+
+      const createNewLayer = () => {
+        const layerId = "layer_" + Math.random().toString(36).substr(2, 9);
+        const layerName = `Layer ${state.layers.length + 1}`;
+
+        state.layers.push({
+          id: layerId,
+          name: layerName,
+          visible: true,
+          opacity: 1.0,
+        });
+
+        state.frames.forEach((f) => {
+          f.layers[layerId] = null;
+        });
+
+        state.activeLayerId = layerId;
+        saveStateToHistory();
+        buildLayersUI();
+        renderActiveFrame();
+        showNotification(
+          "Layer Created",
+          `"${layerName}" added to stage.`,
+          "plus",
+        );
+      };
+
+      // Timeline elements builder
+      const buildTimeline = () => {
+        const container = document.getElementById("frames-timeline");
+        container.innerHTML = "";
+
+        state.frames.forEach((frame, idx) => {
+          const frameCard = document.createElement("div");
+          frameCard.className = `relative shrink-0 w-20 h-16 rounded-lg border-2 flex flex-col items-center justify-center cursor-pointer overflow-hidden transition ${idx === state.currentFrameIndex ? "border-brand-500 bg-zinc-800 ring-2 ring-brand-500/30" : "border-zinc-800 bg-zinc-900 hover:border-zinc-700"}`;
+          frameCard.dataset.index = idx;
+
+          const previewImg = document.createElement("img");
+          previewImg.id = `thumb-${idx}`;
+          previewImg.className =
+            "w-full h-full object-contain absolute inset-0 opacity-80";
+
+          generateCombinedThumb(idx).then((url) => {
+            previewImg.src =
+              url ||
+              "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='transparent'/></svg>";
+          });
+
+          const label = document.createElement("span");
+          label.className =
+            "absolute bottom-1 right-1 text-[10px] bg-zinc-950/90 text-zinc-300 font-bold px-1.5 py-0.5 rounded";
+          label.innerText = idx + 1;
+
+          frameCard.appendChild(previewImg);
+          frameCard.appendChild(label);
+
+          frameCard.onclick = () => selectFrame(idx);
+          container.appendChild(frameCard);
+        });
+      };
+
+      const selectFrame = (index) => {
+        if (index < 0 || index >= state.frames.length) return;
+        state.currentFrameIndex = index;
+        buildTimeline();
+        renderActiveFrame();
+
+        const selectedCard = document.querySelector(`[data-index="${index}"]`);
+        if (selectedCard) {
+          selectedCard.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+            inline: "center",
+          });
+        }
+      };
+
+      const updateTimelineThumb = (index, dataUrl) => {
+        const thumb = document.getElementById(`thumb-${index}`);
+        if (thumb) thumb.src = dataUrl;
+      };
+
+      // Master Dashboard Project Manager Grid loader
+      const loadProjectsDashboard = () => {
+        const projects = JSON.parse(
+          localStorage.getItem("flipglide_library") || "[]",
+        );
+        const container = document.getElementById("dashboard-projects-grid");
+        container.innerHTML = "";
+
+        // Add clean default card if library is empty
+        if (projects.length === 0) {
+          container.className =
+            "flex flex-col items-center justify-center py-20 text-center w-full col-span-full gap-4 text-zinc-500 text-xs";
+          container.innerHTML = `
+                    <i data-lucide="folder-search" class="w-12 h-12 opacity-30 text-brand-500 animate-pulse"></i>
+                    <div>
+                        <p class="font-bold text-sm text-white">No Local Animations Found</p>
+                        <p class="mt-1">Tap the button above or click below to build your first masterpiece!</p>
+                    </div>
+                    <button id="btn-create-first-project" class="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 px-5 rounded-xl transition text-xs shadow-lg shadow-brand-500/20 active:scale-95">
+                        Let's Begin Drawing
+                    </button>
+                `;
+
+          document.getElementById("btn-create-first-project").onclick = () => {
+            createBlankProject();
+            toggleStudioViews(false);
+          };
+          lucide.createIcons();
+          return;
+        }
+
+        container.className =
+          "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 w-full";
+
+        projects.forEach((proj) => {
+          const card = document.createElement("div");
+          card.className =
+            "bg-zinc-900 border border-zinc-800 hover:border-brand-500/30 p-4 rounded-2xl flex flex-col justify-between gap-4 transition shadow-md relative";
+
+          card.innerHTML = `
+                    <div>
+                        <div class="flex items-start justify-between gap-2">
+                            <h4 class="text-sm font-black text-white truncate max-w-[75%]">${proj.name}</h4>
+                            <span class="text-[10px] bg-brand-500/10 text-brand-500 px-2 py-0.5 rounded-full border border-brand-500/20 font-bold">${proj.frameCount} Frames</span>
+                        </div>
+                        <p class="text-[10px] text-zinc-500 mt-1">Layers: ${proj.layers ? proj.layers.length : 2} • FPS: ${proj.fps || 12} • Updated: ${new Date(proj.updatedAt).toLocaleDateString()}</p>
+                    </div>
+                    <div class="flex items-center justify-between gap-2 pt-2 border-t border-zinc-800/80">
+                        <button class="btn-load bg-brand-600 hover:bg-brand-700 text-white font-black px-4 py-2 rounded-xl text-xs transition active:scale-95 shadow-md shadow-brand-500/10" data-id="${proj.id}">
+                            Open Stage
+                        </button>
+                        <div class="flex items-center gap-0.5">
+                            <button class="btn-rename p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition" title="Rename" data-id="${proj.id}">
+                                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
+                            <button class="btn-clone p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition" title="Duplicate" data-id="${proj.id}">
+                                <i data-lucide="copy" class="w-4 h-4"></i>
+                            </button>
+                            <button class="btn-delete p-2 hover:bg-zinc-800 rounded-lg text-zinc-500 hover:text-red-400 transition" title="Delete" data-id="${proj.id}">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+
+          card.querySelector(".btn-load").onclick = () => {
+            openProjectFromLibrary(proj.id);
+            toggleStudioViews(false);
+          };
+
+          card.querySelector(".btn-rename").onclick = () => {
+            const newName = prompt("Rename Project to:", proj.name);
+            if (newName && newName.trim()) {
+              renameProjectInLibrary(proj.id, newName.trim());
+            }
+          };
+
+          card.querySelector(".btn-clone").onclick = () => {
+            duplicateProjectInLibrary(proj.id);
+          };
+
+          card.querySelector(".btn-delete").onclick = () => {
+            if (confirm(`Are you sure you want to delete "${proj.name}"?`)) {
+              deleteProjectInLibrary(proj.id);
+            }
+          };
+
+          container.appendChild(card);
+        });
+
+        lucide.createIcons();
+      };
+
+      const saveProjectToLibrary = () => {
+        const library = JSON.parse(
+          localStorage.getItem("flipglide_library") || "[]",
+        );
+        const index = library.findIndex((p) => p.id === state.projectId);
+
+        const projectSummary = {
+          id: state.projectId,
+          name: state.projectName,
+          frameCount: state.frames.length,
+          fps: state.fps,
+          updatedAt: new Date().toISOString(),
+          layers: state.layers,
+          frames: state.frames,
+        };
+
+        if (index >= 0) {
+          library[index] = projectSummary;
+        } else {
+          library.push(projectSummary);
+        }
+
+        localStorage.setItem("flipglide_library", JSON.stringify(library));
+        showNotification(
+          "Saved to Library",
+          `"${state.projectName}" saved successfully.`,
+          "bookmark",
+        );
+      };
+
+      const openProjectFromLibrary = (id) => {
+        const library = JSON.parse(
+          localStorage.getItem("flipglide_library") || "[]",
+        );
+        const proj = library.find((p) => p.id === id);
+        if (proj) {
+          state.projectId = proj.id;
+          state.projectName = proj.name;
+          state.layers = proj.layers || [
+            { id: "layer-1", name: "Background", visible: true, opacity: 1.0 },
+            { id: "layer-2", name: "Foreground", visible: true, opacity: 1.0 },
+          ];
+          state.frames = proj.frames;
+          state.fps = proj.fps || 12;
+          state.currentFrameIndex = 0;
+
+          state.activeLayerId = state.layers[state.layers.length - 1].id;
+
+          document.getElementById("slider-fps").value = state.fps;
+          document.getElementById("lbl-fps").innerText = `${state.fps} FPS`;
+
+          updateMetadataUI();
+          buildLayersUI();
+          buildTimeline();
+          renderActiveFrame();
+        }
+      };
+
+      const renameProjectInLibrary = (id, newName) => {
+        const library = JSON.parse(
+          localStorage.getItem("flipglide_library") || "[]",
+        );
+        const proj = library.find((p) => p.id === id);
+        if (proj) {
+          proj.name = newName;
+          localStorage.setItem("flipglide_library", JSON.stringify(library));
+          if (state.projectId === id) {
+            state.projectName = newName;
+            updateMetadataUI();
+          }
+          loadProjectsDashboard();
+          showNotification(
+            "Renamed Successfully",
+            "Project name adjusted.",
+            "edit-2",
+          );
+        }
+      };
+
+      const duplicateProjectInLibrary = (id) => {
+        const library = JSON.parse(
+          localStorage.getItem("flipglide_library") || "[]",
+        );
+        const proj = library.find((p) => p.id === id);
+        if (proj) {
+          const clone = {
+            ...proj,
+            id: "proj_" + Math.random().toString(36).substr(2, 9),
+            name: `${proj.name} (Copy)`,
+            updatedAt: new Date().toISOString(),
+          };
+          library.push(clone);
+          localStorage.setItem("flipglide_library", JSON.stringify(library));
+          loadProjectsDashboard();
+          showNotification(
+            "Project Cloned",
+            "Copy created successfully.",
+            "copy",
+          );
+        }
+      };
+
+      const deleteProjectInLibrary = (id) => {
+        let library = JSON.parse(
+          localStorage.getItem("flipglide_library") || "[]",
+        );
+        library = library.filter((p) => p.id !== id);
+        localStorage.setItem("flipglide_library", JSON.stringify(library));
+        loadProjectsDashboard();
+        showNotification(
+          "Project Deleted",
+          "Removed from local workspace library.",
+          "trash-2",
+        );
+      };
+
+      // Export/Import Extensions
+      const exportSpritesheet = () => {
+        showCanvasLoader(true, "Compiling Sprite Matrices...");
+
+        const frameCount = state.frames.length;
+        const singleW = 800;
+        const singleH = 600;
+
+        const targetCanvas = document.createElement("canvas");
+        targetCanvas.width = singleW * frameCount;
+        targetCanvas.height = singleH;
+        const targetCtx = targetCanvas.getContext("2d");
+
+        const loadAndDrawFrame = (index) => {
+          if (index >= frameCount) {
+            const dataUrl = targetCanvas.toDataURL("image/png");
+            const link = document.createElement("a");
+            link.href = dataUrl;
+            link.download = `${state.projectName.replace(/\s+/g, "_")}_spritesheet.png`;
+            link.click();
+            showCanvasLoader(false);
+            showNotification(
+              "Spritesheet Saved",
+              "Sequential PNG spritesheet downloaded.",
+              "image",
+            );
+            return;
+          }
+
+          const frame = state.frames[index];
+          let layerLoadedCount = 0;
+
+          const nextFrameStep = () => {
+            loadAndDrawFrame(index + 1);
+          };
+
+          state.layers.forEach((lyr) => {
+            const layerData = frame.layers[lyr.id];
+            if (!layerData) {
+              layerLoadedCount++;
+              if (layerLoadedCount === state.layers.length) nextFrameStep();
+              return;
+            }
+
+            const img = new Image();
+            img.onload = () => {
+              targetCtx.globalAlpha = lyr.opacity;
+              targetCtx.drawImage(img, index * singleW, 0, singleW, singleH);
+              layerLoadedCount++;
+              if (layerLoadedCount === state.layers.length) nextFrameStep();
+            };
+            img.src = layerData;
+          });
+        };
+
+        loadAndDrawFrame(0);
+      };
+
+      const exportSingleFramePNG = () => {
+        const flatCanvas = document.createElement("canvas");
+        flatCanvas.width = 800;
+        flatCanvas.height = 600;
+        const flatCtx = flatCanvas.getContext("2d");
+
+        const frame = state.frames[state.currentFrameIndex];
+        if (!frame) return;
+
+        let count = 0;
+        const visibleLayers = state.layers.filter((l) => l.visible);
+
+        if (visibleLayers.length === 0) return;
+
+        visibleLayers.forEach((lyr) => {
+          const layerData = frame.layers[lyr.id];
+          if (!layerData) {
+            count++;
+            if (count === visibleLayers.length) triggerDownload();
+            return;
+          }
+
+          const img = new Image();
+          img.onload = () => {
+            flatCtx.globalAlpha = lyr.opacity;
+            flatCtx.drawImage(img, 0, 0);
+            count++;
+            if (count === visibleLayers.length) triggerDownload();
+          };
+          img.src = layerData;
+        });
+
+        function triggerDownload() {
+          const dataUrl = flatCanvas.toDataURL("image/png");
+          const link = document.createElement("a");
+          link.href = dataUrl;
+          link.download = `${state.projectName.replace(/\s+/g, "_")}_frame_${state.currentFrameIndex + 1}.png`;
+          link.click();
+          showNotification(
+            "Frame Capture Saved",
+            "Combined layers exported.",
+            "image",
+          );
+        }
+      };
+
+      const exportAnimationToVideo = async () => {
+        showCanvasLoader(true, "Capturing frames stream...");
+
+        const recordCanvas = document.createElement("canvas");
+        recordCanvas.width = 800;
+        recordCanvas.height = 600;
+        const rCtx = recordCanvas.getContext("2d");
+
+        const stream = recordCanvas.captureStream(state.fps);
+        let mediaRecorder;
+        let recordedChunks = [];
+
+        try {
+          mediaRecorder = new MediaRecorder(stream, {
+            mimeType: "video/webm; codecs=vp9",
+          });
+        } catch (e) {
+          try {
+            mediaRecorder = new MediaRecorder(stream, {
+              mimeType: "video/webm",
+            });
+          } catch (err) {
+            showCanvasLoader(false);
+            showNotification(
+              "Encoder Error",
+              "WebM recording is not supported in this browser.",
+              "alert-circle",
+            );
+            return;
+          }
+        }
+
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) recordedChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: "video/webm" });
+          const videoUrl = URL.createObjectURL(blob);
+          const downloadAnchor = document.createElement("a");
+          downloadAnchor.href = videoUrl;
+          downloadAnchor.download = `${state.projectName.replace(/\s+/g, "_")}_flipglide.webm`;
+          document.body.appendChild(downloadAnchor);
+          downloadAnchor.click();
+          downloadAnchor.remove();
+          showCanvasLoader(false);
+          showNotification(
+            "Export Completed",
+            "Video file ready for sharing!",
+            "check-circle-2",
+          );
+        };
+
+        stopPlayback();
+        mediaRecorder.start();
+
+        let framesCaptured = 0;
+
+        const drawFlatFrameToRecorder = (idx) => {
+          return new Promise((resolve) => {
+            rCtx.fillStyle = "#1e1e24";
+            rCtx.fillRect(0, 0, 800, 600);
+
+            const frame = state.frames[idx];
+            let layersDrawCount = 0;
+
+            state.layers.forEach((lyr) => {
+              const data = frame.layers[lyr.id];
+              if (!data || !lyr.visible) {
+                layersDrawCount++;
+                if (layersDrawCount === state.layers.length) resolve();
+                return;
+              }
+
+              const img = new Image();
+              img.onload = () => {
+                rCtx.globalAlpha = lyr.opacity;
+                rCtx.drawImage(img, 0, 0);
+                layersDrawCount++;
+                if (layersDrawCount === state.layers.length) resolve();
+              };
+              img.src = data;
+            });
+          });
+        };
+
+        const captureInterval = setInterval(() => {
+          if (framesCaptured < state.frames.length) {
+            drawFlatFrameToRecorder(framesCaptured).then(() => {
+              framesCaptured++;
+            });
+          } else {
+            clearInterval(captureInterval);
+            mediaRecorder.stop();
+          }
+        }, 1000 / state.fps);
+      };
+
+      const exportProjectToJson = () => {
+        const packet = {
+          id: state.projectId,
+          name: state.projectName,
+          layers: state.layers,
+          frames: state.frames,
+          fps: state.fps,
+        };
+        const dataStr =
+          "data:text/json;charset=utf-8," +
+          encodeURIComponent(JSON.stringify(packet));
+        const dlAnchor = document.createElement("a");
+        dlAnchor.setAttribute("href", dataStr);
+        dlAnchor.setAttribute(
+          "download",
+          `${state.projectName.replace(/\s+/g, "_")}_project_backup.json`,
+        );
+        dlAnchor.click();
+        showNotification(
+          "JSON Project Downloaded",
+          "Full asset backup completed.",
+          "file-json",
+        );
+      };
+
+      const autoSaveToCache = () => {
+        const bundle = {
+          projectId: state.projectId,
+          projectName: state.projectName,
+          layers: state.layers,
+          frames: state.frames,
+          fps: state.fps,
+        };
+        localStorage.setItem("flipglide_autosave", JSON.stringify(bundle));
+      };
+
+      // Undo & Redo Frame States
+      const saveStateToHistory = () => {
+        state.undoStack.push(
+          JSON.stringify({
+            frames: state.frames,
+            layers: state.layers,
+          }),
+        );
+        state.redoStack = [];
+        updateUndoRedoButtons();
+      };
+
+      const performUndo = () => {
+        if (state.undoStack.length > 1) {
+          const current = state.undoStack.pop();
+          state.redoStack.push(current);
+          const prev = state.undoStack[state.undoStack.length - 1];
+          const restored = JSON.parse(prev);
+          state.frames = restored.frames;
+          state.layers = restored.layers;
+          renderActiveFrame();
+          buildLayersUI();
+          buildTimeline();
+          updateUndoRedoButtons();
+        }
+      };
+
+      const performRedo = () => {
+        if (state.redoStack.length > 0) {
+          const next = state.redoStack.pop();
+          state.undoStack.push(next);
+          const restored = JSON.parse(next);
+          state.frames = restored.frames;
+          state.layers = restored.layers;
+          renderActiveFrame();
+          buildLayersUI();
+          buildTimeline();
+          updateUndoRedoButtons();
+        }
+      };
+
+      const updateUndoRedoButtons = () => {
+        document.getElementById("btn-undo").disabled =
+          state.undoStack.length <= 1;
+        document.getElementById("btn-redo").disabled =
+          state.redoStack.length === 0;
+      };
+
+      // Toggle Views helper
+      const toggleStudioViews = (showDashboard) => {
+        if (showDashboard) {
+          viewDashboard.classList.remove("hidden");
+          viewEditor.classList.add("hidden");
+          loadProjectsDashboard();
+        } else {
+          viewDashboard.classList.add("hidden");
+          viewEditor.classList.remove("hidden");
+          centerWorkspaceViewport();
+        }
+      };
+
+      // Copy Paste Clipboard Memory Controllers
+      const initClipboardSystems = () => {
+        const copyBtn = document.getElementById("btn-copy-frame-data");
+        const pasteBtn = document.getElementById("btn-paste-frame-data");
+
+        copyBtn.onclick = () => {
+          const frame = state.frames[state.currentFrameIndex];
+          if (frame) {
+            frameClipboardMemory = frame.layers[state.activeLayerId];
+            pasteBtn.disabled = !frameClipboardMemory;
+            showNotification(
+              "Frame Copied",
+              "Drawing saved to local clipboard memory.",
+              "copy",
+            );
+          }
+        };
+
+        pasteBtn.onclick = () => {
+          if (frameClipboardMemory) {
+            const frame = state.frames[state.currentFrameIndex];
+            if (frame) {
+              frame.layers[state.activeLayerId] = frameClipboardMemory;
+              renderActiveFrame();
+              saveFrameState();
+              saveStateToHistory();
+              showNotification(
+                "Frame Pasted",
+                "Pasted successfully onto active layer.",
+                "clipboard",
+              );
+            }
+          }
+        };
+      };
+
+      const deleteFrameAction = () => {
+        if (state.frames.length <= 1) {
+          showNotification(
+            "Cannot Delete Frame",
+            "You need at least one frame in your animation.",
+            "alert-triangle",
+          );
+          return;
+        }
+        state.frames.splice(state.currentFrameIndex, 1);
+        if (state.currentFrameIndex >= state.frames.length) {
+          state.currentFrameIndex = state.frames.length - 1;
+        }
+        saveStateToHistory();
+        buildTimeline();
+        renderActiveFrame();
+        autoSaveToCache();
+      };
+
+      const stopPlayback = () => {
+        if (!state.isPlaying) return;
+        state.isPlaying = false;
+        document
+          .getElementById("play-icon")
+          .setAttribute("data-lucide", "play");
+        lucide.createIcons();
+        clearInterval(playInterval);
+        buildTimeline();
+        renderActiveFrame();
+      };
+
+      // Tool toggling mechanics
+      const setTool = (toolName) => {
+        state.currentTool = toolName;
+
+        if (toolName !== "lasso") {
+          clearLassoSelectionVisuals();
+        }
+
+        document.querySelectorAll(".tool-btn").forEach((btn) => {
+          btn.classList.remove(
+            "text-brand-500",
+            "bg-brand-500/10",
+            "border-brand-500/20",
+          );
+          btn.classList.add(
+            "text-zinc-400",
+            "hover:text-zinc-200",
+            "hover:bg-zinc-800",
+          );
+        });
+        const activeBtn = document.getElementById(`tool-${toolName}`);
+        if (activeBtn) {
+          activeBtn.classList.add(
+            "text-brand-500",
+            "bg-brand-500/10",
+            "border-brand-500/20",
+          );
+          activeBtn.classList.remove(
+            "text-zinc-400",
+            "hover:text-zinc-200",
+            "hover:bg-zinc-800",
+          );
+        }
+
+        const cap = toolName.charAt(0).toUpperCase() + toolName.slice(1);
+        document.getElementById("canvas-indicator-tool").innerHTML =
+          `<i data-lucide="edit-3" class="w-3.5 h-3.5"></i> ${cap}`;
+        lucide.createIcons();
+      };
+
+      const setBrushProfile = (profileName) => {
+        state.brushStyle = profileName;
+
+        document.querySelectorAll(".brush-profile-card").forEach((card) => {
+          card.classList.remove("border-brand-500", "bg-brand-500/10");
+          card.classList.add("border-zinc-800", "hover:border-zinc-700");
+        });
+        const activeCard = document.getElementById(`brush-card-${profileName}`);
+        if (activeCard) {
+          activeCard.classList.remove(
+            "border-zinc-800",
+            "hover:border-zinc-700",
+          );
+          activeCard.classList.add("border-brand-500", "bg-brand-500/10");
+        }
+
+        const profile = brushProfiles[profileName];
+        state.opacity = profile.opacity;
+        document.getElementById("slider-opacity").value = Math.round(
+          profile.opacity * 100,
+        );
+        document.getElementById("lbl-opacity").innerText =
+          `${Math.round(profile.opacity * 100)}%`;
+
+        document.getElementById("canvas-indicator-tool").innerHTML =
+          `<i data-lucide="brush" class="w-3.5 h-3.5"></i> ${profile.label}`;
+        lucide.createIcons();
+      };
+
+      // Dynamic Interactive Tour Wizard controllers
+      const startStudioTutorial = () => {
+        currentTourStepIndex = 0;
+        showTourStep();
+      };
+
+      const showTourStep = () => {
+        const step = tourSteps[currentTourStepIndex];
+        if (!step) {
+          endStudioTutorial();
+          return;
+        }
+
+        document.querySelectorAll(".tutorial-highlight").forEach((el) => {
+          el.classList.remove("tutorial-highlight");
+        });
+
+        const targetEl = document.getElementById(step.element);
+        if (targetEl) {
+          targetEl.classList.add("tutorial-highlight");
+          targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+
+        document.getElementById("tour-step-title").innerText = step.title;
+        document.getElementById("tour-step-desc").innerText = step.desc;
+        document.getElementById("tour-progress").innerText =
+          `Step ${currentTourStepIndex + 1} of ${tourSteps.length}`;
+
+        const tourPanel = document.getElementById("tour-wizard");
+        tourPanel.classList.remove("opacity-0", "pointer-events-none");
+
+        const nextBtn = document.getElementById("btn-next-tour");
+        if (currentTourStepIndex === tourSteps.length - 1) {
+          nextBtn.querySelector("span").innerText = "Finish";
+        } else {
+          nextBtn.querySelector("span").innerText = "Next";
+        }
+      };
+
+      const endStudioTutorial = () => {
+        document.querySelectorAll(".tutorial-highlight").forEach((el) => {
+          el.classList.remove("tutorial-highlight");
+        });
+        const tourPanel = document.getElementById("tour-wizard");
+        tourPanel.classList.add("opacity-0", "pointer-events-none");
+        showNotification(
+          "Tour Finished",
+          "You're ready to create masterpieces!",
+          "award",
+        );
+      };
+
+      // Setup Event Listeners
+      const initEventListeners = () => {
+        document.getElementById("btn-back-to-dash").onclick = () => {
+          saveProjectToLibrary();
+          toggleStudioViews(true);
+        };
+
+        // New Project button action
+        document.getElementById("btn-create-project-top").onclick = () => {
+          createBlankProject();
+          toggleStudioViews(false);
+          showNotification(
+            "Stage Initialized",
+            "Have fun animating!",
+            "sparkles",
+          );
+        };
+
+        // Tutorial Event Toggles
+        document.getElementById("btn-start-tutorial").onclick =
+          startStudioTutorial;
+        document.getElementById("btn-skip-tour").onclick = endStudioTutorial;
+        document.getElementById("btn-next-tour").onclick = () => {
+          currentTourStepIndex++;
+          showTourStep();
+        };
+
+        // Custom layer event
+        document.getElementById("btn-create-layer").onclick = createNewLayer;
+
+        // Document rename event trigger
+        document.getElementById("btn-rename-trigger").onclick = () => {
+          const updated = prompt("Enter Project Name:", state.projectName);
+          if (updated && updated.trim()) {
+            state.projectName = updated.trim();
+            updateMetadataUI();
+            saveProjectToLibrary();
+          }
+        };
+
+        // Canvas action buttons
+        document.getElementById("btn-add-frame").onclick = addNewFrame;
+        document.getElementById("btn-duplicate-frame").onclick = duplicateFrame;
+        document.getElementById("btn-delete-frame").onclick = deleteFrameAction;
+
+        // Brushes and palettes sliders
+        document.getElementById("slider-stroke-size").oninput = (e) => {
+          state.brushSize = parseInt(e.target.value);
+          document.getElementById("lbl-stroke-size").innerText =
+            `${state.brushSize}px`;
+          document.getElementById("brush-size-text").innerText =
+            `${state.brushSize}px`;
+          document.getElementById("brush-indicator").style.transform =
+            `scale(${Math.max(0.2, Math.min(2.0, state.brushSize / 15))})`;
+        };
+
+        document.getElementById("slider-opacity").oninput = (e) => {
+          state.opacity = parseFloat(e.target.value) / 100;
+          document.getElementById("lbl-opacity").innerText =
+            `${e.target.value}%`;
+        };
+
+        document.getElementById("native-color-picker").oninput = (e) => {
+          state.brushColor = e.target.value;
+          document.getElementById("btn-color-select").style.backgroundColor =
+            state.brushColor;
+          document.getElementById("brush-indicator").style.backgroundColor =
+            state.brushColor;
+        };
+
+        document.getElementById("slider-fps").oninput = (e) => {
+          state.fps = parseInt(e.target.value);
+          document.getElementById("lbl-fps").innerText = `${state.fps} FPS`;
+          if (state.isPlaying) {
+            stopPlayback();
+            startPlayback();
+          }
+          autoSaveToCache();
+        };
+
+        // Left tools trigger bindings
+        document.getElementById("tool-pen").onclick = () => {
+          setTool("pen");
+          setBrushProfile("pen");
+        };
+        document.getElementById("tool-brush").onclick = () => {
+          setTool("brush");
+          const popup = document.getElementById("brush-popup");
+          popup.classList.toggle("hidden");
+          popup.classList.toggle("flex");
+        };
+        document.getElementById("tool-lasso").onclick = () => setTool("lasso");
+        document.getElementById("tool-eraser").onclick = () =>
+          setTool("eraser");
+        document.getElementById("tool-bucket").onclick = () =>
+          setTool("bucket");
+        document.getElementById("tool-hand").onclick = () => setTool("hand");
+
+        document.getElementById("btn-stroke-config").onclick = (e) => {
+          e.stopPropagation();
+          const popup = document.getElementById("brush-popup");
+          popup.classList.toggle("hidden");
+          popup.classList.toggle("flex");
+        };
+
+        document.addEventListener("click", () => {
+          document.getElementById("brush-popup").classList.add("hidden");
+          document.getElementById("brush-popup").classList.remove("flex");
+        });
+
+        document.getElementById("brush-popup").onclick = (e) =>
+          e.stopPropagation();
+
+        document.getElementById("btn-undo").onclick = performUndo;
+        document.getElementById("btn-redo").onclick = performRedo;
+
+        document.getElementById("btn-save-project").onclick = () => {
+          saveProjectToLibrary();
+        };
+        document.getElementById("btn-export-center").onclick = () => {
+          openModal("modal-export");
+        };
+
+        // Playback elements
+        document.getElementById("btn-play-pause").onclick = () => {
+          if (state.isPlaying) stopPlayback();
+          else startPlayback();
+        };
+
+        document.getElementById("btn-play-prev").onclick = () => {
+          stopPlayback();
+          selectFrame(state.currentFrameIndex - 1);
+        };
+
+        document.getElementById("btn-play-next").onclick = () => {
+          stopPlayback();
+          selectFrame((state.currentFrameIndex + 1) % state.frames.length);
+        };
+
+        document.getElementById("btn-clear-frame").onclick = () => {
+          ctx.clearRect(0, 0, 800, 600);
+          saveFrameState();
+          saveStateToHistory();
+          showNotification(
+            "Canvas Cleared",
+            "Cleared current active layer.",
+            "trash",
+          );
+        };
+
+        // Onion toggle handler
+        document.getElementById("toggle-onion").onclick = () => {
+          state.isOnionActive = !state.isOnionActive;
+          const toggle = document.getElementById("toggle-onion");
+          if (state.isOnionActive) {
+            toggle.className =
+              "bg-brand-500 text-white px-2.5 py-1 rounded-md text-xs font-semibold transition";
+            toggle.innerText = "Active";
+          } else {
+            toggle.className =
+              "bg-zinc-800 text-zinc-400 px-2.5 py-1 rounded-md text-xs font-semibold transition hover:bg-zinc-700";
+            toggle.innerText = "Inactive";
+          }
+          renderActiveFrame();
+        };
+
+        // Keyboard Spacebar and Shortcut controllers
+        window.addEventListener("keydown", (e) => {
+          if (e.code === "Space") {
+            if (e.target.tagName !== "INPUT" && e.target.tagName !== "SELECT") {
+              e.preventDefault();
+              isSpacebarHeld = true;
+              if (!state.isPlaying && state.currentTool !== "hand") {
+                viewport.style.cursor = "grab";
+              }
+            }
+          }
+          if (e.ctrlKey && e.key === "z") {
+            e.preventDefault();
+            performUndo();
+          }
+          if (e.ctrlKey && e.key === "y") {
+            e.preventDefault();
+            performRedo();
+          }
+        });
+
+        window.addEventListener("keyup", (e) => {
+          if (e.code === "Space") {
+            isSpacebarHeld = false;
+            viewport.style.cursor = "default";
+          }
+        });
+
+        // Zoom level actions
+        document.getElementById("btn-zoom-in").onclick = () => {
+          state.zoomScale = Math.min(8.0, state.zoomScale * 1.25);
+          updateTransformState();
+        };
+        document.getElementById("btn-zoom-out").onclick = () => {
+          state.zoomScale = Math.max(0.15, state.zoomScale * 0.8);
+          updateTransformState();
+        };
+        document.getElementById("btn-zoom-reset").onclick =
+          centerWorkspaceViewport;
+
+        // Export Actions Dialog buttons
+        document.getElementById("btn-export-layered-png").onclick = () => {
+          closeModals();
+          exportLayerStitchedPNG();
+        };
+        document.getElementById("btn-export-webm").onclick = () => {
+          closeModals();
+          exportAnimationToVideo();
+        };
+        document.getElementById("btn-export-spritesheet").onclick = () => {
+          closeModals();
+          exportSpritesheet();
+        };
+        document.getElementById("btn-export-json-project").onclick = () => {
+          closeModals();
+          exportProjectToJson();
+        };
+        document.getElementById("btn-export-frame").onclick = () => {
+          closeModals();
+          exportSingleFramePNG();
+        };
+
+        // Close Modal bindings
+        document.querySelectorAll(".btn-close-modal").forEach((btn) => {
+          btn.onclick = closeModals;
+        });
+
+        // JSON Dashboard input importer (Full project backup)
+        document.getElementById("input-json-dashboard").onchange = (e) => {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              try {
+                const parsed = JSON.parse(event.target.result);
+                if (parsed.frames && Array.isArray(parsed.frames)) {
+                  state.projectId =
+                    parsed.id ||
+                    "proj_" + Math.random().toString(36).substr(2, 9);
+                  state.projectName = parsed.name || "Imported Project";
+                  state.layers = parsed.layers || [
+                    {
+                      id: "layer-1",
+                      name: "Background",
+                      visible: true,
+                      opacity: 1.0,
+                    },
+                    {
+                      id: "layer-2",
+                      name: "Foreground",
+                      visible: true,
+                      opacity: 1.0,
+                    },
+                  ];
+                  state.frames = parsed.frames;
+                  state.fps = parsed.fps || 12;
+                  state.currentFrameIndex = 0;
+                  state.activeLayerId =
+                    state.layers[state.layers.length - 1].id;
+
+                  saveProjectToLibrary();
+                  loadProjectsDashboard();
+                  buildLayersUI();
+                  buildTimeline();
+                  renderActiveFrame();
+                  toggleStudioViews(false);
+                  showNotification(
+                    "Project Restored",
+                    `"${state.projectName}" has been imported.`,
+                    "file-check",
+                  );
+                }
+              } catch (err) {
+                showNotification(
+                  "Parser Error",
+                  "Invalid JSON animation file structure.",
+                  "alert-octagon",
+                );
+              }
+            };
+            reader.readAsText(file);
+          }
+        };
+      };
+
+      // Render premium sub-brush select profiles list
+      const buildBrushProfilesSelector = () => {
+        const container = document.getElementById("brush-profiles-selector");
+        container.innerHTML = "";
+
+        Object.keys(brushProfiles).forEach((key) => {
+          const prof = brushProfiles[key];
+          const card = document.createElement("div");
+          card.id = `brush-card-${key}`;
+          card.className = `brush-profile-card p-2 rounded-lg border flex flex-col items-center justify-center gap-1 cursor-pointer transition ${state.brushStyle === key ? "border-brand-500 bg-brand-500/10" : "border-zinc-800 hover:border-zinc-700"}`;
+
+          card.innerHTML = `
+                    <i data-lucide="${prof.icon}" class="w-4 h-4 text-zinc-300"></i>
+                    <span class="text-[9px] font-bold text-center truncate w-full">${prof.label}</span>
+                `;
+
+          card.onclick = (e) => {
+            e.stopPropagation();
+            setBrushProfile(key);
+          };
+
+          container.appendChild(card);
+        });
+
+        lucide.createIcons();
+      };
+
+      const addNewFrame = () => {
+        const newFrame = createBlankFrame();
+        state.frames.splice(state.currentFrameIndex + 1, 0, newFrame);
+        state.currentFrameIndex++;
+        saveStateToHistory();
+        buildTimeline();
+        renderActiveFrame();
+        autoSaveToCache();
+      };
+
+      const duplicateFrame = () => {
+        const current = state.frames[state.currentFrameIndex];
+        const layersClone = {};
+        state.layers.forEach((l) => {
+          layersClone[l.id] = current.layers[l.id];
+        });
+
+        const clone = {
+          layers: layersClone,
+          duration: current.duration,
+        };
+
+        state.frames.splice(state.currentFrameIndex + 1, 0, clone);
+        state.currentFrameIndex++;
+        saveStateToHistory();
+        buildTimeline();
+        renderActiveFrame();
+        autoSaveToCache();
+      };
+
+      // Animation Playback Systems
+      let playInterval = null;
+      const startPlayback = () => {
+        if (state.isPlaying) return;
+        state.isPlaying = true;
+        document
+          .getElementById("play-icon")
+          .setAttribute("data-lucide", "pause");
+        lucide.createIcons();
+
+        const intervalMs = 1000 / state.fps;
+        playInterval = setInterval(() => {
+          state.currentFrameIndex =
+            (state.currentFrameIndex + 1) % state.frames.length;
+          renderActiveFrame();
+        }, intervalMs);
+      };
+
+      // Window Initializer
+      window.onload = () => {
+        initViewportGestures();
+        initGuidesAndSnapping();
+        initFileImporter();
+        initEventListeners();
+        initContextMenuActions();
+        initClipboardSystems();
+        initRulerSystems();
+
+        // Populate palette options
+        const colorPresetGrid = document.getElementById("preset-colors");
+        palettes.forEach((col) => {
+          const btn = document.createElement("button");
+          btn.className =
+            "w-7 h-7 rounded-lg border border-zinc-700/80 shadow-inner flex shrink-0 hover:scale-110 active:scale-95 transition transform";
+          btn.style.backgroundColor = col;
+          btn.onclick = () => {
+            state.brushColor = col;
+            document.getElementById("btn-color-select").style.backgroundColor =
+              col;
+            document.getElementById("brush-indicator").style.backgroundColor =
+              col;
+          };
+          colorPresetGrid.appendChild(btn);
+        });
+
+        // Always load dashboard at launch first (Manage Projects Mode)
+        toggleStudioViews(true);
+        buildBrushProfilesSelector();
+
+        lucide.createIcons();
+      };
+    </script>
+  </body>
+</html>
