@@ -1,0 +1,2243 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>CONCLAVE: Multilayered AI Group Chat</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Google Fonts (Inter) -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        /* Prevents double-tap zoom on iOS touch targets */
+        touch-action: manipulation;
+        overscroll-behavior: none;
+      }
+      /* Custom scrollbar styling */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #0b1329;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #1e293b;
+        border-radius: 6px;
+        border: 2px solid #0b1329;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #334155;
+      }
+
+      /* Hardware accelerated layout fixes to prevent iOS content disappearing glitch */
+      .safe-scroll-container {
+        -webkit-overflow-scrolling: touch;
+        backface-visibility: hidden;
+        transform: translate3d(0, 0, 0);
+      }
+
+      /* Typing indicator animation */
+      @keyframes bounce {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-4px);
+        }
+      }
+      .bounce-1 {
+        animation: bounce 1s infinite 0s;
+      }
+      .bounce-2 {
+        animation: bounce 1s infinite 0.2s;
+      }
+      .bounce-3 {
+        animation: bounce 1s infinite 0.4s;
+      }
+
+      /* Pop animation for reactions */
+      @keyframes pop {
+        0% {
+          transform: scale(0.5);
+          opacity: 0;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+      .reaction-pill {
+        animation: pop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      }
+    </style>
+  </head>
+  <body
+    class="bg-slate-950 text-slate-100 w-screen flex flex-col overflow-hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] select-none"
+  >
+    <!-- Top Navigation Bar (Optimized for Squeeze Prevention) -->
+    <header
+      id="main-header"
+      class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between z-30 shrink-0 select-none"
+    >
+      <!-- Brand Block (Forced No-Shrink) -->
+      <div
+        onclick="openSettingsModal()"
+        class="flex items-center space-x-2 cursor-pointer group shrink-0"
+        title="Configure APIs (Slightly Hidden)"
+      >
+        <div
+          class="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-600 to-pink-500 flex items-center justify-center shadow-lg shrink-0"
+        >
+          <i class="fa-solid fa-layer-group text-white text-sm"></i>
+        </div>
+        <div class="shrink-0 leading-none">
+          <div class="flex items-center space-x-1">
+            <h1
+              class="text-sm font-bold tracking-tight bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent"
+            >
+              CONCLAVE
+            </h1>
+            <i class="fa-solid fa-cog text-[9px] text-slate-500"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity & Controls Center -->
+      <div class="flex items-center space-x-2">
+        <!-- Typing State Indicator Badge -->
+        <div
+          id="typing-monitor-widget"
+          class="hidden xs:flex items-center space-x-1 bg-slate-950 px-2 py-1 rounded border border-slate-800 text-[10px] shrink-0"
+        >
+          <span
+            class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"
+          ></span>
+          <span class="text-slate-400">Typing Paused</span>
+        </div>
+
+        <!-- Mini Status Beacon -->
+        <div
+          class="flex items-center space-x-1 bg-slate-800/80 px-2 py-1 rounded border border-slate-700/50 text-[10px] shrink-0"
+        >
+          <span class="relative flex h-1.5 w-1.5">
+            <span
+              id="network-pulse"
+              class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"
+            ></span>
+            <span
+              id="network-indicator"
+              class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"
+            ></span>
+          </span>
+          <span
+            class="text-slate-300 font-semibold text-[9px]"
+            id="api-status-label"
+            >Ready</span
+          >
+        </div>
+
+        <!-- Sidebar Toggles -->
+        <div class="flex items-center space-x-1 shrink-0">
+          <button
+            onclick="toggleSidebarMenu('rooms-sidebar')"
+            class="lg:hidden text-slate-400 hover:text-white p-1.5 rounded bg-slate-800 hover:bg-slate-700 transition"
+            title="Rooms"
+          >
+            <i class="fa-solid fa-comments text-xs"></i>
+          </button>
+          <button
+            onclick="toggleSidebarMenu('agents-sidebar')"
+            class="lg:hidden text-slate-400 hover:text-white p-1.5 rounded bg-slate-800 hover:bg-slate-700 transition"
+            title="Agents"
+          >
+            <i class="fa-solid fa-users-gear text-xs"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Overlay backdrop layer -->
+    <div
+      id="sidebar-backdrop"
+      onclick="closeAllSidebars()"
+      class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-30 transition-opacity duration-300"
+    ></div>
+
+    <!-- Main Content Area (Dynamic script-calculated height area to avoid CSS Safari height collapse) -->
+    <div
+      id="workspace-container"
+      class="flex flex-row relative overflow-hidden w-full min-h-0 flex-1"
+    >
+      <!-- LEFT SIDEBAR: Chatrooms Navigator -->
+      <aside
+        id="rooms-sidebar"
+        class="absolute lg:static inset-y-0 left-0 w-64 bg-slate-900 border-r border-slate-800 flex flex-col z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out shrink-0 h-full"
+      >
+        <div
+          class="p-3 border-b border-slate-800 flex items-center justify-between"
+        >
+          <span
+            class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
+            >Chatrooms</span
+          >
+          <button
+            onclick="createNewRoom()"
+            class="text-[10px] text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1 bg-indigo-950/40 hover:bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-800/50 transition"
+          >
+            <i class="fa-solid fa-plus text-[8px]"></i> New Room
+          </button>
+        </div>
+
+        <!-- Rooms List (Scrollable) -->
+        <div
+          id="rooms-list"
+          class="flex-1 overflow-y-auto p-2 space-y-0.5 safe-scroll-container"
+        >
+          <!-- Chatroom tabs populate dynamically here -->
+        </div>
+
+        <!-- Storage Monitor -->
+        <div
+          class="p-3 bg-slate-950/60 border-t border-slate-800 space-y-2 shrink-0"
+        >
+          <div
+            class="flex justify-between items-center text-[10px] font-semibold"
+          >
+            <span class="text-slate-400">LocalStorage Cache</span>
+            <span id="storage-percentage" class="text-indigo-400 font-mono"
+              >0.00%</span
+            >
+          </div>
+          <div
+            class="w-full bg-slate-850 rounded-full h-1 overflow-hidden border border-slate-800/85"
+          >
+            <div
+              id="storage-progress-bar"
+              class="bg-indigo-500 h-full rounded-full transition-all duration-300"
+              style="width: 0%"
+            ></div>
+          </div>
+          <div class="flex justify-between items-center text-[9px]">
+            <span id="storage-absolute-usage" class="text-slate-500 font-mono"
+              >0.00 MB / 5.00 MB</span
+            >
+            <button
+              onclick="manuallyTriggerPrune()"
+              class="text-indigo-400 hover:text-indigo-300 underline font-medium"
+            >
+              Prune
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- CENTER CHAT AREA -->
+      <main
+        class="flex-1 flex flex-col bg-slate-950 relative overflow-hidden h-full z-10 min-w-0"
+      >
+        <!-- Elegant Mini Header Banner -->
+        <div
+          id="chat-header"
+          class="bg-slate-900/40 border-b border-slate-800/80 px-4 py-2 flex items-center justify-between shrink-0"
+        >
+          <div class="flex items-center space-x-1.5 min-w-0">
+            <i class="fa-solid fa-hashtag text-indigo-400 text-xs shrink-0"></i>
+            <span
+              id="header-room-name"
+              class="font-bold text-slate-200 text-xs truncate"
+              >Room Title</span
+            >
+          </div>
+          <button
+            onclick="clearChat()"
+            class="text-[10px] text-slate-400 hover:text-red-400 transition font-medium flex items-center gap-1 bg-slate-800/50 px-2 py-1 rounded border border-slate-700/50"
+            title="Erase messages"
+          >
+            <i class="fa-solid fa-trash-can text-[9px]"></i> Clear
+          </button>
+        </div>
+
+        <!-- Conversation Message Scroll Window -->
+        <div
+          id="chat-messages"
+          class="flex-1 overflow-y-auto px-4 py-4 space-y-4 relative safe-scroll-container"
+        >
+          <!-- Messages populate here dynamically -->
+        </div>
+
+        <!-- Input Console Interface -->
+        <div
+          id="chat-input-bar"
+          class="p-3 bg-slate-900 border-t border-slate-800 shrink-0"
+        >
+          <div class="max-w-4xl mx-auto flex items-center space-x-2">
+            <div class="flex-1 relative">
+              <input
+                type="text"
+                id="chat-input"
+                placeholder="Say something to start the debate..."
+                class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-3 pr-10 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 placeholder-slate-500 transition"
+              />
+            </div>
+            <button
+              onclick="handleUserSend()"
+              class="p-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-xl font-semibold transition flex items-center justify-center shadow-lg"
+            >
+              <i class="fa-solid fa-paper-plane text-xs"></i>
+            </button>
+          </div>
+        </div>
+      </main>
+
+      <!-- RIGHT SIDEBAR: Identities & Settings -->
+      <aside
+        id="agents-sidebar"
+        class="absolute lg:static inset-y-0 right-0 w-72 bg-slate-900 border-l border-slate-800 flex flex-col z-40 transform translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out shrink-0 h-full"
+      >
+        <!-- Sidebar Header Tabs -->
+        <div class="flex border-b border-slate-800 shrink-0">
+          <button
+            onclick="switchTab('identities')"
+            id="tab-btn-identities"
+            class="flex-1 py-2.5 text-[10px] font-bold uppercase tracking-wider border-b-2 border-indigo-500 text-white transition"
+          >
+            Active
+          </button>
+          <button
+            onclick="switchTab('create')"
+            id="tab-btn-create"
+            class="flex-1 py-2.5 text-[10px] font-bold uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-white transition"
+          >
+            Create
+          </button>
+        </div>
+
+        <!-- Tab Content Frame -->
+        <div class="flex-1 overflow-y-auto p-3 safe-scroll-container">
+          <!-- TAB: Active Identities List -->
+          <div id="tab-identities" class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span
+                class="text-[9px] font-bold text-slate-400 uppercase tracking-wider"
+                >Agents (<span id="agent-count">0</span>)</span
+              >
+            </div>
+            <div id="identities-list" class="space-y-2"></div>
+          </div>
+
+          <!-- TAB: Create New Identity Form -->
+          <div id="tab-create" class="hidden space-y-3 pb-6">
+            <div>
+              <label class="block text-[10px] font-semibold text-slate-400 mb-1"
+                >Agent Name</label
+              >
+              <input
+                type="text"
+                id="new-agent-name"
+                placeholder="e.g. Professor Quantum"
+                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 animate-none"
+              />
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label
+                  class="block text-[10px] font-semibold text-slate-400 mb-1"
+                  >Emoji Icon</label
+                >
+                <input
+                  type="text"
+                  id="new-agent-emoji"
+                  value="🤖"
+                  class="w-full text-center bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label
+                  class="block text-[10px] font-semibold text-slate-400 mb-1"
+                  >Visual Color</label
+                >
+                <div
+                  class="grid grid-cols-4 gap-0.5 p-1 bg-slate-950 rounded-lg border border-slate-800"
+                >
+                  <button
+                    onclick="selectColor('#6366f1')"
+                    class="color-btn w-3.5 h-3.5 rounded-full bg-indigo-500 border border-white"
+                    data-color="#6366f1"
+                  ></button>
+                  <button
+                    onclick="selectColor('#ec4899')"
+                    class="color-btn w-3.5 h-3.5 rounded-full bg-pink-500 border-2 border-transparent"
+                    data-color="#ec4899"
+                  ></button>
+                  <button
+                    onclick="selectColor('#10b981')"
+                    class="color-btn w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-transparent"
+                    data-color="#10b981"
+                  ></button>
+                  <button
+                    onclick="selectColor('#f59e0b')"
+                    class="color-btn w-3.5 h-3.5 rounded-full bg-amber-500 border-2 border-transparent"
+                    data-color="#f59e0b"
+                  ></button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-semibold text-slate-400 mb-1"
+                >Archetype Tags (Select Multiple)</label
+              >
+              <div
+                class="grid grid-cols-2 gap-1.5"
+                id="tag-selector-grid"
+              ></div>
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-semibold text-slate-400 mb-1"
+                >Custom Prompt & Rules</label
+              >
+              <textarea
+                id="new-agent-prompt"
+                rows="3"
+                placeholder="Explain things casually using simple tech analogies..."
+                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500 placeholder-slate-600 resize-none"
+              ></textarea>
+            </div>
+
+            <div class="pt-2">
+              <button
+                onclick="submitNewAgent()"
+                class="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-lg shadow-indigo-500/10"
+              >
+                <i class="fa-solid fa-plus text-[10px]"></i> Instantiate Agent
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls footer -->
+        <div
+          class="p-3 border-t border-slate-800 bg-slate-950/50 space-y-3 shrink-0"
+        >
+          <div
+            class="bg-slate-900 border border-slate-800 p-2 rounded-lg space-y-2 text-[11px]"
+          >
+            <div class="flex items-center justify-between">
+              <span class="text-slate-300">Auto Reply</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="auto-cascade-toggle"
+                  class="sr-only peer"
+                  checked
+                />
+                <div
+                  class="w-8 h-4 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-indigo-600"
+                ></div>
+              </label>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <span class="text-slate-300">Quiet Mode (Pass)</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="realistic-pass-toggle"
+                  class="sr-only peer"
+                  checked
+                />
+                <div
+                  class="w-8 h-4 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-indigo-600"
+                ></div>
+              </label>
+            </div>
+
+            <div
+              class="flex items-center justify-between pt-1 border-t border-slate-800"
+            >
+              <span class="text-slate-300">Turns</span>
+              <div class="flex items-center space-x-1">
+                <button
+                  onclick="adjustTurns(-1)"
+                  class="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center text-[10px]"
+                >
+                  -
+                </button>
+                <span
+                  id="max-turns-label"
+                  class="text-slate-200 font-mono text-[10px]"
+                  >5</span
+                >
+                <button
+                  onclick="adjustTurns(1)"
+                  class="w-4 h-4 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold flex items-center justify-center text-[10px]"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onclick="triggerAICascade()"
+            class="w-full bg-indigo-900/30 border border-indigo-700/40 hover:bg-indigo-900/50 text-indigo-300 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5"
+          >
+            <i class="fa-solid fa-comments"></i> Debate Cycle
+          </button>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Hidden Settings Modal (Configuration for OpenRouter) -->
+    <div
+      id="settings-modal"
+      class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4"
+    >
+      <div
+        class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl"
+      >
+        <div
+          class="p-4 border-b border-slate-800 flex items-center justify-between"
+        >
+          <div class="flex items-center space-x-2">
+            <div
+              class="w-7 h-7 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400"
+            >
+              <i class="fa-solid fa-key text-xs"></i>
+            </div>
+            <h3 class="text-sm font-bold text-slate-200">System API</h3>
+          </div>
+          <button
+            onclick="closeSettingsModal()"
+            class="text-slate-400 hover:text-white transition"
+          >
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+        <div class="p-4 space-y-3">
+          <div>
+            <label class="block text-[10px] font-semibold text-slate-400 mb-1"
+              >OpenRouter Key</label
+            >
+            <input
+              type="password"
+              id="openrouter-api-key"
+              placeholder="sk-or-v1-..."
+              class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
+            />
+          </div>
+          <div>
+            <label class="block text-[10px] font-semibold text-slate-400 mb-1"
+              >Model Choice</label
+            >
+            <input
+              type="text"
+              id="openrouter-model"
+              placeholder="openrouter/auto:free"
+              class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono"
+            />
+          </div>
+        </div>
+        <div
+          class="p-3 bg-slate-950 border-t border-slate-800 flex justify-between items-center"
+        >
+          <button
+            onclick="clearSettings()"
+            class="text-xs text-red-400 hover:text-red-300 font-semibold"
+          >
+            Clear
+          </button>
+          <div class="flex space-x-2">
+            <button
+              onclick="closeSettingsModal()"
+              class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-lg text-xs transition"
+            >
+              Cancel
+            </button>
+            <button
+              onclick="saveSettings()"
+              class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg text-xs transition"
+            >
+              Apply
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Custom Prompt Modal -->
+    <div
+      id="edit-modal"
+      class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+    >
+      <div
+        class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl"
+      >
+        <div
+          class="p-4 border-b border-slate-800 flex items-center justify-between"
+        >
+          <h3 class="text-sm font-bold text-slate-200">
+            Modify Agent Personality
+          </h3>
+          <button
+            onclick="closeEditModal()"
+            class="text-slate-400 hover:text-white transition"
+          >
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+        <div class="p-4 space-y-3">
+          <input type="hidden" id="edit-agent-id" />
+          <div>
+            <label class="block text-[10px] font-semibold text-slate-400 mb-1"
+              >Name</label
+            >
+            <input
+              type="text"
+              id="edit-agent-name"
+              class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+          <div>
+            <label class="block text-[10px] font-semibold text-slate-400 mb-1"
+              >Instructions</label
+            >
+            <textarea
+              id="edit-agent-prompt"
+              rows="3"
+              class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 resize-none"
+            ></textarea>
+          </div>
+        </div>
+        <div
+          class="p-3 bg-slate-950 border-t border-slate-800 flex justify-end space-x-2"
+        >
+          <button
+            onclick="closeEditModal()"
+            class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-lg text-xs transition"
+          >
+            Cancel
+          </button>
+          <button
+            onclick="saveAgentEdits()"
+            class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg text-xs transition"
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const apiKey = "";
+
+      // State variables backed by localStorage
+      let agents = [];
+      let rooms = [];
+      let currentRoomId = "";
+      let selectedNewColor = "#6366f1";
+      let maxCascadeTurns = 5;
+      let isProcessingQueue = false;
+      let activeCascadeIndex = 0;
+
+      // User Typing state monitor
+      let isUserTyping = false;
+      let typingInactivityTimeout = null;
+
+      // Silence Breaker timer state
+      let lastMessageTimestamp = Date.now();
+      let silenceBreakerCheckInterval = null;
+
+      // Configuration Presets
+      const archetypeTags = [
+        { id: "logical", label: "Logical", desc: "Analytical precision." },
+        {
+          id: "skeptical",
+          label: "Skeptic",
+          desc: "Doubts claims & seeks truth.",
+        },
+        {
+          id: "creative",
+          label: "Creative",
+          desc: "Expressive, poetic metaphor.",
+        },
+        {
+          id: "enthusiastic",
+          label: "Optimist",
+          desc: "Hype builder, tech promoter.",
+        },
+        {
+          id: "sarcastic",
+          label: "Sarcastic",
+          desc: "Dry humor and subtle jokes.",
+        },
+        {
+          id: "philosophical",
+          label: "Philosopher",
+          desc: "Existential questioning, probes ethics.",
+        },
+      ];
+
+      // NO DEFAULT PERSONAS (empty starter slate)
+      const defaultAgents = [];
+
+      // Single Default Room
+      const defaultRooms = [
+        {
+          id: "room_general",
+          name: "General Discussion",
+          chatHistory: [],
+          allowedAgentIds: [],
+        },
+      ];
+
+      // Bootstrap on DOM load
+      window.addEventListener("DOMContentLoaded", () => {
+        initializeTags();
+        loadAgents();
+        loadRooms();
+        setupInputListeners();
+        testAPIConnectivity();
+        updateStorageMetrics();
+        loadSettings();
+        setupSilenceBreakerEngine();
+
+        // Safe height scaling recalculations for iOS (fires resize checks programmatically)
+        window.addEventListener("resize", fixViewportLayoutHeight);
+        fixViewportLayoutHeight();
+      });
+
+      // Safe calculated window offset layout algorithm
+      function fixViewportLayoutHeight() {
+        const header = document.getElementById("main-header");
+        const workspace = document.getElementById("workspace-container");
+        if (!header || !workspace) return;
+
+        const totalAvailableHeight = window.innerHeight;
+        const headerHeight = header.offsetHeight;
+        const calculatedSafeWorkspaceHeight =
+          totalAvailableHeight - headerHeight;
+
+        workspace.style.height = `${calculatedSafeWorkspaceHeight}px`;
+        forceScrollBottom();
+      }
+
+      // Initialize preset tags
+      function initializeTags() {
+        const container = document.getElementById("tag-selector-grid");
+        container.innerHTML = archetypeTags
+          .map(
+            (tag) => `
+                <button type="button" onclick="toggleTagSelection(this, '${tag.id}')" data-tag-id="${tag.id}" class="tag-pill text-left p-1.5 rounded bg-slate-950 border border-slate-800 hover:border-slate-700 text-[10px] transition duration-200">
+                    <p class="font-bold text-slate-300 leading-none">${tag.label}</p>
+                    <p class="text-[8px] text-slate-500 leading-tight mt-0.5">${tag.desc}</p>
+                </button>
+            `,
+          )
+          .join("");
+      }
+
+      // Setup Chatrooms System
+      function loadRooms() {
+        const localRooms = localStorage.getItem("nexus_rooms");
+        if (localRooms) {
+          rooms = JSON.parse(localRooms);
+        } else {
+          rooms = JSON.parse(JSON.stringify(defaultRooms));
+        }
+
+        const localActiveRoom = localStorage.getItem("nexus_active_room_id");
+        if (localActiveRoom && rooms.some((r) => r.id === localActiveRoom)) {
+          currentRoomId = localActiveRoom;
+        } else if (rooms.length > 0) {
+          currentRoomId = rooms[0].id;
+        } else {
+          currentRoomId = "room_general";
+          rooms = [JSON.parse(JSON.stringify(defaultRooms[0]))];
+        }
+
+        // Clear dynamic unread badges for the selected room
+        const activeRoom = rooms.find((r) => r.id === currentRoomId);
+        if (activeRoom) {
+          activeRoom.unreadCount = 0;
+        }
+
+        saveRoomsState();
+        renderRoomsList();
+        renderCurrentRoomMessages();
+      }
+
+      function saveRoomsState() {
+        localStorage.setItem("nexus_rooms", JSON.stringify(rooms));
+        localStorage.setItem("nexus_active_room_id", currentRoomId);
+        updateStorageMetrics();
+      }
+
+      function createNewRoom() {
+        const roomName = prompt(
+          "Enter a name for the new chatroom:",
+          `Room #${rooms.length + 1}`,
+        );
+        if (!roomName || !roomName.trim()) return;
+
+        // Initially, let all active agents be part of this new room
+        const allActiveAgentIds = agents.map((a) => a.id);
+
+        const newRoom = {
+          id: "room_" + Date.now(),
+          name: roomName.trim(),
+          chatHistory: [],
+          allowedAgentIds: allActiveAgentIds,
+          unreadCount: 0,
+        };
+
+        rooms.push(newRoom);
+        currentRoomId = newRoom.id;
+        saveRoomsState();
+        renderRoomsList();
+        renderCurrentRoomMessages();
+        addSystemNotification(
+          `Chatroom "${newRoom.name}" was successfully created.`,
+        );
+        closeAllSidebars();
+      }
+
+      // Programmatic Safe Scroll to Bottom to completely prevent iOS dynamic content rendering bug
+      function forceScrollBottom() {
+        const chatBox = document.getElementById("chat-messages");
+        if (!chatBox) return;
+
+        // Direct update
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // Staggered layout-paint validation loop (fixes iframe WebKit scrolling dropouts on iOS Safari)
+        requestAnimationFrame(() => {
+          chatBox.scrollTop = chatBox.scrollHeight;
+
+          // Force GPU render cycle re-evaluation to fix blank screen glitch
+          chatBox.style.display = "none";
+          chatBox.offsetHeight; // Triggers browser layout reflow calculation
+          chatBox.style.display = "block";
+
+          chatBox.scrollTop = chatBox.scrollHeight;
+        });
+      }
+
+      function selectRoom(roomId) {
+        // Cancel active simulation streams to avoid overlapping inputs
+        isProcessingQueue = false;
+        removeBubbleTypingIndicator();
+
+        currentRoomId = roomId;
+
+        // Clear unread badge counter
+        const targetRoom = rooms.find((r) => r.id === roomId);
+        if (targetRoom) {
+          targetRoom.unreadCount = 0;
+        }
+
+        saveRoomsState();
+        renderRoomsList();
+        renderCurrentRoomMessages();
+        closeAllSidebars();
+      }
+
+      function deleteRoom(roomId, event) {
+        if (event) event.stopPropagation();
+        if (rooms.length <= 1) {
+          alertUser("At least one active chatroom must exist.");
+          return;
+        }
+
+        if (
+          confirm(
+            "Are you sure you want to delete this chatroom and its entire history?",
+          )
+        ) {
+          rooms = rooms.filter((r) => r.id !== roomId);
+          if (currentRoomId === roomId) {
+            currentRoomId = rooms[0].id;
+          }
+          saveRoomsState();
+          renderRoomsList();
+          renderCurrentRoomMessages();
+        }
+      }
+
+      function renderRoomsList() {
+        const container = document.getElementById("rooms-list");
+        container.innerHTML = rooms
+          .map((room) => {
+            const isActive = room.id === currentRoomId;
+            const unreadBadge =
+              !isActive && room.unreadCount && room.unreadCount > 0
+                ? `<span class="bg-red-500 text-white font-bold text-[9px] px-1.5 py-0.5 rounded-full shrink-0 min-w-[16px] text-center">${room.unreadCount}</span>`
+                : "";
+            return `
+                    <div onclick="selectRoom('${room.id}')" class="group flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium cursor-pointer transition ${isActive ? "bg-indigo-600/20 border border-indigo-500/40 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-transparent"}">
+                        <div class="flex items-center space-x-1.5 min-w-0 flex-1">
+                            <i class="fa-solid fa-hashtag text-[10px] ${isActive ? "text-indigo-400" : "text-slate-600"} shrink-0"></i>
+                            <span class="truncate flex-1">${escapeHTML(room.name)}</span>
+                            ${unreadBadge}
+                        </div>
+                        <button onclick="deleteRoom('${room.id}', event)" class="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 p-0.5 ml-1 transition" title="Delete Room">
+                            <i class="fa-solid fa-trash text-[9px]"></i>
+                        </button>
+                    </div>
+                `;
+          })
+          .join("");
+      }
+
+      // Improved Sidebar Slide and Backdrop Controllers
+      function toggleSidebarMenu(sidebarId) {
+        const sidebar = document.getElementById(sidebarId);
+        const backdrop = document.getElementById("sidebar-backdrop");
+
+        const isOpen =
+          !sidebar.classList.contains("-translate-x-full") &&
+          !sidebar.classList.contains("translate-x-full");
+
+        closeAllSidebars();
+
+        if (!isOpen) {
+          if (sidebarId === "rooms-sidebar") {
+            sidebar.classList.remove("-translate-x-full");
+          } else {
+            sidebar.classList.remove("translate-x-full");
+          }
+          backdrop.classList.remove("hidden");
+          backdrop.classList.add("block");
+        }
+      }
+
+      // Close Sidebar View completely
+      function closeAllSidebars() {
+        const leftSidebar = document.getElementById("rooms-sidebar");
+        const rightSidebar = document.getElementById("agents-sidebar");
+        const backdrop = document.getElementById("sidebar-backdrop");
+
+        leftSidebar.classList.add("-translate-x-full");
+        rightSidebar.classList.add("translate-x-full");
+        backdrop.classList.add("hidden");
+        backdrop.classList.remove("block");
+      }
+
+      // OpenRouter Settings Modal Controllers
+      function openSettingsModal() {
+        document.getElementById("settings-modal").classList.remove("hidden");
+      }
+
+      function closeSettingsModal() {
+        document.getElementById("settings-modal").classList.add("hidden");
+      }
+
+      // Load persisted local configs
+      function loadSettings() {
+        const storedKey = localStorage.getItem("nexus_openrouter_key") || "";
+        const storedModel =
+          localStorage.getItem("nexus_openrouter_model") ||
+          "openrouter/auto:free";
+
+        document.getElementById("openrouter-api-key").value = storedKey;
+        document.getElementById("openrouter-model").value = storedModel;
+
+        updateAPIIndicator();
+      }
+
+      function saveSettings() {
+        const key = document.getElementById("openrouter-api-key").value.trim();
+        const model =
+          document.getElementById("openrouter-model").value.trim() ||
+          "openrouter/auto:free";
+
+        localStorage.setItem("nexus_openrouter_key", key);
+        localStorage.setItem("nexus_openrouter_model", model);
+
+        closeSettingsModal();
+        updateAPIIndicator();
+        addSystemNotification(
+          "System: Saved OpenRouter config. All agents will route through your chosen endpoint model.",
+        );
+      }
+
+      function clearSettings() {
+        if (
+          confirm(
+            "Clear your API Key and revert back to standard system simulation mode?",
+          )
+        ) {
+          localStorage.removeItem("nexus_openrouter_key");
+          localStorage.removeItem("nexus_openrouter_model");
+          document.getElementById("openrouter-api-key").value = "";
+          document.getElementById("openrouter-model").value =
+            "openrouter/auto:free";
+          closeSettingsModal();
+          updateAPIIndicator();
+          addSystemNotification(
+            "System: API Key deleted. Reverted to standard simulations.",
+          );
+        }
+      }
+
+      function updateAPIIndicator() {
+        const hasOrKey = !!localStorage.getItem("nexus_openrouter_key");
+        const indicator = document.getElementById("network-indicator");
+        const pulse = document.getElementById("network-pulse");
+        const label = document.getElementById("api-status-label");
+
+        if (hasOrKey) {
+          indicator.className =
+            "relative inline-flex rounded-full h-1.5 w-1.5 bg-indigo-500";
+          pulse.className =
+            "animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75";
+          label.innerText = "OpenRouter";
+        } else {
+          indicator.className =
+            "relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500";
+          pulse.className =
+            "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75";
+          label.innerText = "Ready";
+        }
+      }
+
+      // Color picking dynamics
+      function selectColor(colorCode) {
+        selectedNewColor = colorCode;
+        document.querySelectorAll(".color-btn").forEach((btn) => {
+          const btnColor = btn.getAttribute("data-color");
+          if (btnColor === colorCode) {
+            btn.classList.add("border-white");
+            btn.classList.remove("border-transparent");
+          } else {
+            btn.classList.remove("border-white");
+            btn.classList.add("border-transparent");
+          }
+        });
+      }
+
+      function toggleTagSelection(element, tagId) {
+        element.classList.toggle("border-indigo-600");
+        element.classList.toggle("bg-indigo-950/20");
+      }
+
+      function switchTab(tabName) {
+        const tabs = ["identities", "create"];
+        tabs.forEach((tab) => {
+          const element = document.getElementById(`tab-${tab}`);
+          const btn = document.getElementById(`tab-btn-${tab}`);
+          if (tab === tabName) {
+            element.classList.remove("hidden");
+            btn.classList.add("border-indigo-500", "text-white");
+            btn.classList.remove("border-transparent", "text-slate-400");
+          } else {
+            element.classList.add("hidden");
+            btn.classList.remove("border-indigo-500", "text-white");
+            btn.classList.add("border-transparent", "text-slate-400");
+          }
+        });
+      }
+
+      // Setup Agent Storage & Management
+      function loadAgents() {
+        const local = localStorage.getItem("nexus_agents");
+        if (local) {
+          agents = JSON.parse(local);
+        } else {
+          agents = JSON.parse(JSON.stringify(defaultAgents));
+        }
+        saveAgentsState();
+        renderAgentsList();
+      }
+
+      function resetToDefaultAgents() {
+        if (
+          confirm(
+            "Reset current agent group back to original default settings?",
+          )
+        ) {
+          localStorage.removeItem("nexus_agents");
+          loadAgents();
+        }
+      }
+
+      function saveAgentsState() {
+        localStorage.setItem("nexus_agents", JSON.stringify(agents));
+        document.getElementById("agent-count").innerText = agents.length;
+        updateStorageMetrics();
+      }
+
+      function getAvatarMarkup(agent, size = "w-8 h-8") {
+        return `
+                <div class="${size} rounded-xl flex items-center justify-center text-xs shadow font-sans select-none border border-slate-700/50 shrink-0" style="background-color: ${agent.color}">
+                    ${agent.emoji}
+                </div>
+            `;
+      }
+
+      function renderAgentsList() {
+        const listContainer = document.getElementById("identities-list");
+        if (!agents || agents.length === 0) {
+          listContainer.innerHTML = `
+                    <div class="text-center py-4 border border-dashed border-slate-800 rounded-xl p-3">
+                        <p class="text-xs text-slate-500">No agents in workspace.</p>
+                        <button onclick="switchTab('create')" class="text-[10px] text-indigo-400 hover:underline mt-1 font-medium block mx-auto">Create Your First Agent</button>
+                    </div>
+                `;
+          return;
+        }
+        listContainer.innerHTML = agents
+          .map(
+            (agent) => `
+                <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between transition duration-200">
+                    <div class="flex items-center space-x-2 min-w-0">
+                        ${getAvatarMarkup(agent)}
+                        <div class="min-w-0 w-[55%]">
+                            <h4 class="text-xs font-bold text-slate-200 truncate">${agent.name}</h4>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-1 shrink-0">
+                        <button onclick="openEditModal('${agent.id}')" class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-900 transition" title="Modify Rules">
+                            <i class="fa-solid fa-pen text-[9px]"></i>
+                        </button>
+                        <button onclick="deleteAgent('${agent.id}')" class="text-slate-600 hover:text-red-400 p-1 rounded hover:bg-slate-900 transition" title="Delete">
+                            <i class="fa-solid fa-trash text-[9px]"></i>
+                        </button>
+                    </div>
+                </div>
+            `,
+          )
+          .join("");
+      }
+
+      function deleteAgent(id) {
+        const targetAgent = agents.find((a) => a.id === id);
+        const agentName = targetAgent ? targetAgent.name : "Agent";
+
+        if (
+          confirm(`Are you sure you want to permanently delete ${agentName}?`)
+        ) {
+          // Cancel active simulation streams to avoid overlapping inputs
+          isProcessingQueue = false;
+          removeBubbleTypingIndicator();
+
+          agents = agents.filter((a) => a.id !== id);
+
+          // Clean allowed rooms references
+          rooms.forEach((r) => {
+            if (r.allowedAgentIds) {
+              r.allowedAgentIds = r.allowedAgentIds.filter((aid) => aid !== id);
+            }
+          });
+
+          saveRoomsState();
+          saveAgentsState();
+          renderAgentsList();
+          renderCurrentRoomMessages();
+          addSystemNotification(`${agentName} has been deleted.`);
+        }
+      }
+
+      function submitNewAgent() {
+        const nameInput = document.getElementById("new-agent-name");
+        const emojiInput = document.getElementById("new-agent-emoji");
+        const customPromptInput = document.getElementById("new-agent-prompt");
+
+        const name = nameInput.value.trim();
+        if (!name) {
+          alertUser("Please specify an agent identity name!");
+          return;
+        }
+
+        const selectedTags = [];
+        document
+          .querySelectorAll(".tag-pill.border-indigo-600")
+          .forEach((el) => {
+            selectedTags.push(el.getAttribute("data-tag-id"));
+          });
+
+        const newAgentId = "agent_" + Date.now();
+        const newAgent = {
+          id: newAgentId,
+          name: name,
+          emoji: emojiInput.value.trim() || "🤖",
+          color: selectedNewColor,
+          tags: selectedTags,
+          description:
+            customPromptInput.value.trim() ||
+            `An identity named ${name} with traits: ${selectedTags.join(", ")}. Keep it extremely short, natural, and conversational in chat format. Limit responses to 15 words.`,
+          isActive: true,
+        };
+
+        agents.push(newAgent);
+        saveAgentsState();
+
+        // Add allowed to current chatroom
+        const activeRoom = rooms.find((r) => r.id === currentRoomId);
+        if (activeRoom) {
+          if (!activeRoom.allowedAgentIds) activeRoom.allowedAgentIds = [];
+          activeRoom.allowedAgentIds.push(newAgentId);
+        }
+        saveRoomsState();
+
+        renderAgentsList();
+        renderCurrentRoomMessages();
+
+        nameInput.value = "";
+        customPromptInput.value = "";
+        emojiInput.value = "🤖";
+        document.querySelectorAll(".tag-pill").forEach((el) => {
+          el.classList.remove("border-indigo-600", "bg-indigo-950/20");
+        });
+
+        switchTab("identities");
+        addSystemNotification(`${newAgent.name} has joined the workspace.`);
+        closeAllSidebars();
+      }
+
+      // Toggle Persona assignment for a single chatroom
+      function toggleRoomPersonaAssignment(agentId) {
+        const activeRoom = rooms.find((r) => r.id === currentRoomId);
+        if (!activeRoom) return;
+
+        if (!activeRoom.allowedAgentIds) {
+          activeRoom.allowedAgentIds = agents.map((a) => a.id);
+        }
+
+        if (activeRoom.allowedAgentIds.includes(agentId)) {
+          // Do not allow removing if it's the last persona assigned
+          if (activeRoom.allowedAgentIds.length <= 1) {
+            alert("A chatroom must contain at least one assigned AI persona.");
+            return;
+          }
+          activeRoom.allowedAgentIds = activeRoom.allowedAgentIds.filter(
+            (id) => id !== agentId,
+          );
+        } else {
+          activeRoom.allowedAgentIds.push(agentId);
+        }
+
+        saveRoomsState();
+        renderCurrentRoomMessages();
+      }
+
+      // Edit Modal dynamics
+      function openEditModal(agentId) {
+        const target = agents.find((a) => a.id === agentId);
+        if (!target) return;
+
+        document.getElementById("edit-agent-id").value = target.id;
+        document.getElementById("edit-agent-name").value = target.name;
+        document.getElementById("edit-agent-prompt").value = target.description;
+
+        document.getElementById("edit-modal").classList.remove("hidden");
+      }
+
+      function closeEditModal() {
+        document.getElementById("edit-modal").classList.add("hidden");
+      }
+
+      function saveAgentEdits() {
+        const id = document.getElementById("edit-agent-id").value;
+        const name = document.getElementById("edit-agent-name").value.trim();
+        const description = document
+          .getElementById("edit-agent-prompt")
+          .value.trim();
+
+        if (!name) {
+          alertUser("Identity name cannot be blank.");
+          return;
+        }
+
+        agents = agents.map((a) =>
+          a.id === id ? { ...a, name, description } : a,
+        );
+        saveAgentsState();
+        renderAgentsList();
+        closeEditModal();
+        renderCurrentRoomMessages();
+        addSystemNotification(`Updated configurations for ${name}.`);
+      }
+
+      function adjustTurns(amount) {
+        maxCascadeTurns = Math.max(1, Math.min(10, maxCascadeTurns + amount));
+        document.getElementById("max-turns-label").innerText = maxCascadeTurns;
+      }
+
+      // Storage Pruning
+      function updateStorageMetrics() {
+        let totalChars = 0;
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key.startsWith("nexus_")) {
+            totalChars += (localStorage.getItem(key) || "").length;
+          }
+        }
+
+        const maxAllocation = 5 * 1024 * 1024; // 5 MB
+        const usageMB = (totalChars / (1024 * 1024)).toFixed(3);
+        const percentage = ((totalChars / maxAllocation) * 100).toFixed(2);
+
+        document.getElementById("storage-percentage").innerText =
+          `${percentage}%`;
+        document.getElementById("storage-absolute-usage").innerText =
+          `${usageMB} MB / 5.00 MB`;
+        document.getElementById("storage-progress-bar").style.width =
+          `${Math.min(100, parseFloat(percentage))}%`;
+
+        if (parseFloat(percentage) > 80) {
+          pruneOldStorageChronologically();
+        }
+      }
+
+      function manuallyTriggerPrune() {
+        pruneOldStorageChronologically(true);
+      }
+
+      function pruneOldStorageChronologically(manual = false) {
+        let clearedCount = 0;
+
+        rooms.forEach((room) => {
+          if (room.chatHistory && room.chatHistory.length > 10) {
+            const toKeep = Math.floor(room.chatHistory.length * 0.5);
+            const deletedAmount = room.chatHistory.length - toKeep;
+            room.chatHistory = room.chatHistory.slice(deletedAmount);
+            clearedCount += deletedAmount;
+          }
+        });
+
+        if (clearedCount > 0) {
+          saveRoomsState();
+          renderCurrentRoomMessages();
+          addSystemNotification(
+            `Storage Optimizer: Cleared ${clearedCount} oldest conversation logs.`,
+          );
+        } else if (manual) {
+          addSystemNotification("Storage is highly optimized.");
+        }
+      }
+
+      // Input Listeners
+      function setupInputListeners() {
+        const chatInput = document.getElementById("chat-input");
+        const widget = document.getElementById("typing-monitor-widget");
+
+        chatInput.addEventListener("keypress", (e) => {
+          if (e.key === "Enter") {
+            handleUserSend();
+          }
+        });
+
+        chatInput.addEventListener("input", () => {
+          isUserTyping = true;
+          widget.classList.remove("hidden");
+          widget.classList.add("flex");
+
+          // Clear the auto-resume trigger timer
+          clearTimeout(typingInactivityTimeout);
+
+          // If user stops typing for 4.5 seconds, bring characters back to life
+          typingInactivityTimeout = setTimeout(() => {
+            isUserTyping = false;
+            widget.classList.add("hidden");
+            widget.classList.remove("flex");
+
+            // Resume cascade natively if enabled
+            const autoCascade = document.getElementById(
+              "auto-cascade-toggle",
+            ).checked;
+            if (autoCascade && !isProcessingQueue) {
+              triggerAICascade();
+            }
+          }, 4500);
+        });
+      }
+
+      function appendChatMessage(
+        messageId,
+        senderName,
+        text,
+        isUser,
+        agent = null,
+        reactions = [],
+        readsCount = 0,
+        readNames = [],
+      ) {
+        const chatBox = document.getElementById("chat-messages");
+        const card = document.createElement("div");
+        card.id = `msg-${messageId}`;
+        card.className = `flex ${isUser ? "justify-end" : "justify-start"} w-full items-start gap-2 group shrink-0`;
+
+        const timestamp = new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        // Generate reaction block HTML
+        let reactionHtml = "";
+        if (reactions && reactions.length > 0) {
+          const grouped = {};
+          reactions.forEach((r) => {
+            grouped[r.emoji] = (grouped[r.emoji] || 0) + 1;
+          });
+          reactionHtml = `
+                    <div class="flex flex-wrap gap-1 mt-1.5">
+                        ${Object.keys(grouped)
+                          .map(
+                            (emo) => `
+                            <div class="reaction-pill flex items-center space-x-1 bg-slate-950/90 hover:bg-slate-800 border border-slate-800/80 px-1.5 py-0.5 rounded-full text-[10px] cursor-pointer select-none">
+                                <span>${emo}</span>
+                                <span class="text-[8px] text-slate-500 font-bold">${grouped[emo]}</span>
+                            </div>
+                        `,
+                          )
+                          .join("")}
+                    </div>
+                `;
+        }
+
+        // Create checkmark status block representing read receipts INSIDE the speech bubble
+        let statusHtml = "";
+        if (readsCount > 0) {
+          const tooltipText =
+            readNames.length > 0 ? `Read by: ${readNames.join(", ")}` : "Read";
+          const checkColor =
+            readsCount >= 2 ? "text-sky-400" : "text-slate-400";
+          const checkIcon = readsCount >= 2 ? "fa-double-check" : "fa-check";
+          const counterText =
+            readsCount > 1
+              ? `<span class="ml-0.5 font-bold font-mono text-[8px]">${readsCount}</span>`
+              : "";
+          statusHtml = `
+                    <span class="flex items-center ${checkColor} ml-0.5 cursor-help animate-pulse" title="${escapeHTML(tooltipText)}">
+                        <i class="fa-solid ${checkIcon}"></i>${counterText}
+                    </span>
+                `;
+        }
+
+        if (isUser) {
+          card.innerHTML = `
+                    <div class="flex flex-col items-end max-w-[85%] sm:max-w-md">
+                        <div class="flex items-center space-x-1 mb-0.5">
+                            <span class="text-[9px] font-bold text-indigo-400">You</span>
+                        </div>
+                        <div class="bg-indigo-600 text-slate-100 rounded-2xl rounded-tr-none px-3 pt-2 pb-2 text-xs shadow leading-relaxed break-words min-w-[100px]">
+                            <div class="mb-1 whitespace-pre-wrap">${escapeHTML(text)}</div>
+                            <div class="flex items-center justify-end space-x-1 text-[8px] text-indigo-200 select-none">
+                                <span>${timestamp}</span>
+                                ${statusHtml}
+                            </div>
+                        </div>
+                        ${reactionHtml}
+                    </div>
+                `;
+        } else {
+          card.innerHTML = `
+                    ${getAvatarMarkup(agent, "w-8 h-8 shrink-0")}
+                    <div class="flex flex-col items-start max-w-[85%] sm:max-w-md">
+                        <div class="flex items-center space-x-1 mb-0.5">
+                            <span class="text-[9px] font-bold text-slate-300">${agent.name}</span>
+                        </div>
+                        <div class="bg-slate-900 border border-slate-800 text-slate-200 rounded-2xl rounded-tl-none px-3 pt-2 pb-2 text-xs shadow-md leading-relaxed break-words min-w-[100px]">
+                            <div class="mb-1 whitespace-pre-wrap">${escapeHTML(text)}</div>
+                            <div class="flex items-center justify-end space-x-1 text-[8px] text-slate-500 select-none">
+                                <span>${timestamp}</span>
+                                ${statusHtml}
+                            </div>
+                        </div>
+                        ${reactionHtml}
+                    </div>
+                `;
+        }
+
+        chatBox.appendChild(card);
+        forceScrollBottom();
+      }
+
+      // Inline bubble typing indicator setup (At the end of chat log)
+      function insertBubbleTypingIndicator(agent) {
+        removeBubbleTypingIndicator(); // Guarantee clean state
+
+        const chatBox = document.getElementById("chat-messages");
+        const typingBubble = document.createElement("div");
+        typingBubble.id = "nexus-bubble-typing";
+        typingBubble.className =
+          "flex justify-start w-full items-start gap-2 shrink-0 animate-pulse";
+
+        typingBubble.innerHTML = `
+                ${getAvatarMarkup(agent, "w-8 h-8 shrink-0")}
+                <div class="flex flex-col items-start max-w-[85%] sm:max-w-md">
+                    <div class="flex items-center space-x-1 mb-0.5">
+                        <span class="text-[9px] font-bold text-slate-300">${agent.name}</span>
+                    </div>
+                    <div class="bg-slate-900 border border-slate-800 text-slate-200 rounded-2xl rounded-tl-none px-3 py-2 shadow-md flex items-center space-x-1 font-sans">
+                        <span class="w-1 h-1 bg-indigo-400 rounded-full bounce-1"></span>
+                        <span class="w-1 h-1 bg-indigo-400 rounded-full bounce-2"></span>
+                        <span class="w-1 h-1 bg-indigo-400 rounded-full bounce-3"></span>
+                    </div>
+                </div>
+            `;
+
+        chatBox.appendChild(typingBubble);
+        forceScrollBottom();
+      }
+
+      function removeBubbleTypingIndicator() {
+        const bubble = document.getElementById("nexus-bubble-typing");
+        if (bubble) {
+          bubble.remove();
+        }
+      }
+
+      function renderCurrentRoomMessages() {
+        const chatBox = document.getElementById("chat-messages");
+        chatBox.innerHTML = "";
+
+        const currentRoom = rooms.find((r) => r.id === currentRoomId);
+        if (!currentRoom) return;
+
+        // Set Header name
+        document.getElementById("header-room-name").innerText =
+          currentRoom.name;
+
+        // Decent elegant banner built in at the start of the chat list
+        const welcomeBanner = document.createElement("div");
+        welcomeBanner.className =
+          "max-w-xl mx-auto text-center py-6 px-3 border-b border-slate-800/65 mb-4 shrink-0";
+
+        // Build assigned personas toggles list inside the header banner
+        let personasAssignMarkup = "";
+        if (agents && agents.length > 0) {
+          const assignedIds =
+            currentRoom.allowedAgentIds || agents.map((a) => a.id);
+          personasAssignMarkup = `
+                    <div class="flex justify-center items-center gap-1.5 mt-2 flex-wrap">
+                        ${agents
+                          .map((a) => {
+                            const isAssigned = assignedIds.includes(a.id);
+                            return `
+                                <button onclick="toggleRoomPersonaAssignment('${a.id}')" class="flex items-center space-x-1 px-2.5 py-1 rounded-full border transition ${isAssigned ? "bg-indigo-600/25 border-indigo-500 text-white" : "bg-slate-900 border-slate-800 text-slate-500 opacity-50"} text-[10px]">
+                                    <span class="shrink-0">${a.emoji}</span>
+                                    <span class="font-semibold truncate max-w-[70px]">${a.name}</span>
+                                    <i class="fa-solid ${isAssigned ? "fa-check" : "fa-plus"} text-[8px] ml-1"></i>
+                                </button>
+                            `;
+                          })
+                          .join("")}
+                    </div>
+                `;
+        } else {
+          personasAssignMarkup = `
+                    <div class="text-center py-2">
+                        <p class="text-[10px] text-slate-500 italic">No personas registered in workspace yet.</p>
+                        <button onclick="switchTab('create')" class="text-[10px] text-indigo-400 hover:underline mt-1 font-semibold">Create an Agent Personality</button>
+                    </div>
+                `;
+        }
+
+        welcomeBanner.innerHTML = `
+                <div class="inline-flex w-8 h-8 items-center justify-center bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-lg mb-2">
+                    <i class="fa-solid fa-hashtag text-sm"></i>
+                </div>
+                <h2 class="text-xs font-bold text-slate-200">Welcome to # ${escapeHTML(currentRoom.name)}</h2>
+                <div class="mt-2">
+                    <span class="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Assigned Chatroom Members</span>
+                    ${personasAssignMarkup}
+                </div>
+            `;
+        chatBox.appendChild(welcomeBanner);
+
+        // Populate existing messages
+        currentRoom.chatHistory.forEach((item) => {
+          const readsCount = item.reads ? item.reads.length : 0;
+          const readNames = item.reads ? item.reads : [];
+          if (item.sender === "User") {
+            appendChatMessage(
+              item.id,
+              "User",
+              item.text,
+              true,
+              null,
+              item.reactions,
+              readsCount,
+              readNames,
+            );
+          } else {
+            const matchedAgent = agents.find((a) => a.name === item.sender);
+            const fallbackAgent = matchedAgent || {
+              name: item.sender,
+              emoji: "🤖",
+              color: "#334155",
+            };
+            appendChatMessage(
+              item.id,
+              item.sender,
+              item.text,
+              false,
+              fallbackAgent,
+              item.reactions,
+              readsCount,
+              readNames,
+            );
+          }
+        });
+
+        forceScrollBottom();
+      }
+
+      // Crucial User message submission handler. Safe locks reset on user submit.
+      function handleUserSend() {
+        const inputEl = document.getElementById("chat-input");
+        const text = inputEl.value.trim();
+        if (!text) return;
+
+        // Reset dynamic message locks instantly. User input always interrupts background AI calculations.
+        isProcessingQueue = false;
+        removeBubbleTypingIndicator();
+
+        inputEl.value = "";
+        isUserTyping = false;
+        document
+          .getElementById("typing-monitor-widget")
+          .classList.add("hidden");
+        clearTimeout(typingInactivityTimeout);
+
+        const currentRoom = rooms.find((r) => r.id === currentRoomId);
+        if (!currentRoom) return;
+
+        const messageId =
+          "msg_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4);
+
+        const msgObj = {
+          id: messageId,
+          sender: "User",
+          text: text,
+          reactions: [],
+          reads: [],
+        };
+
+        currentRoom.chatHistory.push(msgObj);
+
+        // Mark the message timestamp for silence detection
+        lastMessageTimestamp = Date.now();
+
+        saveRoomsState();
+        appendChatMessage(messageId, "User", text, true, null, [], 0, []);
+
+        // Handle bystander seen receipts and reaction flows
+        triggerSimulatedReadsAndReactions(messageId);
+
+        // Execute Cascade debate triggers if user is not typing
+        const autoCascade = document.getElementById(
+          "auto-cascade-toggle",
+        ).checked;
+        if (autoCascade) {
+          setTimeout(() => {
+            triggerAICascade();
+          }, 100);
+        }
+      }
+
+      function triggerAICascade() {
+        if (isUserTyping) return;
+        isProcessingQueue = true;
+
+        const currentRoom = rooms.find((r) => r.id === currentRoomId);
+        if (!currentRoom) {
+          isProcessingQueue = false;
+          return;
+        }
+
+        // FILTER: Select only assigned agents to this room
+        const assignedAgentIds =
+          currentRoom.allowedAgentIds || agents.map((a) => a.id);
+        const activeRoomAgents = agents.filter((a) =>
+          assignedAgentIds.includes(a.id),
+        );
+
+        if (activeRoomAgents.length === 0) {
+          addSystemNotification(
+            "No agents are currently active and assigned to this specific chatroom.",
+          );
+          isProcessingQueue = false;
+          return;
+        }
+
+        activeCascadeIndex = 0;
+        executeNextAgentStep(activeRoomAgents);
+      }
+
+      async function executeNextAgentStep(activeAgents) {
+        // Respect active user typing pauses or abrupt queue interruptions
+        if (isUserTyping || !isProcessingQueue) {
+          isProcessingQueue = false;
+          removeBubbleTypingIndicator();
+          return;
+        }
+
+        if (activeCascadeIndex >= maxCascadeTurns) {
+          isProcessingQueue = false;
+          removeBubbleTypingIndicator();
+          return;
+        }
+
+        const currentRoom = rooms.find((r) => r.id === currentRoomId);
+        if (!currentRoom) {
+          isProcessingQueue = false;
+          removeBubbleTypingIndicator();
+          return;
+        }
+
+        const historyNames = currentRoom.chatHistory.map((h) => h.sender);
+
+        // ANTI-SELF-REPLY GUARD: Identify who spoke last.
+        let lastSpeakerName = "";
+        if (currentRoom.chatHistory.length > 0) {
+          lastSpeakerName =
+            currentRoom.chatHistory[currentRoom.chatHistory.length - 1].sender;
+        }
+
+        // Filter active agents to ensure we exclude the last speaker
+        const candidates = activeAgents.filter(
+          (agent) => agent.name !== lastSpeakerName,
+        );
+
+        if (candidates.length === 0) {
+          // If there are no other active agents to reply, end the cycle gracefully
+          isProcessingQueue = false;
+          removeBubbleTypingIndicator();
+          return;
+        }
+
+        // Find the most appropriate candidate who hasn't spoken recently
+        let targetAgent = null;
+        let lowestScore = Infinity;
+
+        candidates.forEach((agent) => {
+          let score = 0;
+          const lastIndex = historyNames.lastIndexOf(agent.name);
+          if (lastIndex !== -1) {
+            score += (historyNames.length - lastIndex) * 5;
+          }
+          if (score < lowestScore) {
+            lowestScore = score;
+            targetAgent = agent;
+          }
+        });
+
+        if (!targetAgent) {
+          targetAgent =
+            candidates[Math.floor(Math.random() * candidates.length)];
+        }
+
+        // Simulate formulation thinking time (completely silent)
+        const formulationDelay = 1200 + Math.random() * 1300;
+
+        setTimeout(async () => {
+          if (isUserTyping || !isProcessingQueue) {
+            isProcessingQueue = false;
+            removeBubbleTypingIndicator();
+            return;
+          }
+
+          try {
+            const responseText = await getAgentResponse(
+              targetAgent,
+              currentRoom,
+            );
+
+            if (
+              !responseText ||
+              responseText.trim() === "[PASS]" ||
+              responseText.includes("[PASS]")
+            ) {
+              // Silent skip
+              activeCascadeIndex++;
+              setTimeout(() => {
+                executeNextAgentStep(activeAgents);
+              }, 500);
+              return;
+            }
+
+            // Calculate typing duration based on response length (mimicking typing)
+            const typingTime = Math.min(
+              4000,
+              Math.max(1200, responseText.length * 25),
+            );
+
+            // Show natural "next bubble" typing indicator directly in the feed!
+            insertBubbleTypingIndicator(targetAgent);
+
+            setTimeout(() => {
+              if (isUserTyping || !isProcessingQueue) {
+                isProcessingQueue = false;
+                removeBubbleTypingIndicator();
+                return;
+              }
+
+              removeBubbleTypingIndicator();
+
+              const messageId =
+                "msg_" +
+                Date.now() +
+                "_" +
+                Math.random().toString(36).substr(2, 4);
+              const msgObj = {
+                id: messageId,
+                sender: targetAgent.name,
+                text: responseText,
+                reactions: [],
+                reads: [],
+              };
+
+              currentRoom.chatHistory.push(msgObj);
+
+              // Mark the message timestamp for silence detection
+              lastMessageTimestamp = Date.now();
+
+              saveRoomsState();
+              appendChatMessage(
+                messageId,
+                targetAgent.name,
+                responseText,
+                false,
+                targetAgent,
+                [],
+                0,
+                [],
+              );
+
+              // Let other active agents see & react to this new message
+              triggerSimulatedReadsAndReactions(messageId);
+
+              activeCascadeIndex++;
+
+              // Delay before planning the next speaker
+              setTimeout(() => {
+                executeNextAgentStep(activeAgents);
+              }, 2500);
+            }, typingTime);
+          } catch (err) {
+            removeBubbleTypingIndicator();
+            console.error(err);
+            isProcessingQueue = false;
+          }
+        }, formulationDelay);
+      }
+
+      // Router deciding whether to call Gemini or OpenRouter API
+      async function getAgentResponse(agent, room) {
+        const openRouterKey = localStorage.getItem("nexus_openrouter_key");
+        const openRouterModel =
+          localStorage.getItem("nexus_openrouter_model") ||
+          "openrouter/auto:free";
+
+        if (openRouterKey && openRouterKey.trim() !== "") {
+          return await queryOpenRouter(
+            agent,
+            room,
+            openRouterKey,
+            openRouterModel,
+          );
+        } else {
+          return await queryGeminiForAgent(agent, room);
+        }
+      }
+
+      // Simulates read checkmarks appearing on a slight delay, followed by contextual reaction checks
+      function triggerSimulatedReadsAndReactions(targetMessageId) {
+        // Find the room containing this message ID to avoid cross-room leaks
+        let targetRoom = null;
+        rooms.forEach((r) => {
+          if (r.chatHistory.some((m) => m.id === targetMessageId)) {
+            targetRoom = r;
+          }
+        });
+
+        if (!targetRoom) return;
+
+        const msgObj = targetRoom.chatHistory.find(
+          (m) => m.id === targetMessageId,
+        );
+        if (!msgObj) return;
+
+        const isCurrentRoom = targetRoom.id === currentRoomId;
+
+        // Increment unread count for other rooms
+        if (!isCurrentRoom) {
+          targetRoom.unreadCount = (targetRoom.unreadCount || 0) + 1;
+          saveRoomsState();
+          renderRoomsList();
+        }
+
+        // Selected room personas filtering
+        const assignedIds =
+          targetRoom.allowedAgentIds || agents.map((a) => a.id);
+        const activeAgents = agents.filter(
+          (a) => a.name !== msgObj.sender && assignedIds.includes(a.id),
+        );
+
+        // Phase 1: Staggered Seen Receipts
+        activeAgents.forEach((agent, index) => {
+          const readDelay = 400 + index * (300 + Math.random() * 400);
+          setTimeout(() => {
+            // Revalidate database item presence
+            const checkRoom = rooms.find((r) => r.id === targetRoom.id);
+            if (
+              !checkRoom ||
+              !checkRoom.chatHistory.some((m) => m.id === targetMessageId)
+            )
+              return;
+
+            if (!msgObj.reads) msgObj.reads = [];
+
+            if (!msgObj.reads.includes(agent.name)) {
+              msgObj.reads.push(agent.name);
+              saveRoomsState();
+              if (isCurrentRoom) {
+                renderCurrentRoomMessages();
+              }
+            }
+          }, readDelay);
+
+          // Phase 2: Contextual reaction evaluation (evaluated via LLM context lookup)
+          const reactionDelay = readDelay + 1000 + Math.random() * 1500;
+          setTimeout(async () => {
+            const checkRoom = rooms.find((r) => r.id === targetRoom.id);
+            if (
+              !checkRoom ||
+              !checkRoom.chatHistory.some((m) => m.id === targetMessageId)
+            )
+              return;
+            if (!msgObj.reactions) msgObj.reactions = [];
+
+            // Prevent duplicate reactions from the exact same agent
+            if (msgObj.reactions.some((r) => r.sender === agent.name)) return;
+
+            try {
+              const reactionEmoji = await evaluateContextualReaction(
+                agent,
+                msgObj.text,
+              );
+              if (
+                reactionEmoji &&
+                reactionEmoji !== "NONE" &&
+                reactionEmoji.trim().length <= 4
+              ) {
+                msgObj.reactions.push({
+                  emoji: reactionEmoji.trim(),
+                  sender: agent.name,
+                });
+                saveRoomsState();
+                if (isCurrentRoom) {
+                  renderCurrentRoomMessages();
+                }
+              }
+            } catch (e) {
+              console.warn("Could not calculate contextual reaction", e);
+            }
+          }, reactionDelay);
+        });
+      }
+
+      // Contextual Reaction Evaluator: Interrogates the LLM behind-the-scenes
+      async function evaluateContextualReaction(agent, targetMessageText) {
+        const openRouterKey = localStorage.getItem("nexus_openrouter_key");
+        const openRouterModel =
+          localStorage.getItem("nexus_openrouter_model") ||
+          "openrouter/auto:free";
+
+        const promptText = `Analyze this message sent in a group chat: "${targetMessageText}"
+
+You are acting as "${agent.name}" (${agent.description}). 
+Would you react to this message with an emoji?
+If YES: Output ONLY the single reaction emoji that best represents your emotion (e.g. 👍, 😒, ❤️, 😮, 🤦, 🔥, 🧐, 🤨).
+If NO or irrelevant to your interests: Output ONLY the word "NONE".
+
+Rule: Output absolutely nothing else except the emoji itself or the word "NONE".`;
+
+        if (openRouterKey && openRouterKey.trim() !== "") {
+          const payload = {
+            model: openRouterModel,
+            messages: [
+              {
+                role: "system",
+                content:
+                  "You are an emoji reaction classifier. Respond strictly with either a single emoji or 'NONE'.",
+              },
+              { role: "user", content: promptText },
+            ],
+            temperature: 0.3,
+            max_tokens: 5,
+          };
+          try {
+            const response = await fetchWithRetry(
+              "https://openrouter.ai/api/v1/chat/completions",
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${openRouterKey}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
+              },
+            );
+            return response.choices?.[0]?.message?.content?.trim() || "NONE";
+          } catch (e) {
+            return "NONE";
+          }
+        } else {
+          const payload = {
+            contents: [{ parts: [{ text: promptText }] }],
+            systemInstruction: {
+              parts: [
+                {
+                  text: "You are a contextual reaction classifier. Respond with only a single emoji, or 'NONE'.",
+                },
+              ],
+            },
+          };
+          const endpointUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+          try {
+            const response = await fetchWithRetry(endpointUrl, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            });
+            return (
+              response?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
+              "NONE"
+            );
+          } catch (e) {
+            return "NONE";
+          }
+        }
+      }
+
+      // Fetch from OpenRouter endpoint
+      async function queryOpenRouter(agent, room, key, model) {
+        const condensedHistory = room.chatHistory.slice(-10);
+
+        const systemPrompt = `You are playing the role of "${agent.name}" in a multi-agent group conversation.
+Your description/personality: ${agent.description}
+Your Tags/Archetypes: ${agent.tags.join(", ")}
+
+Strict Rules of Engagement:
+1. Speak exclusively in character. Express thoughts, arguments, and styles natural to you.
+2. Address arguments or statements raised by the user or other agents in the conversation log.
+3. If asked about facts (e.g. what you wear, your age, what you do), be consistent. Reference any of your own previously stated replies inside the conversation log.
+4. Keep your reply highly concise, casual, and brief (do not exceed 10 to 18 words). NEVER generate long essays, introductions, bullet points, greetings, or "Hey guys" prefixes.
+5. If the recent discussion is completely unrelated to your interests, or you have nothing interesting to contribute, or if you spoke very recently, you must output exactly "[PASS]". Do not add any other words.`;
+
+        // Map messages structure for standard API compatibility
+        const messages = [{ role: "system", content: systemPrompt }];
+
+        condensedHistory.forEach((h) => {
+          messages.push({
+            role: h.sender === "User" ? "user" : "assistant",
+            name:
+              h.sender !== "User"
+                ? h.sender.replace(/[^a-zA-Z0-9_-]/g, "")
+                : undefined,
+            content: h.text,
+          });
+        });
+
+        messages.push({
+          role: "user",
+          content: `Act as ${agent.name} and provide your next response (or return [PASS] if you decide to remain silent):`,
+        });
+
+        const payload = {
+          model: model || "openrouter/auto:free",
+          messages: messages,
+          temperature: 0.85,
+          max_tokens: 50,
+        };
+
+        const response = await fetchWithRetry(
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${key}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": "https://nexus-ai-group.local",
+              "X-Title": "Nexus Group Chat",
+            },
+            body: JSON.stringify(payload),
+          },
+        );
+
+        return response.choices?.[0]?.message?.content || "[PASS]";
+      }
+
+      // Fetch from local Gemini model (backup fallback)
+      async function queryGeminiForAgent(agent, room) {
+        const condensedHistory = room.chatHistory.slice(-10);
+        const conversationLog = condensedHistory
+          .map((h) => `${h.sender}: ${h.text}`)
+          .join("\n");
+
+        const realismToggle = document.getElementById(
+          "realistic-pass-toggle",
+        ).checked;
+
+        const systemPrompt = `You are playing the role of "${agent.name}" in a multi-agent group conversation.
+Your description/personality: ${agent.description}
+Your Tags/Archetypes: ${agent.tags.join(", ")}
+
+Strict Rules of Engagement:
+1. Speak exclusively in character. Express thoughts, arguments, and styles natural to you.
+2. Address arguments or statements raised by the user or other agents in the conversation log.
+3. If asked about facts (e.g. what you wear, your age, what you do), be consistent. Reference any of your own previously stated replies inside the conversation log.
+4. Keep your reply highly concise, casual, and brief (do not exceed 10 to 18 words). NEVER generate long essays, introductions, bullet points, greetings, or "Hey guys" prefixes.
+5. ${realismToggle ? 'IMPORTANT: You are a realistic person. You do not always need to say something! If the recent discussion is completely unrelated to your interests, or you have nothing interesting to contribute, or if you spoke very recently, you must output exactly "[PASS]". Do not add any other words.' : "Contribute to the conversation naturally."}`;
+
+        const userPrompt = `Below is the condensed group chat history:\n\n${conversationLog}\n\nAct as ${agent.name} and provide your next response (or return [PASS] if you decide to remain silent):`;
+
+        const payload = {
+          contents: [
+            {
+              parts: [{ text: userPrompt }],
+            },
+          ],
+          systemInstruction: {
+            parts: [{ text: systemPrompt }],
+          },
+        };
+
+        const endpointUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+        const response = await fetchWithRetry(endpointUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        return response?.candidates?.[0]?.content?.parts?.[0]?.text || "[PASS]";
+      }
+
+      // Silence Breaker Engine (Triggers random group cycles after ended turns or quiet phases)
+      function setupSilenceBreakerEngine() {
+        if (silenceBreakerCheckInterval) {
+          clearInterval(silenceBreakerCheckInterval);
+        }
+
+        // Check every 25 seconds for dynamic room activity
+        silenceBreakerCheckInterval = setInterval(() => {
+          const autoCascade = document.getElementById(
+            "auto-cascade-toggle",
+          ).checked;
+          if (!autoCascade || isProcessingQueue || isUserTyping) return;
+
+          const currentRoom = rooms.find((r) => r.id === currentRoomId);
+          if (!currentRoom || currentRoom.chatHistory.length === 0) return;
+
+          const elapsedSecondsSinceLastMessage =
+            (Date.now() - lastMessageTimestamp) / 1000;
+
+          // Define silence threshold dynamically (at least 90 seconds)
+          if (elapsedSecondsSinceLastMessage >= 90) {
+            // 35% chance to break the silence contextually with an active assigned persona
+            if (Math.random() < 0.35) {
+              addSystemNotification(
+                "Silence Breaker: An agent decides to continue the conversation...",
+              );
+              triggerAICascade();
+            }
+          }
+        }, 25000);
+      }
+
+      // Exponential backoff executor
+      async function fetchWithRetry(url, options, retries = 5, delay = 1000) {
+        try {
+          const response = await fetch(url, options);
+          if (!response.ok) {
+            throw new Error(`HTTP Error Status: ${response.status}`);
+          }
+          return await response.json();
+        } catch (error) {
+          if (retries > 0) {
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            return fetchWithRetry(url, options, retries - 1, delay * 2);
+          }
+          throw error;
+        }
+      }
+
+      // Test API Setup connectivity
+      async function testAPIConnectivity() {
+        const pulse = document.getElementById("network-pulse");
+        const dot = document.getElementById("network-indicator");
+        const label = document.getElementById("api-status-label");
+
+        if (!apiKey) {
+          updateAPIIndicator();
+          return;
+        }
+
+        try {
+          const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+          const payload = { contents: [{ parts: [{ text: "hi" }] }] };
+
+          const response = await fetch(testUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          if (response.ok) {
+            dot.className =
+              "relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500";
+            pulse.className =
+              "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75";
+            label.innerText = "Ready";
+          } else {
+            throw new Error();
+          }
+        } catch (err) {
+          dot.className =
+            "relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500";
+          pulse.className =
+            "animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75";
+          label.innerText = "Offline Mode";
+        }
+      }
+
+      function escapeHTML(str) {
+        return str
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      // Notification utility
+      function alertUser(msg) {
+        addSystemNotification(`Notice: ${msg}`);
+      }
+    </script>
+  </body>
+</html>
