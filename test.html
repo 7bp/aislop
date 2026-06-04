@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-900 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PicToQuiz AI - Crop & Play Dashboard</title>
+    <!-- Tailwind CSS for modern premium styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                            900: '#4c1d95',
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'scan': 'scan 2s linear infinite',
+                    },
+                    keyframes: {
+                        scan: {
+                            '0%, 100%': { transform: 'translateY(0%)', opacity: '0.8' },
+                            '50%': { transform: 'translateY(350px)', opacity: '0.8' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Smooth custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans antialiased overflow-x-hidden selection:bg-brand-500 selection:text-white">
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 py-3 sm:px-6">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-gradient-to-tr from-brand-600 to-indigo-500 rounded-xl shadow-lg shadow-brand-500/20">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-brand-300">
+                        PicToQuiz AI
+                    </h1>
+                    <p class="text-xs text-slate-400">Contextual Smart-Crops & Interactive Quizzes</p>
+                </div>
+            </div>
+            
+            <!-- Tab Controls -->
+            <nav class="flex p-1 bg-slate-950 rounded-xl border border-slate-800/80 w-full sm:w-auto">
+                <button onclick="switchTab('creator')" id="tab-btn-creator" class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 bg-brand-600 text-white shadow">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Create Quiz
+                </button>
+                <button onclick="switchTab('player')" id="tab-btn-player" class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Play Mode
+                </button>
+                <button onclick="switchTab('data')" id="tab-btn-data" class="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 text-slate-400 hover:text-white">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                    Manage / Import
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 overflow-y-auto">
+
+        <!-- Toast Container -->
+        <div id="toast-container" class="fixed top-20 right-4 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none"></div>
+
+        <!-- TAB 1: CREATOR TAB -->
+        <section id="tab-creator" class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Setup Inputs -->
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="bg-slate-800/50 backdrop-blur border border-slate-700/80 rounded-2xl p-5 space-y-4">
+                        <div class="flex items-center gap-2 pb-2 border-b border-slate-700">
+                            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500/10 text-brand-400 text-xs font-bold">1</span>
+                            <h2 class="font-semibold text-slate-100">Setup Context</h2>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Quiz Focus & Guidelines</label>
+                            <textarea id="creator-focus" rows="4" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition" placeholder="Example: Focus only on cellular respiration stages shown in the graphs. Make sure to identify and crop the relevant diagrams/labels."></textarea>
+                            <p class="text-xs text-slate-400 mt-1.5 leading-relaxed">Assists the AI in isolating specific structural crops (diagrams, tables, graphs) for the questions.</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Target Questions Count</label>
+                            <input id="creator-count" type="number" min="1" max="15" value="4" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition">
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-800/30 border border-slate-700/60 rounded-2xl p-5 space-y-3">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Precision Crop Tech</h3>
+                        <p class="text-xs text-slate-400 leading-relaxed">
+                            The engine utilizes structured coordinate outputs to cut out isolated contextual sections (like a single labeled organelle or a process block) from your uploads, ensuring study questions remain highly targeted without giving away the complete page answers.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Image Upload Area -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-slate-800/50 backdrop-blur border border-slate-700/80 rounded-2xl p-5 space-y-6">
+                        <div class="flex items-center justify-between pb-2 border-b border-slate-700">
+                            <div class="flex items-center gap-2">
+                                <span class="flex h-6 w-6 items-center justify-center rounded-full bg-brand-500/10 text-brand-400 text-xs font-bold">2</span>
+                                <h2 class="font-semibold text-slate-100">Upload Study Images / Materials</h2>
+                            </div>
+                            <span id="upload-counter" class="text-xs text-slate-400 bg-slate-950 px-2.5 py-1 rounded-full border border-slate-800">0 images selected</span>
+                        </div>
+
+                        <!-- Dropzone Area -->
+                        <div id="drop-zone" class="border-2 border-dashed border-slate-700 hover:border-brand-500/80 bg-slate-900/50 rounded-2xl p-8 text-center cursor-pointer transition-all duration-300 group">
+                            <input type="file" id="image-input" multiple accept="image/*" class="hidden">
+                            <div class="max-w-md mx-auto space-y-3">
+                                <div class="mx-auto w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center group-hover:bg-brand-500/10 group-hover:text-brand-400 transition-colors duration-300">
+                                    <svg class="w-6 h-6 text-slate-400 group-hover:text-brand-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                </div>
+                                <div class="space-y-1">
+                                    <p class="text-sm text-slate-200 font-semibold">Drag & drop your study photos here, or <span class="text-brand-400 group-hover:underline">browse</span></p>
+                                    <p class="text-xs text-slate-400">Supports PNG, JPG, JPEG, and WebP.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Thumbnail Grid -->
+                        <div id="preview-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 hidden"></div>
+
+                        <!-- Action Block -->
+                        <div class="pt-4 border-t border-slate-700/80 flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <button onclick="loadSampleQuiz()" class="text-xs font-semibold text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1.5 py-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                Try packed Biology demo set
+                            </button>
+                            
+                            <button id="btn-generate" onclick="generateQuiz()" class="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-brand-500/20 active:scale-[0.98] transition flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5 animate-spin hidden" id="spinner-generate" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                <span>Analyze & Generate Quiz</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quiz Generation Progress Modal -->
+            <div id="progress-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center space-y-6">
+                    <div class="relative mx-auto w-24 h-24 flex items-center justify-center">
+                        <div class="absolute inset-0 rounded-full border-4 border-slate-800 border-t-brand-500 animate-spin"></div>
+                        <div class="p-3 bg-brand-500/10 rounded-full text-brand-400">
+                            <svg class="w-10 h-10 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <h3 class="text-lg font-bold text-slate-100" id="progress-title">Initiating Analysis</h3>
+                        <p class="text-sm text-slate-400" id="progress-subtitle">Synthesizing raw visual assets...</p>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-2">
+                        <div id="progress-bar" class="bg-brand-500 h-2 rounded-full transition-all duration-300" style="width: 5%"></div>
+                    </div>
+                    <div class="text-xs text-slate-500 uppercase tracking-wider" id="progress-step">Step 1 of 4</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: INTERACTIVE QUIZ PLAYER -->
+        <section id="tab-player" class="space-y-6 hidden">
+            <!-- Empty State -->
+            <div id="player-empty" class="text-center py-16 bg-slate-800/40 border border-dashed border-slate-700/80 rounded-3xl space-y-4">
+                <div class="mx-auto w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center text-slate-500">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <div class="max-w-sm mx-auto space-y-2">
+                    <h3 class="font-bold text-slate-200">No Quiz Active</h3>
+                    <p class="text-sm text-slate-400">Generate a quiz using your own study images, load the biology demo set, or import a JSON quiz!</p>
+                </div>
+                <div class="pt-2 flex flex-wrap justify-center gap-3">
+                    <button onclick="switchTab('creator')" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-500 font-semibold text-sm rounded-xl transition">Go to Creator</button>
+                    <button onclick="loadSampleQuiz()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 font-semibold text-sm rounded-xl transition">Load Sample Quiz</button>
+                </div>
+            </div>
+
+            <!-- Play Screen -->
+            <div id="player-active" class="hidden space-y-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-800/50 backdrop-blur border border-slate-700/80 p-4 rounded-2xl gap-3">
+                    <div>
+                        <h2 class="font-bold text-slate-100" id="quiz-player-title">Photosynthesis Quiz</h2>
+                        <p class="text-xs text-slate-400" id="quiz-player-desc">Contextual crops generated directly from uploads.</p>
+                    </div>
+                    <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                        <div class="text-right">
+                            <span class="text-xs text-slate-400 font-medium">Progress</span>
+                            <div class="text-sm font-bold text-slate-200" id="quiz-player-counter">Question 1 of 5</div>
+                        </div>
+                        <div class="h-8 w-px bg-slate-700 hidden sm:block"></div>
+                        <button onclick="resetQuizState()" class="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-950 border border-slate-700 text-xs font-semibold rounded-lg text-slate-300 transition-colors flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 4.89M9 11l3-3 3 3m-3-3v12"></path></svg>
+                            Restart
+                        </button>
+                    </div>
+                </div>
+
+                <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                    <div id="player-top-progress" class="bg-brand-500 h-full transition-all duration-300" style="width: 20%"></div>
+                </div>
+
+                <!-- Main Gameboard Split Screen -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                    
+                    <!-- Left: Interactive Visual Aid Panel -->
+                    <div class="lg:col-span-5 flex flex-col bg-slate-800/50 backdrop-blur border border-slate-700/80 rounded-2xl p-5 min-h-[420px] justify-between relative overflow-hidden">
+                        <div class="space-y-4 h-full flex flex-col justify-between">
+                            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-2 border-b border-slate-700/60">
+                                <span class="text-xs uppercase tracking-wider font-bold text-brand-400 flex items-center gap-1.5">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    Visual Aid Helper
+                                </span>
+                                <!-- View Toggles -->
+                                <div class="flex bg-slate-950 p-0.5 rounded-lg border border-slate-700/80 text-[10px]" id="visual-mode-selectors">
+                                    <button onclick="changeVisualMode('crop')" id="vbtn-crop" class="px-2.5 py-1 rounded bg-brand-600 text-white font-medium">Smart Crop</button>
+                                    <button onclick="changeVisualMode('full')" id="vbtn-full" class="px-2.5 py-1 rounded text-slate-400 hover:text-white">Full Source</button>
+                                    <button onclick="changeVisualMode('ai')" id="vbtn-ai" class="px-2.5 py-1 rounded text-slate-400 hover:text-white">AI Gen</button>
+                                </div>
+                            </div>
+
+                            <!-- Display Screen Box -->
+                            <div class="flex-1 flex items-center justify-center p-1 min-h-[250px]">
+                                <div class="w-full h-full max-h-[350px] aspect-video rounded-xl overflow-hidden bg-slate-950 flex items-center justify-center relative border border-slate-700/80">
+                                    
+                                    <!-- Scan Line Animation for Crop Mode -->
+                                    <div id="scan-laser" class="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-brand-400 to-transparent shadow-md shadow-brand-500/50 z-20 pointer-events-none animate-scan hidden"></div>
+
+                                    <div id="visual-loader" class="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center p-4 space-y-3 z-10 hidden">
+                                        <svg class="w-8 h-8 text-brand-500 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                        <p class="text-xs text-slate-300 font-medium animate-pulse text-center" id="visual-loader-text">Cropping focused segment...</p>
+                                    </div>
+                                    
+                                    <!-- Dynamic Crop Rendering Canvas -->
+                                    <canvas id="crop-canvas" class="object-contain max-w-full max-h-full hidden"></canvas>
+                                    <!-- Default Image Tag for Full View & AI Generated -->
+                                    <img id="visual-image" src="" alt="Visual Context" class="object-contain max-w-full max-h-full hidden">
+                                    
+                                    <!-- Fallback Status -->
+                                    <div id="visual-fallback" class="p-6 text-center text-slate-500 space-y-2 hidden">
+                                        <svg class="w-12 h-12 mx-auto text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        <p class="text-xs">No local crop metadata calculated.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Source Status Indicator -->
+                            <p id="visual-prompt-desc" class="text-[11px] text-slate-400 leading-relaxed bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+                                Fetching relevant visual data...
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Right: Interactive Question Container -->
+                    <div class="lg:col-span-7 flex flex-col bg-slate-800/50 backdrop-blur border border-slate-700/80 rounded-2xl p-5 justify-between">
+                        <div class="space-y-6">
+                            <span class="inline-block text-xs font-semibold px-2.5 py-1 bg-brand-500/10 text-brand-400 rounded-full border border-brand-500/20" id="current-question-tag">Question 1</span>
+                            <h3 class="text-lg sm:text-xl font-bold text-slate-100 leading-snug" id="current-question-text">
+                                Analyzing Question Options...
+                            </h3>
+                            
+                            <!-- Options -->
+                            <div id="options-container" class="space-y-3"></div>
+                        </div>
+
+                        <!-- Feedback and Actions -->
+                        <div class="mt-6 pt-4 border-t border-slate-700/60 space-y-4">
+                            <!-- Explanation Alert Box -->
+                            <div id="feedback-card" class="p-4 rounded-xl border hidden transition-all duration-300">
+                                <div class="flex items-start gap-3">
+                                    <span id="feedback-icon-container" class="p-1 rounded-full text-white"></span>
+                                    <div class="space-y-1">
+                                        <h4 class="font-bold text-sm" id="feedback-title">Title</h4>
+                                        <p class="text-xs leading-relaxed" id="feedback-explanation">Explanation...</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-between items-center gap-4">
+                                <div class="text-xs text-slate-400 font-semibold">
+                                    Current Score: <span class="text-emerald-400 text-sm font-bold" id="hud-score-value">0</span>
+                                </div>
+                                <button id="btn-next" onclick="nextQuestion()" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm rounded-xl transition flex items-center gap-1.5 shadow" disabled>
+                                    <span>Select Option First</span>
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Results Page -->
+            <div id="player-results" class="hidden max-w-2xl mx-auto bg-slate-800/50 backdrop-blur border border-slate-700/80 rounded-3xl p-6 sm:p-8 space-y-8 text-center relative overflow-hidden">
+                <div class="absolute -top-10 -left-10 w-40 h-40 bg-brand-500/10 rounded-full blur-3xl"></div>
+                <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
+
+                <div class="space-y-4">
+                    <div class="inline-block p-4 bg-brand-500/10 rounded-3xl text-brand-400">
+                        <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
+                    </div>
+                    <div class="space-y-2">
+                        <h2 class="text-2xl font-black text-slate-100">Quiz Completed!</h2>
+                        <p class="text-sm text-slate-400 max-w-md mx-auto">Below is your final performance breakdown.</p>
+                    </div>
+                </div>
+
+                <div class="relative w-36 h-36 mx-auto flex flex-col items-center justify-center rounded-full border-4 border-slate-700 bg-slate-900">
+                    <span class="text-4xl font-black text-white" id="results-score-value">0/0</span>
+                    <span class="text-xs text-slate-500 uppercase font-bold tracking-wider" id="results-pct-value">0%</span>
+                </div>
+
+                <div id="results-breakdown-list" class="text-left space-y-3 max-h-[300px] overflow-y-auto pr-2"></div>
+
+                <div class="pt-4 border-t border-slate-700 flex flex-wrap items-center justify-center gap-3">
+                    <button onclick="resetQuizState()" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-500 font-semibold text-sm rounded-xl transition shadow">
+                        Try Again
+                    </button>
+                    <button onclick="switchTab('creator')" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 font-semibold text-sm rounded-xl transition border border-slate-700">
+                        Create Another
+                    </button>
+                    <button onclick="exportCurrentQuiz()" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-950 font-semibold text-sm rounded-xl transition border border-slate-700 text-brand-400">
+                        Export JSON
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: DATA HUB (IMPORT / EXPORT) -->
+        <section id="tab-data" class="space-y-6 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Import -->
+                <div class="bg-slate-800/50 backdrop-blur border border-slate-700/80 rounded-2xl p-5 space-y-4">
+                    <div class="flex items-center gap-2 pb-2 border-b border-slate-700">
+                        <svg class="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        <h2 class="font-semibold text-slate-100">Import JSON Quiz</h2>
+                    </div>
+
+                    <div id="json-drop-zone" class="border-2 border-dashed border-slate-700 hover:border-brand-500/80 bg-slate-900/50 rounded-xl p-6 text-center cursor-pointer transition group">
+                        <input type="file" id="json-file-input" accept=".json" class="hidden">
+                        <div class="space-y-2">
+                            <svg class="w-8 h-8 text-slate-500 mx-auto group-hover:text-brand-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V4a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                            <p class="text-xs text-slate-300 font-semibold">Drop `.json` file here or <span class="text-brand-400 group-hover:underline">browse</span></p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Raw JSON</label>
+                        <textarea id="import-json-area" rows="6" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono text-slate-100 focus:outline-none focus:ring-1 focus:ring-brand-500 transition" placeholder='{"quiz_title": "...", "questions": [...]}'></textarea>
+                    </div>
+
+                    <button onclick="importRawJSON()" class="w-full py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold rounded-xl transition">
+                        Validate & Load
+                    </button>
+                </div>
+
+                <!-- Export -->
+                <div class="bg-slate-800/50 backdrop-blur border border-slate-700/80 rounded-2xl p-5 space-y-4">
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-700">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            <h2 class="font-semibold text-slate-100">Export & Copy</h2>
+                        </div>
+                        <span id="active-quiz-status" class="text-xs px-2.5 py-0.5 rounded-full font-medium">No Quiz Loaded</span>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Active Quiz JSON</label>
+                        <textarea id="export-json-area" readonly rows="8" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none" placeholder="Active dataset empty."></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="copyToClipboard()" class="py-2.5 bg-slate-900 hover:bg-slate-950 border border-slate-700 text-slate-300 text-sm font-semibold rounded-xl transition flex items-center justify-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-5 5h.01M8 14h.01M8 17h.01"></path></svg>
+                            Copy to Clipboard
+                        </button>
+                        <button onclick="exportCurrentQuiz()" class="py-2.5 bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold rounded-xl transition flex items-center justify-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Download File
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quiz Questions Editor / Management List -->
+            <div class="bg-slate-800/50 backdrop-blur border border-slate-700/80 rounded-2xl p-5 space-y-4">
+                <div class="flex justify-between items-center pb-2 border-b border-slate-700">
+                    <h2 class="font-semibold text-slate-100 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        Quiz Questions Manager
+                    </h2>
+                    <span id="editor-counter-badge" class="text-xs bg-brand-500/10 text-brand-400 px-2.5 py-0.5 rounded-full border border-brand-500/20">0 Questions</span>
+                </div>
+                <div id="editor-questions-list" class="space-y-4 max-h-[500px] overflow-y-auto pr-1">
+                    <p class="text-xs text-slate-500 italic py-6 text-center">No active quiz questions to manage.</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer Status -->
+    <footer class="mt-auto border-t border-slate-800/60 bg-slate-950 px-4 py-3 sm:px-6 text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p>Direct Browser Interface running Gemini 2.5-Flash and Imagen 4.0 APIs</p>
+            <div class="flex items-center gap-3">
+                <span>Active Crop Coordinates Engine Enabled</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Core App Logic -->
+    <script>
+        const apiKey = ""; 
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'pic-to-quiz-app';
+
+        // State Store
+        let uploadedImagesBase64 = []; 
+        let currentQuizData = null; 
+        let activeTab = "creator"; 
+        let currentVisualMode = "crop"; // "crop" | "full" | "ai"
+
+        // Player Session
+        let playerCurrentIndex = 0;
+        let playerScore = 0;
+        let playerAnswersSelected = []; 
+
+        // Demo sample set with default simulated coordinates for offline crop testing
+        const SAMPLE_QUIZ = {
+            "quiz_title": "Biology: Organelles & Mitochondria",
+            "focus_context": "Sample study set regarding cellular organelles, focus on energy synthesis.",
+            "questions": [
+                {
+                    "question": "What primary function is associated with the organelle often described as the powerhouse of the cell?",
+                    "options": [
+                        "Ribosomal peptide assembly",
+                        "Synthesis of ATP via oxidative phosphorylation",
+                        "Digestive enzyme storage and degradation",
+                        "Glucose breakdown into pyruvate only"
+                    ],
+                    "answer": "Synthesis of ATP via oxidative phosphorylation",
+                    "explanation": "Mitochondria produce most of the cell's ATP using the proton-motive gradient built by the electron transport chain across their inner folded membranes.",
+                    "imagePrompt": "A highly premium scientific blueprint diagram depicting a double-membrane mitochondrion with highlighted outer and inner folds (cristae), schematic style, glowing biological design, labels removed.",
+                    "use_crop": false
+                },
+                {
+                    "question": "Which membranes are embedded with the electron transport chain components in the mitochondrion?",
+                    "options": [
+                        "The outer membrane layer",
+                        "The internal nucleolus",
+                        "The cristae (inner folded membranes)",
+                        "The nuclear membrane sheath"
+                    ],
+                    "answer": "The cristae (inner folded membranes)",
+                    "explanation": "Folding of the inner membrane into cristae drastically increases surface area, housing thousands of electron transport chain proteins and ATP Synthase complexes.",
+                    "imagePrompt": "A close up cross section diagram of cristae membranes with proton channels, stylized biochemical concept rendering, simple lines.",
+                    "use_crop": false
+                }
+            ]
+        };
+
+        function switchTab(tabId) {
+            activeTab = tabId;
+            document.getElementById('tab-creator').classList.add('hidden');
+            document.getElementById('tab-player').classList.add('hidden');
+            document.getElementById('tab-data').classList.add('hidden');
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            const navs = ['creator', 'player', 'data'];
+            navs.forEach(nav => {
+                const btn = document.getElementById(`tab-btn-${nav}`);
+                btn.className = (nav === tabId) ?
+                    "flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 bg-brand-600 text-white shadow" :
+                    "flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 text-slate-400 hover:text-white";
+            });
+
+            if (tabId === 'player') renderPlayer();
+            if (tabId === 'data') syncDataHub();
+        }
+
+        // Dropzone & Local Files Engine
+        const dropZone = document.getElementById('drop-zone');
+        const imageInput = document.getElementById('image-input');
+
+        dropZone.addEventListener('click', () => imageInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-brand-500', 'bg-brand-500/5'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('border-brand-500', 'bg-brand-500/5'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-brand-500', 'bg-brand-500/5');
+            handleFiles(e.dataTransfer.files);
+        });
+        imageInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function handleFiles(files) {
+            const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+            if (imageFiles.length === 0) {
+                showToast("Please upload image files (PNG, JPG, WebP).", "error");
+                return;
+            }
+
+            imageFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = function(event) {
+                    const base64Data = event.target.result;
+                    if (!uploadedImagesBase64.some(img => img.name === file.name)) {
+                        uploadedImagesBase64.push({
+                            name: file.name,
+                            type: file.type,
+                            data: base64Data
+                        });
+                        showToast(`Successfully loaded "${file.name}"`, "success");
+                        updatePreviews();
+                    }
+                };
+            });
+        }
+
+        function updatePreviews() {
+            const grid = document.getElementById('preview-grid');
+            const counter = document.getElementById('upload-counter');
+            if (uploadedImagesBase64.length === 0) {
+                grid.classList.add('hidden');
+                counter.textContent = '0 images selected';
+                return;
+            }
+            grid.classList.remove('hidden');
+            counter.textContent = `${uploadedImagesBase64.length} image${uploadedImagesBase64.length > 1 ? 's' : ''} selected`;
+            grid.innerHTML = '';
+
+            uploadedImagesBase64.forEach((img, idx) => {
+                const div = document.createElement('div');
+                div.className = "relative group rounded-xl overflow-hidden aspect-video bg-slate-950 border border-slate-700/60 shadow-md";
+                div.innerHTML = `
+                    <img src="${img.data}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" alt="${img.name}">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-2">
+                        <p class="text-[10px] font-medium text-slate-300 truncate w-full">${img.name}</p>
+                    </div>
+                    <button onclick="removeImage(${idx}); event.stopPropagation();" class="absolute top-1.5 right-1.5 bg-rose-600 hover:bg-rose-500 text-white p-1 rounded-lg transition opacity-90">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        function removeImage(index) {
+            uploadedImagesBase64.splice(index, 1);
+            updatePreviews();
+            showToast("Asset removed.", "info");
+        }
+
+        function showToast(message, type = "success") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded-xl shadow-lg border text-sm font-medium flex items-start gap-3 transition-all duration-300 transform translate-x-12 opacity-0 bg-slate-800 pointer-events-auto`;
+            
+            let colorClasses = "border-brand-500/30 text-brand-400";
+            let icon = `<svg class="w-5 h-5 flex-shrink-0 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+
+            if (type === "error") {
+                colorClasses = "border-rose-500/30 text-rose-400";
+                icon = `<svg class="w-5 h-5 flex-shrink-0 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+            } else if (type === "success") {
+                colorClasses = "border-emerald-500/30 text-emerald-400";
+                icon = `<svg class="w-5 h-5 flex-shrink-0 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            }
+
+            toast.classList.add(...colorClasses.split(' '));
+            toast.innerHTML = `
+                ${icon}
+                <div class="flex-1">${message}</div>
+                <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-white transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            `;
+
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-x-12', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('translate-x-12', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 4500);
+        }
+
+        async function callGeminiWithRetry(url, payload, retries = 5, delay = 1000) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (response.ok) return await response.json();
+                } catch (e) {}
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 2;
+            }
+            throw new Error("Unable to complete analysis. Please verify your internet link.");
+        }
+
+        function updateProgressIndicator(title, subtitle, progressPercent, stepText) {
+            document.getElementById('progress-title').textContent = title;
+            document.getElementById('progress-subtitle').textContent = subtitle;
+            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+            document.getElementById('progress-step').textContent = stepText;
+        }
+
+        // Analysis: Question Generation & Coordinate Crop Detection
+        async function generateQuiz() {
+            if (uploadedImagesBase64.length === 0) {
+                showToast("Please upload at least one image/document to analyze.", "error");
+                return;
+            }
+
+            const focusText = document.getElementById('creator-focus').value.trim();
+            const questionsCount = parseInt(document.getElementById('creator-count').value) || 4;
+
+            const modal = document.getElementById('progress-modal');
+            modal.classList.remove('hidden');
+
+            try {
+                updateProgressIndicator("Transcribing Layout", "Ingesting images and preparing layout indexing...", 15, "Step 1 of 4");
+
+                const parts = [
+                    {
+                        text: `You are an elite educational AI system.
+                        Task: Generate a high-quality study quiz containing exactly ${questionsCount} multiple-choice questions based ONLY on the context of the uploaded documents/images.
+                        
+                        Critically, you must identify contextually relevant diagrams, flowcharts, tables, or graphs inside the uploaded images that relate directly to each question. 
+                        Calculate the localized coordinate region to crop out just that specific element (excluding distracting text or correct answers written elsewhere on the page).
+                        
+                        Instructions:
+                        1. Match findings against common academic facts to cross-check and ensure absolute accuracy.
+                        2. Focus explicitly on the following user constraints: "${focusText || 'Comprehensive analysis of visible assets'}".
+                        3. Provide a quiz structured schema.
+                        4. For each question, supply a "crop_box" object indicating the exact bounding box of the diagram on the source image. Bounding box coordinates must be floating point decimals between 0.0 and 1.0 (relative to original width/height of the uploaded image file).
+                        
+                        You MUST return a JSON structure matching this exact JSON schema:
+                        {
+                          "quiz_title": "Example Subject Title",
+                          "focus_context": "Brief summary",
+                          "questions": [
+                            {
+                              "question": "Clear scientific query based on content?",
+                              "options": ["Option A", "Option B", "Option C", "Option D"],
+                              "answer": "Option B",
+                              "explanation": "Extensive educational details.",
+                              "imagePrompt": "Description of simple visual schematic helper diagram fallback if original crop is unavailable.",
+                              "use_crop": true,
+                              "original_image_index": 0,
+                              "crop_box": {
+                                "ymin": 0.12,
+                                "xmin": 0.25,
+                                "ymax": 0.45,
+                                "xmax": 0.75
+                              }
+                            }
+                          ]
+                        }`
+                    }
+                ];
+
+                uploadedImagesBase64.forEach(img => {
+                    const rawBase64 = img.data.split(',')[1];
+                    parts.push({
+                        inlineData: {
+                            mimeType: img.type,
+                            data: rawBase64
+                        }
+                    });
+                });
+
+                const payload = {
+                    contents: [{ parts: parts }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                quiz_title: { type: "STRING" },
+                                focus_context: { type: "STRING" },
+                                questions: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            question: { type: "STRING" },
+                                            options: { type: "ARRAY", items: { type: "STRING" } },
+                                            answer: { type: "STRING" },
+                                            explanation: { type: "STRING" },
+                                            imagePrompt: { type: "STRING" },
+                                            use_crop: { type: "BOOLEAN" },
+                                            original_image_index: { type: "INTEGER" },
+                                            crop_box: {
+                                                type: "OBJECT",
+                                                properties: {
+                                                    ymin: { type: "NUMBER" },
+                                                    xmin: { type: "NUMBER" },
+                                                    ymax: { type: "NUMBER" },
+                                                    xmax: { type: "NUMBER" }
+                                                },
+                                                required: ["ymin", "xmin", "ymax", "xmax"]
+                                            }
+                                        },
+                                        required: ["question", "options", "answer", "explanation", "imagePrompt", "use_crop", "original_image_index", "crop_box"]
+                                    }
+                                }
+                            },
+                            required: ["quiz_title", "focus_context", "questions"]
+                        }
+                    }
+                };
+
+                updateProgressIndicator("Synthesizing Visual Coordinates", "Formulating questions & isolating crops...", 55, "Step 2 of 4");
+
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const result = await callGeminiWithRetry(url, payload);
+
+                updateProgressIndicator("Parsing Structural Output", "Packaging JSON structures...", 85, "Step 3 of 4");
+
+                const responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!responseText) throw new Error("Could not extract clean structured data.");
+
+                const quizJSON = JSON.parse(responseText);
+                
+                // Inject original images directly into the quiz JSON schema for seamless exporting
+                quizJSON.embedded_images = uploadedImagesBase64.map(img => ({
+                    name: img.name,
+                    type: img.type,
+                    data: img.data
+                }));
+
+                currentQuizData = quizJSON;
+                resetQuizState();
+
+                updateProgressIndicator("Complete!", "Interactive workspace compiled successfully.", 100, "Step 4 of 4");
+                
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    switchTab('player');
+                    showToast(`Quiz generated: "${quizJSON.quiz_title}"`, "success");
+                }, 800);
+
+            } catch (err) {
+                modal.classList.add('hidden');
+                showToast(err.message || "An unexpected error occurred during parsing.", "error");
+            }
+        }
+
+        function loadSampleQuiz() {
+            currentQuizData = JSON.parse(JSON.stringify(SAMPLE_QUIZ));
+            resetQuizState();
+            switchTab('player');
+            showToast("Loaded mitochondria biology sample!", "success");
+        }
+
+        function resetQuizState() {
+            playerCurrentIndex = 0;
+            playerScore = 0;
+            playerAnswersSelected = [];
+            currentVisualMode = "crop"; // default to smart crop
+            
+            document.getElementById('hud-score-value').textContent = "0";
+            
+            const playerEmpty = document.getElementById('player-empty');
+            const playerActive = document.getElementById('player-active');
+            const playerResults = document.getElementById('player-results');
+
+            if (!currentQuizData || !currentQuizData.questions || currentQuizData.questions.length === 0) {
+                playerEmpty.classList.remove('hidden');
+                playerActive.classList.add('hidden');
+                playerResults.classList.add('hidden');
+            } else {
+                playerEmpty.classList.add('hidden');
+                playerActive.classList.remove('hidden');
+                playerResults.classList.add('hidden');
+                loadQuestionIndex(0);
+            }
+        }
+
+        async function loadQuestionIndex(idx) {
+            const total = currentQuizData.questions.length;
+            if (idx >= total) {
+                showResultsScreen();
+                return;
+            }
+
+            playerCurrentIndex = idx;
+
+            document.getElementById('quiz-player-title').textContent = currentQuizData.quiz_title;
+            document.getElementById('quiz-player-desc').textContent = currentQuizData.focus_context || "Dynamic Quiz Session";
+            document.getElementById('quiz-player-counter').textContent = `Question ${idx + 1} of ${total}`;
+            document.getElementById('player-top-progress').style.width = `${((idx + 1) / total) * 100}%`;
+            document.getElementById('current-question-tag').textContent = `Question ${idx + 1}`;
+
+            const q = currentQuizData.questions[idx];
+            document.getElementById('current-question-text').textContent = q.question;
+
+            // Generate options elements
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+
+            q.options.forEach((opt, optIdx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left p-4 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-800 hover:border-slate-600 transition flex items-center justify-between group active:scale-[0.99]";
+                btn.onclick = () => selectOption(optIdx);
+                btn.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-slate-400 group-hover:text-white font-semibold text-xs border border-slate-700 transition">
+                            ${String.fromCharCode(65 + optIdx)}
+                        </span>
+                        <span class="text-sm font-medium text-slate-200">${opt}</span>
+                    </div>
+                    <div class="w-5 h-5 rounded-full border border-slate-700 flex items-center justify-center group-hover:border-slate-500 transition">
+                        <span class="w-2.5 h-2.5 rounded-full bg-transparent"></span>
+                    </div>
+                `;
+                container.appendChild(btn);
+            });
+
+            document.getElementById('feedback-card').classList.add('hidden');
+            const nextBtn = document.getElementById('btn-next');
+            nextBtn.disabled = true;
+            nextBtn.className = "px-5 py-2.5 bg-slate-800 text-slate-500 font-semibold text-sm rounded-xl transition cursor-not-allowed";
+            nextBtn.querySelector('span').textContent = "Select Option First";
+
+            // Determine starting visual tab
+            if (q.use_crop && (currentQuizData.embedded_images?.length > 0 || uploadedImagesBase64.length > 0)) {
+                currentVisualMode = "crop";
+            } else {
+                currentVisualMode = "ai";
+            }
+            updateVisualModeUI();
+            await updateActiveVisual();
+        }
+
+        function updateVisualModeUI() {
+            const cropBtn = document.getElementById('vbtn-crop');
+            const fullBtn = document.getElementById('vbtn-full');
+            const aiBtn = document.getElementById('vbtn-ai');
+
+            [cropBtn, fullBtn, aiBtn].forEach(b => b.className = "px-2.5 py-1 rounded text-slate-400 hover:text-white transition");
+
+            if (currentVisualMode === 'crop') {
+                cropBtn.className = "px-2.5 py-1 rounded bg-brand-600 text-white font-medium shadow";
+            } else if (currentVisualMode === 'full') {
+                fullBtn.className = "px-2.5 py-1 rounded bg-brand-600 text-white font-medium shadow";
+            } else if (currentVisualMode === 'ai') {
+                aiBtn.className = "px-2.5 py-1 rounded bg-brand-600 text-white font-medium shadow";
+            }
+        }
+
+        function changeVisualMode(mode) {
+            currentVisualMode = mode;
+            updateVisualModeUI();
+            updateActiveVisual();
+        }
+
+        // --- Optimized Visual Aid Engine ---
+        async function updateActiveVisual() {
+            const canvas = document.getElementById('crop-canvas');
+            const visualImage = document.getElementById('visual-image');
+            const fallback = document.getElementById('visual-fallback');
+            const loader = document.getElementById('visual-loader');
+            const scanLaser = document.getElementById('scan-laser');
+            const promptDesc = document.getElementById('visual-prompt-desc');
+
+            const q = currentQuizData.questions[playerCurrentIndex];
+            const originalImages = currentQuizData.embedded_images || uploadedImagesBase64;
+
+            // Hide Everything initially
+            canvas.classList.add('hidden');
+            visualImage.classList.add('hidden');
+            fallback.classList.add('hidden');
+            loader.classList.add('hidden');
+            scanLaser.classList.add('hidden');
+
+            if (currentVisualMode === 'crop') {
+                // Perform smart extraction crop
+                if (q.use_crop && originalImages && originalImages[q.original_image_index]) {
+                    loader.classList.remove('hidden');
+                    scanLaser.classList.remove('hidden');
+                    document.getElementById('visual-loader-text').textContent = "Scanning source coordinates...";
+
+                    const srcImg = originalImages[q.original_image_index].data;
+                    promptDesc.textContent = `Smart-crop focused on bounding coordinates [ymin: ${q.crop_box.ymin}, xmin: ${q.crop_box.xmin}] from "${originalImages[q.original_image_index].name}"`;
+
+                    setTimeout(() => {
+                        performCanvasCrop(srcImg, q.crop_box, (croppedBase64) => {
+                            loader.classList.add('hidden');
+                            scanLaser.classList.add('hidden');
+                            visualImage.src = croppedBase64;
+                            visualImage.classList.remove('hidden');
+                        });
+                    }, 600); // short delay for visual satisfaction scan effect
+                } else {
+                    fallback.classList.remove('hidden');
+                    promptDesc.textContent = "Crop metadata unavailable. Load standard assets.";
+                }
+            } 
+            else if (currentVisualMode === 'full') {
+                // View full parent document page
+                if (originalImages && originalImages[q.original_image_index]) {
+                    visualImage.src = originalImages[q.original_image_index].data;
+                    visualImage.classList.remove('hidden');
+                    promptDesc.textContent = `Full parent view: "${originalImages[q.original_image_index].name}"`;
+                } else {
+                    fallback.classList.remove('hidden');
+                    promptDesc.textContent = "Parent document not found.";
+                }
+            } 
+            else if (currentVisualMode === 'ai') {
+                // Render custom generated illustration fallback
+                if (!q.imagePrompt || q.imagePrompt.trim() === '') {
+                    fallback.classList.remove('hidden');
+                    promptDesc.textContent = "No prompt available for generation.";
+                    return;
+                }
+
+                loader.classList.remove('hidden');
+                document.getElementById('visual-loader-text').textContent = "Synthesizing AI study cue...";
+                promptDesc.textContent = `AI Prompt Context: "${q.imagePrompt}"`;
+
+                try {
+                    const payload = {
+                        instances: [{ prompt: `${q.imagePrompt}, scientific visualization diagram, clean layout, without labels` }],
+                        parameters: { sampleCount: 1 }
+                    };
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`;
+                    
+                    const response = await callGeminiWithRetry(url, payload, 3, 1000);
+                    const bytes = response.predictions?.[0]?.bytesBase64Encoded;
+                    
+                    if (bytes) {
+                        visualImage.src = `data:image/png;base64,${bytes}`;
+                        visualImage.classList.remove('hidden');
+                        loader.classList.add('hidden');
+                    } else {
+                        throw new Error();
+                    }
+                } catch {
+                    loader.classList.add('hidden');
+                    fallback.classList.remove('hidden');
+                    promptDesc.textContent = `Offline visual context: "${q.imagePrompt}"`;
+                }
+            }
+        }
+
+        // HTML5 Canvas cropping algorithm
+        function performCanvasCrop(base64Src, box, callback) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Box relative floating decimals (0.0 to 1.0)
+                const x = box.xmin * img.width;
+                const y = box.ymin * img.height;
+                const w = (box.xmax - box.xmin) * img.width;
+                const h = (box.ymax - box.ymin) * img.height;
+                
+                canvas.width = Math.max(w, 50); // Ensure width isn't collapsed
+                canvas.height = Math.max(h, 50);
+                
+                ctx.drawImage(img, x, y, w, h, 0, 0, canvas.width, canvas.height);
+                callback(canvas.toDataURL());
+            };
+            img.src = base64Src;
+        }
+
+        function selectOption(selectedIdx) {
+            if (playerAnswersSelected.length > playerCurrentIndex) return;
+
+            const q = currentQuizData.questions[playerCurrentIndex];
+            const selectedText = q.options[selectedIdx];
+            const isCorrect = selectedText === q.answer;
+
+            playerAnswersSelected.push(selectedIdx);
+            if (isCorrect) playerScore++;
+
+            document.getElementById('hud-score-value').textContent = playerScore;
+
+            const container = document.getElementById('options-container');
+            const buttons = container.querySelectorAll('button');
+
+            buttons.forEach((btn, idx) => {
+                btn.onclick = null;
+                btn.classList.remove('hover:bg-slate-800', 'hover:border-slate-600', 'active:scale-[0.99]');
+                
+                const currentOptText = q.options[idx];
+                const circle = btn.querySelector('div:last-child');
+                const badge = btn.querySelector('span');
+
+                if (currentOptText === q.answer) {
+                    btn.className = "w-full text-left p-4 rounded-xl border border-emerald-500 bg-emerald-950/20 flex items-center justify-between transition-all duration-300";
+                    circle.className = "w-5 h-5 rounded-full bg-emerald-500 border border-emerald-400 flex items-center justify-center";
+                    circle.innerHTML = `<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>`;
+                    badge.className = "flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500 text-white font-bold text-xs border border-emerald-400";
+                } else if (idx === selectedIdx) {
+                    btn.className = "w-full text-left p-4 rounded-xl border border-rose-500 bg-rose-950/20 flex items-center justify-between transition-all duration-300";
+                    circle.className = "w-5 h-5 rounded-full bg-rose-500 border border-rose-400 flex items-center justify-center";
+                    circle.innerHTML = `<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>`;
+                    badge.className = "flex h-7 w-7 items-center justify-center rounded-lg bg-rose-500 text-white font-bold text-xs border border-rose-400";
+                } else {
+                    btn.className = "w-full text-left p-4 rounded-xl border border-slate-800 bg-slate-900/30 opacity-50 flex items-center justify-between transition-all duration-300";
+                }
+            });
+
+            const card = document.getElementById('feedback-card');
+            const fbIcon = document.getElementById('feedback-icon-container');
+            const fbTitle = document.getElementById('feedback-title');
+            const fbExplanation = document.getElementById('feedback-explanation');
+
+            card.classList.remove('hidden');
+            if (isCorrect) {
+                card.className = "p-4 rounded-xl border border-emerald-500/20 bg-emerald-950/20 transition-all duration-300";
+                fbIcon.className = "p-1.5 rounded-full bg-emerald-500 text-white";
+                fbIcon.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`;
+                fbTitle.className = "font-bold text-sm text-emerald-400";
+                fbTitle.textContent = "Correct Connection!";
+            } else {
+                card.className = "p-4 rounded-xl border border-rose-500/20 bg-rose-950/20 transition-all duration-300";
+                fbIcon.className = "p-1.5 rounded-full bg-rose-500 text-white";
+                fbIcon.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>`;
+                fbTitle.className = "font-bold text-sm text-rose-400";
+                fbTitle.textContent = "Review Concept Detail";
+            }
+
+            fbExplanation.textContent = q.explanation;
+
+            const nextBtn = document.getElementById('btn-next');
+            nextBtn.disabled = false;
+            nextBtn.className = "px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-semibold text-sm rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-brand-500/20 active:scale-[0.98]";
+            
+            const isLast = playerCurrentIndex + 1 >= currentQuizData.questions.length;
+            nextBtn.querySelector('span').textContent = isLast ? "View Final Results" : "Next Question";
+        }
+
+        function nextQuestion() {
+            const nextIdx = playerCurrentIndex + 1;
+            if (nextIdx >= currentQuizData.questions.length) {
+                showResultsScreen();
+            } else {
+                loadQuestionIndex(nextIdx);
+            }
+        }
+
+        function showResultsScreen() {
+            document.getElementById('player-active').classList.add('hidden');
+            const resultsPanel = document.getElementById('player-results');
+            resultsPanel.classList.remove('hidden');
+
+            const total = currentQuizData.questions.length;
+            const pct = Math.round((playerScore / total) * 100);
+
+            document.getElementById('results-score-value').textContent = `${playerScore}/${total}`;
+            document.getElementById('results-pct-value').textContent = `${pct}% Correct`;
+
+            const list = document.getElementById('results-breakdown-list');
+            list.innerHTML = '';
+
+            currentQuizData.questions.forEach((q, idx) => {
+                const selectedOptionIdx = playerAnswersSelected[idx];
+                const selectedText = q.options[selectedOptionIdx];
+                const isCorrect = selectedText === q.answer;
+
+                const div = document.createElement('div');
+                div.className = `p-4 rounded-xl border text-sm space-y-2 ${isCorrect ? 'border-emerald-500/10 bg-emerald-950/10' : 'border-rose-500/10 bg-rose-950/10'}`;
+                div.innerHTML = `
+                    <div class="flex items-center gap-2 justify-between">
+                        <span class="text-xs font-bold ${isCorrect ? 'text-emerald-400' : 'text-rose-400'}">
+                            ${isCorrect ? '✓ Correct' : '✗ Incorrect'} — Question ${idx + 1}
+                        </span>
+                    </div>
+                    <p class="font-semibold text-slate-200">${q.question}</p>
+                    <p class="text-xs text-slate-400">
+                        <span class="font-medium text-slate-300">Your Answer:</span> ${selectedText || 'Skipped'} <br>
+                        ${!isCorrect ? `<span class="font-medium text-emerald-400">Correct:</span> ${q.answer}` : ''}
+                    </p>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function renderPlayer() {
+            resetQuizState();
+        }
+
+        // --- Data Hub Sync & Manual Editors ---
+        function syncDataHub() {
+            const statusTag = document.getElementById('active-quiz-status');
+            const exportArea = document.getElementById('export-json-area');
+            const editorList = document.getElementById('editor-questions-list');
+            const editorBadge = document.getElementById('editor-counter-badge');
+
+            if (!currentQuizData) {
+                statusTag.textContent = 'No Quiz Loaded';
+                statusTag.className = "text-xs px-2.5 py-0.5 rounded-full font-medium bg-slate-900 border border-slate-800 text-slate-500";
+                exportArea.value = '';
+                editorList.innerHTML = `<p class="text-xs text-slate-500 italic py-6 text-center">No active questions.</p>`;
+                editorBadge.textContent = '0 Questions';
+                return;
+            }
+
+            statusTag.textContent = 'Study Set Active';
+            statusTag.className = "text-xs px-2.5 py-0.5 rounded-full font-medium bg-emerald-500/10 border border-emerald-500/20 text-emerald-400";
+            exportArea.value = JSON.stringify(currentQuizData, null, 2);
+            editorBadge.textContent = `${currentQuizData.questions.length} Questions`;
+
+            editorList.innerHTML = '';
+            currentQuizData.questions.forEach((q, idx) => {
+                const item = document.createElement('div');
+                item.className = "p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-3 relative";
+                item.innerHTML = `
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-800/80">
+                        <span class="text-xs text-brand-400 font-bold">Question ${idx + 1}</span>
+                        <button onclick="deleteQuestion(${idx})" class="p-1 hover:bg-rose-500/10 text-slate-500 hover:text-rose-400 rounded-lg transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-[10px] uppercase font-bold text-slate-500 mb-1">Question Prompt</label>
+                            <input type="text" onchange="updateQuestionField(${idx}, 'question', this.value)" value="${escapeHtml(q.question)}" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500 transition">
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] uppercase font-bold text-slate-500 mb-1">Options (comma separated)</label>
+                                <input type="text" onchange="updateQuestionOptions(${idx}, this.value)" value="${escapeHtml(q.options.join(', '))}" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] uppercase font-bold text-slate-500 mb-1">Correct Answer</label>
+                                <input type="text" onchange="updateQuestionField(${idx}, 'answer', this.value)" value="${escapeHtml(q.answer)}" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none transition">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] uppercase font-bold text-slate-500 mb-1">Explanation</label>
+                                <textarea rows="2" onchange="updateQuestionField(${idx}, 'explanation', this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none transition">${escapeHtml(q.explanation)}</textarea>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] uppercase font-bold text-slate-500 mb-1">Crop Coordinates Metadata</label>
+                                <div class="grid grid-cols-4 gap-1">
+                                    <input type="number" step="0.01" onchange="updateCropCoordinate(${idx}, 'ymin', this.value)" value="${q.crop_box?.ymin || 0}" class="bg-slate-950 border border-slate-800 rounded px-1.5 py-1 text-[10px] text-center" placeholder="ymin">
+                                    <input type="number" step="0.01" onchange="updateCropCoordinate(${idx}, 'xmin', this.value)" value="${q.crop_box?.xmin || 0}" class="bg-slate-950 border border-slate-800 rounded px-1.5 py-1 text-[10px] text-center" placeholder="xmin">
+                                    <input type="number" step="0.01" onchange="updateCropCoordinate(${idx}, 'ymax', this.value)" value="${q.crop_box?.ymax || 1}" class="bg-slate-950 border border-slate-800 rounded px-1.5 py-1 text-[10px] text-center" placeholder="ymax">
+                                    <input type="number" step="0.01" onchange="updateCropCoordinate(${idx}, 'xmax', this.value)" value="${q.crop_box?.xmax || 1}" class="bg-slate-950 border border-slate-800 rounded px-1.5 py-1 text-[10px] text-center" placeholder="xmax">
+                                </div>
+                                <span class="text-[9px] text-slate-500 block mt-1">Adjust coordinate bounds between 0.0 and 1.0</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                editorList.appendChild(item);
+            });
+        }
+
+        function updateQuestionField(qIdx, field, value) {
+            if (!currentQuizData) return;
+            currentQuizData.questions[qIdx][field] = value;
+            syncDataHub();
+        }
+
+        function updateCropCoordinate(qIdx, coord, value) {
+            if (!currentQuizData) return;
+            if (!currentQuizData.questions[qIdx].crop_box) {
+                currentQuizData.questions[qIdx].crop_box = { ymin: 0, xmin: 0, ymax: 1, xmax: 1 };
+            }
+            currentQuizData.questions[qIdx].crop_box[coord] = parseFloat(value);
+            syncDataHub();
+        }
+
+        function updateQuestionOptions(qIdx, text) {
+            if (!currentQuizData) return;
+            currentQuizData.questions[qIdx].options = text.split(',').map(o => o.trim()).filter(Boolean);
+            syncDataHub();
+        }
+
+        function deleteQuestion(qIdx) {
+            if (!currentQuizData) return;
+            currentQuizData.questions.splice(qIdx, 1);
+            syncDataHub();
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+
+        function copyToClipboard() {
+            const area = document.getElementById('export-json-area');
+            if (!area.value) {
+                showToast("No data to copy.", "error");
+                return;
+            }
+            area.select();
+            document.execCommand('copy');
+            showToast("Copied active quiz schema!", "success");
+        }
+
+        function exportCurrentQuiz() {
+            if (!currentQuizData) {
+                showToast("No quiz dataset available to export.", "error");
+                return;
+            }
+            const cleanName = currentQuizData.quiz_title.toLowerCase().replace(/[^a-z0-9]/gi, '_');
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentQuizData, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", `quiz_${cleanName}.json`);
+            dlAnchorElem.click();
+            showToast("Downloaded quiz schema file.", "success");
+        }
+
+        function importRawJSON() {
+            const inputArea = document.getElementById('import-json-area');
+            const val = inputArea.value.trim();
+
+            if (!val) {
+                showToast("Please paste JSON structures.", "error");
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(val);
+                if (!parsed.quiz_title || !parsed.questions || !Array.isArray(parsed.questions)) {
+                    throw new Error("Missing title or questions components.");
+                }
+                currentQuizData = parsed;
+                syncDataHub();
+                inputArea.value = '';
+                switchTab('player');
+                showToast(`Parsed and loaded "${parsed.quiz_title}"!`, "success");
+            } catch (err) {
+                showToast(`Failed: ${err.message}`, "error");
+            }
+        }
+
+        // File Uploader
+        const jsonDrop = document.getElementById('json-drop-zone');
+        const jsonFileIn = document.getElementById('json-file-input');
+
+        jsonDrop.addEventListener('click', () => jsonFileIn.click());
+        jsonDrop.addEventListener('dragover', (e) => { e.preventDefault(); jsonDrop.classList.add('border-brand-500', 'bg-brand-500/5'); });
+        jsonDrop.addEventListener('dragleave', () => jsonDrop.classList.remove('border-brand-500', 'bg-brand-500/5'));
+        jsonDrop.addEventListener('drop', (e) => {
+            e.preventDefault();
+            jsonDrop.classList.remove('border-brand-500', 'bg-brand-500/5');
+            if (e.dataTransfer.files.length > 0) handleJsonFile(e.dataTransfer.files[0]);
+        });
+        jsonFileIn.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handleJsonFile(e.target.files[0]);
+        });
+
+        function handleJsonFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    currentQuizData = parsed;
+                    syncDataHub();
+                    switchTab('player');
+                    showToast(`Loaded "${parsed.quiz_title}"`, "success");
+                } catch {
+                    showToast("Failed reading file.", "error");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        window.onload = function() {
+            resetQuizState();
+        };
+    </script>
+</body>
+</html>
