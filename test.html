@@ -89,14 +89,28 @@
 
             <!-- Global Target Instructions and Multi-Image Board -->
             <div class="bg-white p-6 md:p-8 rounded-3xl shadow-xl border-4 border-indigo-200 space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm font-bold text-slate-500 mb-1">🏷️ Quiz Name</label>
-                        <input type="text" id="quiz-title-input" value="My Master Study Pack" class="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl focus:border-indigo-400 outline-none font-bold" placeholder="e.g., Human Heart Anatomy">
+                        <input type="text" id="quiz-title-input" value="My Master Study Pack" class="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl focus:border-indigo-400 outline-none font-bold text-sm" placeholder="e.g., Human Heart Anatomy">
                     </div>
                     <div>
-                        <label class="block text-sm font-bold text-slate-500 mb-1">🌐 Target Topic / Language Context</label>
-                        <input type="text" id="quiz-topic-input" value="Biology Concepts" class="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl focus:border-indigo-400 outline-none font-bold" placeholder="e.g., English Vocabulary, French Physics">
+                        <label class="block text-sm font-bold text-slate-500 mb-1">🌐 Target Topic / Context</label>
+                        <input type="text" id="quiz-topic-input" value="Biology Concepts" class="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl focus:border-indigo-400 outline-none font-bold text-sm" placeholder="e.g., English Vocabulary, French Physics">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-500 mb-1">🗣️ Target Language</label>
+                        <select id="quiz-language-select" class="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl focus:border-indigo-400 outline-none font-bold bg-white text-sm">
+                            <option value="English" selected>English 🇺🇸</option>
+                            <option value="German">German 🇩🇪</option>
+                            <option value="French">French 🇫🇷</option>
+                            <option value="Spanish">Spanish 🇪🇸</option>
+                            <option value="Italian">Italian 🇮🇹</option>
+                            <option value="Dutch">Dutch 🇳🇱</option>
+                            <option value="Portuguese">Portuguese 🇵🇹</option>
+                            <option value="Swedish">Swedish 🇸🇪</option>
+                            <option value="Japanese">Japanese 🇯🇵</option>
+                        </select>
                     </div>
                 </div>
 
@@ -218,7 +232,7 @@
             </div>
 
             <!-- Large progress bar -->
-            <div class="w-full bg-slate-900 h-3 rounded-full overflow-hidden relative border border-slate-700/50 mb-4">
+            <div class="w-full bg-slate-950 h-3 rounded-full overflow-hidden relative border border-slate-700/50 mb-4">
                 <div id="dash-progress-bar" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-full w-0 transition-all duration-300"></div>
             </div>
 
@@ -484,6 +498,7 @@
                     instruction: "Complete the primary anatomical definition sentence.",
                     image: null,
                     sentence: "The primary structural and functional unit of all known living organisms is the _______.",
+                    options: ["cell", "atom", "molecule", "tissue"],
                     correctAnswer: "cell"
                 }
             ];
@@ -577,6 +592,7 @@
             const promptGuideline = document.getElementById('ai-prompt-guideline').value.trim() || "Extract key information and create highly relevant study questions.";
             const targetName = document.getElementById('quiz-title-input').value.trim();
             const targetTopic = document.getElementById('quiz-topic-input').value.trim();
+            const targetLanguage = document.getElementById('quiz-language-select').value;
             const intensity = parseInt(document.getElementById('questions-per-image').value) || 1;
 
             // Reset dashboard state
@@ -586,6 +602,7 @@
             document.getElementById('dash-crop-feed').classList.add('hidden');
             
             writeLog(`Initiating Sequential Autopilot scan on ${uploadedImages.length} uploaded slides...`, "info");
+            writeLog(`Target language context set to: ${targetLanguage}`, "info");
             writeLog(`Intensity setting: ${intensity} Question(s) to be created per slide.`, "info");
             
             const tempDeck = [];
@@ -610,7 +627,7 @@
 
                 try {
                     // Call the API specifically for this single slide
-                    const quizBlock = await scanSingleSlideMaterial(base64Image, idx, promptGuideline, targetName, targetTopic, intensity);
+                    const quizBlock = await scanSingleSlideMaterial(base64Image, idx, promptGuideline, targetName, targetTopic, targetLanguage, intensity);
                     
                     if (quizBlock && Array.isArray(quizBlock.questions)) {
                         writeLog(`AI parsed ${quizBlock.questions.length} questions for Slide #${currentSlideNum}. Processing image crops...`, "success");
@@ -665,19 +682,28 @@
         }
 
         // --- GEMINI PROCESSOR CORE ---
-        async function scanSingleSlideMaterial(base64Image, slideIndex, promptGuideline, subjectName, topicDomain, intensity) {
+        async function scanSingleSlideMaterial(base64Image, slideIndex, promptGuideline, subjectName, topicDomain, targetLanguage, intensity) {
             const systemPrompt = `
                 You are an elite educational parsing engine scanning material slide #${slideIndex + 1}.
-                Analyze this slide carefully and generate exactly ${intensity} focused question(s). 
+                Analyze this slide carefully and generate exactly ${intensity} simple question(s). 
                 Choose the best question layout: Multiple Choice ("mc") or Fill in the Blanks ("fib").
                 
+                TARGET AUDIENCE / AGE RANGE: 10-year-old children (4th or 5th-grade level). 
+                Keep questions, instructions, vocabulary, sentences, options, and distractors simple, clear, playful, engaging, and easy to understand.
+                Avoid overly complex academic prose or deep technical jargon.
+                
+                TARGET LANGUAGE: Generate ALL texts, prompts, options, sentences, and correct answers in ${targetLanguage}.
+
+                For both Multiple Choice ("mc") and Fill in the Blanks ("fib"), you MUST provide an array of exactly 4 choices/words inside the 'options' property.
+                For 'fib' (Fill-in-the-blank) questions, the 'options' array must consist of exactly 4 single-word or short-phrase suggestions including the correct answer. The student will be shown these options as interactive selection pills.
+
                 You must define a 'cropBox' representing a visual segment or area of interest on this slide to show as context.
                 The coordinates MUST be percentages:
                 - x: X-offset (0 to 100)
                 - y: Y-offset (0 to 100)
                 - w: Width (0 to 100)
                 - h: Height (0 to 100)
-                Ensure this crop area details the relevant topic segment (like formulas, specific tables, highlighted boxes, structures) but DOES NOT explicitly show the text of the correct answer.
+                Ensure this crop area details the relevant topic segment (like formulas, specific tables, highlighted boxes, structures) but DOES NOT explicitly show the written correct answer itself.
 
                 Study Guidelines: "${promptGuideline}"
                 Subject Context: "${subjectName}"
@@ -688,11 +714,11 @@
                   "questions": [
                     {
                       "type": "mc" or "fib",
-                      "instruction": "A clear study question based on the material in this slide.",
+                      "instruction": "A clear, simple study question based on the material in this slide suitable for 10 year olds.",
                       "cropBox": { "x": 10, "y": 15, "w": 40, "h": 45 },
-                      "options": ["Option A", "Option B", "Option C", "Option D"], // Exactly 4 choices. Required only for type "mc"
-                      "correctAnswer": "The exact correct answer (must match one of the options for mc, or be the target blank word for fib)",
-                      "sentence": "Required only for 'fib'. Complete sentence with '_______' where the missing word belongs."
+                      "options": ["Option A", "Option B", "Option C", "Option D"], // Exactly 4 simple choices or word suggestions including correct answer
+                      "correctAnswer": "The exact correct answer (must match one of the options)",
+                      "sentence": "Required only for 'fib'. Complete simple sentence with '_______' where the missing word belongs."
                     }
                   ]
                 }
@@ -743,7 +769,7 @@
                                         correctAnswer: { type: "STRING" },
                                         sentence: { type: "STRING" }
                                     },
-                                    required: ["type", "instruction", "correctAnswer", "cropBox"]
+                                    required: ["type", "instruction", "correctAnswer", "cropBox", "options"]
                                 }
                             }
                         },
@@ -781,7 +807,7 @@
             }
         }
 
-        // Canvas element programmatic Cropper
+        // Canvas element programmatic Cropper with 50% Quality JPEG Compression
         function executeProgrammaticCrop(base64Src, cropBox) {
             return new Promise((resolve) => {
                 const img = new Image();
@@ -805,7 +831,8 @@
                         canvas.height = sourceH;
 
                         ctx.drawImage(img, sourceX, sourceY, sourceW, sourceH, 0, 0, sourceW, sourceH);
-                        resolve(canvas.toDataURL('image/jpeg', 0.85));
+                        // Save as JPEG with 50% quality compression for ultra-lightweight exports
+                        resolve(canvas.toDataURL('image/jpeg', 0.5));
                     } catch (e) {
                         resolve(null);
                     }
@@ -976,20 +1003,28 @@
                     </div>
                 `;
             } else {
-                // Fill in the blank parser layout
-                const fillSentence = activeQ.sentence.replace("_______", `
-                    <input type="text" id="play-input-node" autofocus class="inline-block mx-1.5 px-3 py-1 border-b-4 border-indigo-500 font-extrabold text-indigo-700 focus:bg-indigo-50 outline-none text-center rounded-lg min-w-[130px] bg-transparent" placeholder="..." onkeydown="if(event.key === 'Enter') validatePlayerFib()">
-                `);
+                // Fill-in-the-blank but with suggestion bubble buttons instead of raw text input!
+                const randomizedOptions = [...(activeQ.options || [])];
+                if (randomizedOptions.length === 0 && activeQ.correctAnswer) {
+                    randomizedOptions.push(activeQ.correctAnswer, "Option B", "Option C", "Option D");
+                }
+                // Ensure options are shuffled
+                randomizedOptions.sort(() => Math.random() - 0.5);
+
+                const fillSentence = activeQ.sentence.replace("_______", `<span id="fib-placeholder" class="inline-block mx-1.5 px-3 py-1 border-b-4 border-dashed border-indigo-500 font-extrabold text-indigo-700 min-w-[130px] text-center bg-indigo-50/50 rounded-lg">❓</span>`);
 
                 responseElementLayout = `
                     <div class="space-y-6 max-w-xl mx-auto">
                         <div class="bg-indigo-50/60 p-6 rounded-3xl border-2 border-indigo-100 leading-relaxed text-lg font-bold text-slate-700 text-center">
                             ${fillSentence}
                         </div>
-                        <div class="text-center">
-                            <button onclick="validatePlayerFib()" class="btn-bounce px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-2xl shadow-md">
-                                Submit Answer 🚀
-                            </button>
+                        <div class="text-center font-bold text-indigo-600 text-xs uppercase tracking-wider mb-2">🎈 Pick the matching word!</div>
+                        <div class="grid grid-cols-2 gap-3 max-w-md mx-auto">
+                            ${randomizedOptions.map((opt) => `
+                                <button onclick="selectFibWord('${opt.replace(/'/g, "\\'")}')" class="btn-bounce p-4 text-center border-3 border-slate-100 hover:border-indigo-400 focus:border-indigo-500 active:bg-indigo-50 font-bold rounded-2xl bg-slate-50/50 hover:bg-white text-slate-700 transition-all text-sm shadow-sm">
+                                    🌟 ${opt}
+                                </button>
+                            `).join('')}
                         </div>
                     </div>
                 `;
@@ -1013,15 +1048,15 @@
             `;
         }
 
-        function validatePlayerFib() {
-            const element = document.getElementById('play-input-node');
-            if(!element) return;
-            const inputVal = element.value.trim();
-            if(!inputVal) {
-                notify("Type in an answer slot first!", "📝");
-                return;
+        function selectFibWord(word) {
+            const placeholder = document.getElementById('fib-placeholder');
+            if (placeholder) {
+                placeholder.innerText = word;
+                placeholder.className = "inline-block mx-1.5 px-3 py-1 border-b-4 border-indigo-500 font-extrabold text-indigo-700 min-w-[130px] text-center bg-indigo-100/50 rounded-lg animate-pulse";
             }
-            validatePlayerAnswer(inputVal);
+            setTimeout(() => {
+                validatePlayerAnswer(word);
+            }, 600); // Small, satisfying delay to let the kid see their choice!
         }
 
         function validatePlayerAnswer(answer) {
