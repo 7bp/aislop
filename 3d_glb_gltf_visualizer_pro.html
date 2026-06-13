@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D GLB / GLTF Visualizer Pro</title>
+    <!-- Tailwind CSS for UI styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- GLTFLoader -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- GLTFExporter (For saving edits and generating share links) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom scrollbar styling for sidebar panels */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a; /* Slate 900 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155; /* Slate 700 */
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569; /* Slate 600 */
+        }
+        /* Custom active styling for tab headers */
+        .tab-active {
+            border-bottom: 2px solid #818cf8; /* Indigo 400 */
+            color: #f8fafc; /* Slate 50 */
+        }
+        /* Loader wave animation */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 0.4; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .pulse-element {
+            animation: pulse-ring 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen w-screen flex flex-col">
+
+    <!-- Navigation Header -->
+    <header class="h-16 border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 flex items-center justify-between z-20 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="bg-indigo-600 p-2 rounded-lg text-white shadow-lg shadow-indigo-500/30 flex items-center justify-center">
+                <i data-lucide="box" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg tracking-tight flex items-center gap-2">
+                    Visualizer Pro <span class="text-xs bg-slate-800 text-slate-400 py-0.5 px-2 rounded-full font-normal border border-slate-700">GLB/GLTF Viewer</span>
+                </h1>
+                <p class="text-[10px] text-slate-400">Offline-first local 3D workspace</p>
+            </div>
+        </div>
+
+        <!-- Loaded File Badge -->
+        <div id="file-info-badge" class="hidden md:flex items-center gap-2 bg-slate-950/60 border border-slate-800 px-3 py-1.5 rounded-full text-xs">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-slate-400">Active Model:</span>
+            <span id="active-filename" class="font-semibold text-indigo-300 max-w-[200px] truncate">No model loaded</span>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <!-- Share button triggering modal -->
+            <button onclick="openShareModal()" class="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-md shadow-indigo-500/10 p-2 rounded-lg transition-all flex items-center gap-2 text-xs font-semibold" title="Share Workspace Link">
+                <i data-lucide="share-2" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Share Link</span>
+            </button>
+            <button onclick="triggerScreenshot()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 p-2 rounded-lg transition-all flex items-center gap-2 text-xs font-semibold" title="Capture Image">
+                <i data-lucide="camera" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Snapshot</span>
+            </button>
+            <button onclick="exportToGLTF()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 p-2 rounded-lg transition-all flex items-center gap-2 text-xs font-semibold" title="Export Modified GLTF">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Export</span>
+            </button>
+            <a href="https://github.com/KhronosGroup/glTF-Sample-Assets" target="_blank" class="text-slate-400 hover:text-slate-200 p-2 rounded-lg transition" title="Khronos GLTF Repository">
+                <i data-lucide="github" class="w-5 h-5"></i>
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <div class="flex-1 flex overflow-hidden relative">
+
+        <!-- Left Panel: Sidebar containing tools, model trees, stats -->
+        <aside class="w-80 border-r border-slate-800 bg-slate-900/60 backdrop-blur flex flex-col z-10 shrink-0 h-full">
+            <!-- Sidebar Tabs -->
+            <div class="flex border-b border-slate-800 text-xs font-medium">
+                <button onclick="switchTab('tab-upload')" id="btn-tab-upload" class="flex-1 py-3 text-center tab-active hover:text-white transition">
+                    <i data-lucide="file-plus" class="w-4 h-4 mx-auto mb-1"></i>
+                    Files & Library
+                </button>
+                <button onclick="switchTab('tab-hierarchy')" id="btn-tab-hierarchy" class="flex-1 py-3 text-center text-slate-400 hover:text-white transition">
+                    <i data-lucide="git-branch" class="w-4 h-4 mx-auto mb-1"></i>
+                    Hierarchy & Materials
+                </button>
+                <button onclick="switchTab('tab-settings')" id="btn-tab-settings" class="flex-1 py-3 text-center text-slate-400 hover:text-white transition">
+                    <i data-lucide="sliders" class="w-4 h-4 mx-auto mb-1"></i>
+                    Lighting Studio
+                </button>
+            </div>
+
+            <!-- Tab Content Wrapper -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-5">
+
+                <!-- TAB 1: UPLOAD & LIBRARY -->
+                <div id="tab-upload" class="space-y-4">
+                    <!-- Drop Zone -->
+                    <div id="drop-zone" class="border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-xl p-6 text-center transition-all bg-slate-950/40 relative cursor-pointer group">
+                        <input type="file" id="file-input" class="absolute inset-0 opacity-0 cursor-pointer" accept=".glb,.gltf" multiple>
+                        <i data-lucide="upload-cloud" class="w-10 h-10 mx-auto text-slate-500 group-hover:text-indigo-400 mb-3 transition"></i>
+                        <p class="text-xs font-semibold text-slate-300 group-hover:text-slate-100 transition">Drag & Drop 3D File</p>
+                        <p class="text-[10px] text-slate-500 mt-1">Accepts <span class="text-indigo-400">.glb</span>, <span class="text-indigo-400">.gltf</span> (and matching .bin / texture maps if loaded together)</p>
+                    </div>
+
+                    <!-- Test Sample Models -->
+                    <div class="space-y-2">
+                        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                            <i data-lucide="library" class="w-3.5 h-3.5"></i> Sample Presets
+                        </h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="loadSample('DamagedHelmet')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg p-2.5 text-left text-xs transition">
+                                <span class="font-medium text-slate-200 block truncate">Damaged Helmet</span>
+                                <span class="text-[10px] text-indigo-400">Detailed PBR Map</span>
+                            </button>
+                            <button onclick="loadSample('FlightHelmet')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg p-2.5 text-left text-xs transition">
+                                <span class="font-medium text-slate-200 block truncate">Flight Helmet</span>
+                                <span class="text-[10px] text-indigo-400">Multitextured</span>
+                            </button>
+                            <button onclick="loadSample('Avocado')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg p-2.5 text-left text-xs transition">
+                                <span class="font-medium text-slate-200 block truncate">Avocado</span>
+                                <span class="text-[10px] text-indigo-400">Lightweight</span>
+                            </button>
+                            <button onclick="loadSample('Duck')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg p-2.5 text-left text-xs transition">
+                                <span class="font-medium text-slate-200 block truncate">Duck</span>
+                                <span class="text-[10px] text-indigo-400">Classic Mesh</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- File Information Card -->
+                    <div id="model-stats-card" class="hidden bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5 space-y-2.5 text-xs">
+                        <h4 class="font-bold text-slate-300 border-b border-slate-800 pb-1.5 flex justify-between items-center">
+                            <span>Metadata</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">Active</span>
+                        </h4>
+                        <div class="space-y-1.5 code-font text-[11px] text-slate-400">
+                            <div class="flex justify-between"><span class="text-slate-500">Vertices:</span> <span id="meta-vertices">0</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Triangles:</span> <span id="meta-triangles">0</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Meshes:</span> <span id="meta-meshes">0</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Materials:</span> <span id="meta-materials">0</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500">Animations:</span> <span id="meta-animations">0</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: HIERARCHY & MATERIALS -->
+                <div id="tab-hierarchy" class="hidden space-y-4">
+                    <!-- Tree Viewer Header -->
+                    <div class="space-y-2">
+                        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                            <span>Scene Tree Inspector</span>
+                            <span class="text-[10px] text-slate-500">Visibility nodes</span>
+                        </h3>
+                        <div id="tree-root" class="bg-slate-950/50 border border-slate-800/80 rounded-xl p-3 max-h-[220px] overflow-y-auto space-y-1 text-xs">
+                            <div class="text-slate-500 italic text-center py-2">No model loaded yet</div>
+                        </div>
+                    </div>
+
+                    <!-- Material Controls list -->
+                    <div class="space-y-2">
+                        <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Material Parameter Tweak</h3>
+                        <div id="materials-container" class="space-y-3 max-h-[260px] overflow-y-auto pr-1">
+                            <div class="text-slate-500 italic text-center py-2 text-xs">No materials inspected</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: LIGHTING & ENVIRONMENT -->
+                <div id="tab-settings" class="hidden space-y-4">
+                    <!-- Environment Lighting Configuration -->
+                    <div class="space-y-3 bg-slate-950/40 p-3 rounded-xl border border-slate-800">
+                        <h3 class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                            <i data-lucide="sun" class="w-4 h-4 text-amber-400"></i> Main Direct Light
+                        </h3>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400">Intensity</span>
+                                <input type="range" id="sun-intensity" min="0" max="10" step="0.1" value="2" class="w-32 accent-indigo-500" oninput="updateLights()">
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400">Color</span>
+                                <input type="color" id="sun-color" value="#ffffff" class="w-8 h-5 rounded border-0 cursor-pointer bg-transparent" oninput="updateLights()">
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400">Y-Elevation</span>
+                                <input type="range" id="sun-y" min="1" max="25" step="0.5" value="10" class="w-32 accent-indigo-500" oninput="updateLights()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ambient and Studio Fill Configuration -->
+                    <div class="space-y-3 bg-slate-950/40 p-3 rounded-xl border border-slate-800">
+                        <h3 class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                            <i data-lucide="cloud-lightning" class="w-4 h-4 text-blue-400"></i> Ambient Hemisphere
+                        </h3>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400">Sky Intensity</span>
+                                <input type="range" id="hemi-sky-intensity" min="0" max="4" step="0.1" value="1" class="w-32 accent-indigo-500" oninput="updateLights()">
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400">Sky Color</span>
+                                <input type="color" id="hemi-sky-color" value="#ffffff" class="w-8 h-5 rounded border-0 cursor-pointer bg-transparent" oninput="updateLights()">
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400">Ground Color</span>
+                                <input type="color" id="hemi-ground-color" value="#334155" class="w-8 h-5 rounded border-0 cursor-pointer bg-transparent" oninput="updateLights()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Viewport Background and Visual Helpers -->
+                    <div class="space-y-3 bg-slate-950/40 p-3 rounded-xl border border-slate-800">
+                        <h3 class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                            <i data-lucide="eye" class="w-4 h-4 text-emerald-400"></i> Visual Helpers
+                        </h3>
+                        <div class="space-y-2.5 text-xs">
+                            <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white transition">
+                                <input type="checkbox" id="toggle-grid" checked class="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 bg-slate-950" onchange="toggleHelpers()">
+                                <span>Show Base Grid</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white transition">
+                                <input type="checkbox" id="toggle-axes" checked class="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 bg-slate-950" onchange="toggleHelpers()">
+                                <span>Show Orientation Axes</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white transition">
+                                <input type="checkbox" id="toggle-shadows" checked class="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 bg-slate-950" onchange="toggleShadows()">
+                                <span>Enable Shadows</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Auto Rotator -->
+                    <div class="space-y-3 bg-slate-950/40 p-3 rounded-xl border border-slate-800">
+                        <h3 class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                            <i data-lucide="refresh-cw" class="w-4 h-4 text-teal-400"></i> Auto-Rotation (Turntable)
+                        </h3>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400">Rotate Model</span>
+                                <input type="checkbox" id="auto-rotate" class="rounded border-slate-700 text-indigo-600 focus:ring-indigo-500 bg-slate-950" onchange="toggleAutoRotate()">
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400">Rotation Speed</span>
+                                <input type="range" id="rotate-speed" min="0.1" max="10" step="0.1" value="2" class="w-32 accent-indigo-500" oninput="updateAutoRotateSpeed()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Developer footer branding -->
+            <div class="h-12 border-t border-slate-800 bg-slate-950 px-4 flex items-center justify-between text-[11px] text-slate-500">
+                <span class="flex items-center gap-1"><i data-lucide="terminal" class="w-3.5 h-3.5"></i> WebGL 2.0 Enabled</span>
+                <span>Active</span>
+            </div>
+        </aside>
+
+        <!-- Right Main Viewport & Interactive Tools -->
+        <main class="flex-1 relative bg-slate-950 flex flex-col justify-between overflow-hidden">
+            <!-- 3D Canvas rendering destination -->
+            <div id="viewport-canvas-container" class="w-full h-full absolute top-0 left-0 z-0"></div>
+
+            <!-- Viewport Overlay: Loading Panel -->
+            <div id="loading-overlay" class="absolute inset-0 z-30 bg-slate-950/90 flex flex-col items-center justify-center transition-opacity duration-300 pointer-events-none opacity-0">
+                <div class="flex flex-col items-center space-y-4 max-w-sm w-full px-6">
+                    <div class="relative w-16 h-16 flex items-center justify-center">
+                        <div class="absolute inset-0 rounded-full border-4 border-indigo-500/20"></div>
+                        <div class="absolute inset-0 rounded-full border-4 border-t-indigo-500 animate-spin"></div>
+                    </div>
+                    <div class="text-center space-y-1">
+                        <h3 class="font-bold text-slate-200" id="loading-title">Parsing 3D Scene Assets</h3>
+                        <p class="text-xs text-slate-400" id="loading-progress-txt">Processing vertices...</p>
+                    </div>
+                    <!-- ProgressBar -->
+                    <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div id="loading-bar-fill" class="bg-indigo-500 h-full w-[10%]" style="transition: width 0.15s ease-out;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Viewport Control Overlay Top Bar -->
+            <div class="absolute top-4 left-4 z-10 flex flex-col gap-2">
+                <!-- Dropdown View Selector -->
+                <div class="flex items-center gap-1.5 bg-slate-900/95 border border-slate-800 rounded-xl p-1.5 shadow-2xl">
+                    <button onclick="setView('iso')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-slate-100 transition" title="Isometric View">ISO</button>
+                    <button onclick="setView('front')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-slate-100 transition" title="Front View">FNT</button>
+                    <button onclick="setView('back')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-slate-100 transition" title="Back View">BCK</button>
+                    <button onclick="setView('top')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-slate-100 transition" title="Top View">TOP</button>
+                    <button onclick="setView('left')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold hover:bg-slate-800 text-slate-300 hover:text-slate-100 transition" title="Left View">LFT</button>
+                </div>
+
+                <!-- Custom Backdrop Picker -->
+                <div class="flex items-center gap-1 bg-slate-900/95 border border-slate-800 rounded-xl p-1.5 shadow-2xl">
+                    <button onclick="setBackgroundColor('#020617')" class="w-5 h-5 rounded-full bg-slate-950 border border-slate-800" title="Dark Slate"></button>
+                    <button onclick="setBackgroundColor('#1e293b')" class="w-5 h-5 rounded-full bg-slate-800 border border-slate-700" title="Medium Slate"></button>
+                    <button onclick="setBackgroundColor('#64748b')" class="w-5 h-5 rounded-full bg-slate-500 border border-slate-400" title="Cool Grey"></button>
+                    <button onclick="setBackgroundColor('#f8fafc')" class="w-5 h-5 rounded-full bg-slate-50 border border-slate-200" title="Chalk White"></button>
+                    <button onclick="setBackgroundGradient()" class="w-5 h-5 rounded-full bg-gradient-to-r from-slate-900 to-indigo-950 border border-slate-700" title="Atmosphere Gradient"></button>
+                </div>
+            </div>
+
+            <!-- Performance Stats Overlay Right -->
+            <div class="absolute top-4 right-4 z-10 flex flex-col items-end gap-2 text-right">
+                <div class="bg-slate-900/95 border border-slate-800 rounded-xl p-3 shadow-2xl text-[11px] code-font text-slate-400 space-y-1">
+                    <div class="text-xs font-bold text-slate-300 mb-1 border-b border-slate-800 pb-1 flex justify-between items-center gap-4">
+                        <span>Viewport</span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    </div>
+                    <div>FPS: <span id="perf-fps" class="text-emerald-400 font-bold">--</span></div>
+                    <div>Geom Memory: <span id="perf-geom" class="text-indigo-400">-- MB</span></div>
+                </div>
+            </div>
+
+            <!-- Empty State Prompt -->
+            <div id="empty-state" class="m-auto z-10 flex flex-col items-center justify-center text-center space-y-4 p-8 max-w-md pointer-events-none">
+                <div class="bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 p-4 rounded-full animate-bounce">
+                    <i data-lucide="box" class="w-12 h-12"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-slate-100">Drag a 3D model into this browser</h2>
+                    <p class="text-xs text-slate-400 mt-1 leading-relaxed">Supports drag-and-drop of GLB/GLTF assets. All file reading is performed instantly in-browser; your private model data is never uploaded to any server.</p>
+                </div>
+                <div class="flex flex-wrap items-center justify-center gap-2 pointer-events-auto">
+                    <button onclick="loadSample('DamagedHelmet')" class="text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-xl transition shadow-lg shadow-indigo-500/20">
+                        Demo: Damaged Helmet
+                    </button>
+                    <button onclick="triggerFileInput()" class="text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-2 rounded-xl transition">
+                        Select File
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bottom Controls Overlay (Animations mixer) -->
+            <div id="animation-dock" class="hidden m-4 z-10 bg-slate-900/95 border border-slate-800 rounded-2xl p-4 shadow-2xl flex flex-col gap-3 max-w-4xl self-center w-full md:w-[calc(100%-2rem)]">
+                <!-- Controls top bar -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                    <div class="flex items-center gap-3">
+                        <button id="anim-play-btn" onclick="toggleAnimationPlayback()" class="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-xl transition flex items-center justify-center shadow-lg shadow-indigo-600/20">
+                            <i data-lucide="pause" class="w-5 h-5" id="anim-play-icon"></i>
+                        </button>
+                        <div>
+                            <span class="text-[10px] text-indigo-400 font-bold tracking-wider uppercase">Active Clip</span>
+                            <select id="animation-selector" onchange="switchAnimation()" class="bg-slate-950 border border-slate-800 text-xs font-medium rounded-lg px-2.5 py-1 text-slate-200 outline-none focus:ring-1 focus:ring-indigo-500 block max-w-[200px] truncate">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Speed & Time progress labels -->
+                    <div class="flex items-center gap-4 text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="text-slate-500">Speed:</span>
+                            <select id="animation-speed" onchange="updateAnimationSpeed()" class="bg-slate-950 border border-slate-800 text-xs rounded-lg px-2 py-0.5 text-slate-300">
+                                <option value="0.25">0.25x</option>
+                                <option value="0.5">0.5x</option>
+                                <option value="1.0" selected>1.0x</option>
+                                <option value="1.5">1.5x</option>
+                                <option value="2.0">2.0x</option>
+                            </select>
+                        </div>
+                        <div class="code-font text-slate-400">
+                            <span id="anim-current-time">0:00</span> / <span id="anim-duration">0:00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeline Bar Scrubber -->
+                <div class="flex items-center gap-3">
+                    <input type="range" id="animation-scrubber" min="0" max="100" step="0.1" value="0" class="w-full accent-indigo-500 h-1 bg-slate-800 rounded-full cursor-pointer" oninput="scrubAnimation(this.value)">
+                </div>
+            </div>
+
+        </main>
+
+    </div>
+
+    <!-- Share Workspace Modal -->
+    <div id="share-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl flex flex-col transform scale-95 transition-all duration-300">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="bg-indigo-600/10 p-1.5 rounded-lg text-indigo-400">
+                        <i data-lucide="share-2" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-200 text-sm">Share Workspace Link</h3>
+                        <p class="text-[10px] text-slate-400">Collaborate with self-contained 3D state URLs</p>
+                    </div>
+                </div>
+                <button onclick="closeShareModal()" class="text-slate-400 hover:text-slate-200 transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content (Tab Selector) -->
+            <div class="p-6 space-y-5">
+                <!-- Modes Toggle -->
+                <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                    <button onclick="switchShareMode('embedded')" id="share-tab-embedded" class="flex-1 py-2 text-center rounded-lg font-semibold bg-slate-800 text-white transition">
+                        Embedded Model (Data URI)
+                    </button>
+                    <button onclick="switchShareMode('external')" id="share-tab-external" class="flex-1 py-2 text-center rounded-lg font-semibold text-slate-400 hover:text-slate-200 transition">
+                        External Model Link (CDN)
+                    </button>
+                </div>
+
+                <!-- Option A: Embedded Base64 Data URI -->
+                <div id="share-panel-embedded" class="space-y-4">
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        Serializes and converts your current 3D model modifications into a raw self-contained **Base64 Data URI** directly within the URL. Anyone opening the link sees your model instantly!
+                    </p>
+                    
+                    <div class="bg-slate-950 border border-slate-800 p-3 rounded-xl flex items-center justify-between">
+                        <span class="text-xs text-slate-400">Calculated Payload size:</span>
+                        <span id="embed-payload-size" class="text-xs font-mono font-bold text-indigo-400">Calculating...</span>
+                    </div>
+
+                    <!-- Size Limit warning -->
+                    <div id="embed-limit-warning" class="hidden flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 p-3 rounded-xl text-[11px] leading-relaxed">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0 mt-0.5"></i>
+                        <span>This model is too large for certain messaging channels (like Discord/Twitter) which clip URL characters. Recommend sharing via an **External Model Link** below instead.</span>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="embed-share-input" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 w-full focus:outline-none focus:ring-1 focus:ring-indigo-500 code-font select-all" readonly>
+                        <button onclick="copyToClipboard('embed-share-input')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-semibold transition shrink-0 flex items-center gap-1">
+                            <i data-lucide="copy" class="w-4 h-4"></i> Copy
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Option B: CDN/External File reference -->
+                <div id="share-panel-external" class="hidden space-y-4">
+                    <p class="text-xs text-slate-400 leading-relaxed">
+                        Paste a direct URL to any `.gltf` or `.glb` model hosted on the web (e.g. GitHub raw URL, Dropbox, or custom CDN) to generate a quick, lightweight viewer link.
+                    </p>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Direct Model Link</label>
+                        <input type="url" id="external-url-input" placeholder="https://raw.githubusercontent.com/.../model.glb" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 w-full focus:outline-none focus:ring-1 focus:ring-indigo-500 code-font" oninput="generateExternalShareLink()">
+                    </div>
+
+                    <div class="flex items-center gap-2 pt-2">
+                        <input type="text" id="external-share-output" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-400 w-full focus:outline-none code-font select-all" readonly placeholder="Waiting for direct input URL...">
+                        <button id="external-copy-btn" disabled onclick="copyToClipboard('external-share-output')" class="bg-slate-800 text-slate-500 px-4 py-2 rounded-xl text-xs font-semibold transition shrink-0 flex items-center gap-1 cursor-not-allowed">
+                            <i data-lucide="copy" class="w-4 h-4"></i> Copy
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-3 border-t border-slate-800 bg-slate-950/50 flex justify-end">
+                <button onclick="closeShareModal()" class="text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl transition">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert / Message Display Box -->
+    <div id="toast-message" class="fixed bottom-6 right-6 z-50 transform translate-y-12 opacity-0 pointer-events-none transition-all duration-300 max-w-sm w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-2xl flex items-start gap-3">
+        <div id="toast-icon-wrapper" class="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400">
+            <i data-lucide="info" class="w-5 h-5"></i>
+        </div>
+        <div class="flex-1">
+            <h4 id="toast-title" class="font-bold text-xs text-slate-200">Alert Notification</h4>
+            <p id="toast-desc" class="text-[11px] text-slate-400 mt-1">Details about process output go here.</p>
+        </div>
+        <button onclick="hideToast()" class="text-slate-500 hover:text-slate-300">
+            <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+    </div>
+
+    <script>
+        // Global Three.js engine and viewer state variables
+        let container, renderer, scene, camera, controls;
+        let mainModel = null;
+        let mixer = null;
+        let animationsList = [];
+        let currentAction = null;
+        let gridHelper, axesHelper;
+        let ambientLight, directionalLight, hemisphereLight;
+        let lastTime = performance.now();
+        let frameCount = 0;
+        let activeTab = 'tab-upload';
+        let backgroundMode = 'gradient';
+        let bgGradient = 'radial-gradient(circle, #1e1b4b 0%, #030712 100%)';
+        let currentShareMode = 'embedded';
+        
+        // Cache DOM elements
+        const canvasContainer = document.getElementById('viewport-canvas-container');
+        const emptyState = document.getElementById('empty-state');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const activeFilenameLabel = document.getElementById('active-filename');
+        const fileBadge = document.getElementById('file-info-badge');
+
+        // Initial setup on DOM window loading
+        window.onload = function() {
+            // Setup Lucide SVG Icons
+            lucide.createIcons();
+
+            // Setup webGL interactive elements
+            initThree();
+            setupEventListeners();
+            animate();
+            
+            // Check for initial hash parameters if user loaded an external shared URL directly
+            if (location.hash.startsWith('#model=')) {
+                const initialUrl = decodeURIComponent(location.hash.substring(7));
+                loadModelByUrl(initialUrl);
+            } else if (location.hash.startsWith('#data=')) {
+                const base64Data = location.hash.substring(6);
+                loadModelFromBase64(base64Data);
+            }
+        };
+
+        // Setup Three.js 3D WebGL render pipeline
+        function initThree() {
+            const width = canvasContainer.clientWidth;
+            const height = canvasContainer.clientHeight;
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.0;
+            canvasContainer.appendChild(renderer.domElement);
+
+            // Scene
+            scene = new THREE.Scene();
+            applyBackgroundColor();
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+            camera.position.set(5, 5, 10);
+
+            // OrbitControls for interaction
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxDistance = 500;
+            controls.minDistance = 0.1;
+
+            // Add Standard Grid & Axes Helpers
+            gridHelper = new THREE.GridHelper(50, 50, 0x4f46e5, 0x334155);
+            gridHelper.position.y = -0.01; // Avoid flickering with models aligned directly on plane
+            scene.add(gridHelper);
+
+            axesHelper = new THREE.AxesHelper(3);
+            scene.add(axesHelper);
+
+            // Lighting setup
+            setupLights();
+        }
+
+        // Apply light vectors and types to scene
+        function setupLights() {
+            // Ambient Hemisphere Light
+            hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x334155, 1);
+            scene.add(hemisphereLight);
+
+            // High-detail Directional shadow-casting Light (Acts as the Sun)
+            directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+            directionalLight.position.set(10, 10, 10);
+            directionalLight.castShadow = true;
+            
+            // Optimize shadow resolution and frustum scale
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.bias = -0.0001;
+            directionalLight.shadow.camera.near = 0.5;
+            directionalLight.shadow.camera.far = 100;
+            directionalLight.shadow.camera.left = -10;
+            directionalLight.shadow.camera.right = 10;
+            directionalLight.shadow.camera.top = 10;
+            directionalLight.shadow.camera.bottom = -10;
+            scene.add(directionalLight);
+        }
+
+        // Responsive event listeners setup
+        function setupEventListeners() {
+            window.addEventListener('resize', onWindowResize);
+
+            // Setup drag & drop triggers
+            const dropArea = document.getElementById('drop-zone');
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    dropArea.classList.add('border-indigo-500', 'bg-indigo-950/10');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    dropArea.classList.remove('border-indigo-500', 'bg-indigo-950/10');
+                }, false);
+            });
+
+            dropArea.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files.length > 0) {
+                    processFiles(files);
+                }
+            });
+
+            document.getElementById('file-input').addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    processFiles(e.target.files);
+                }
+            });
+        }
+
+        // Update camera and viewport dimensions on system/browser frame resize
+        function onWindowResize() {
+            const width = canvasContainer.clientWidth;
+            const height = canvasContainer.clientHeight;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        }
+
+        // Parse drop lists, support multi-file GLTF structures (combining .bin, maps)
+        function processFiles(files) {
+            const filesMap = {};
+            let mainFile = null;
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                filesMap[file.name] = file;
+                const ext = file.name.split('.').pop().toLowerCase();
+                if (ext === 'glb' || ext === 'gltf') {
+                    mainFile = file;
+                }
+            }
+
+            if (!mainFile) {
+                showToast("Failed to load", "No matching GLB or GLTF asset was detected in the upload.", "error");
+                return;
+            }
+
+            // Create loading manager to intercept and resolve relative links internally with Blob URLs
+            const manager = new THREE.LoadingManager();
+            const blobURLs = [];
+
+            manager.setURLModifier((url) => {
+                // Remove root prefix if present
+                const cleanURL = url.replace(/^(\.?\/)/, '');
+                
+                if (filesMap[cleanURL]) {
+                    const blobURL = URL.createObjectURL(filesMap[cleanURL]);
+                    blobURLs.push(blobURL);
+                    return blobURL;
+                }
+                return url;
+            });
+
+            // Set up status overlays
+            showLoading(true, `Reading "${mainFile.name}"`, "Zeroing model coordinate vectors...");
+            
+            const loader = new THREE.GLTFLoader(manager);
+            const mainFileBlobURL = URL.createObjectURL(mainFile);
+            blobURLs.push(mainFileBlobURL);
+
+            loader.load(
+                mainFileBlobURL,
+                (gltf) => {
+                    // Success callback
+                    setNewSceneModel(gltf, mainFile.name);
+                    showLoading(false);
+                    showToast("Successfully loaded", `${mainFile.name} rendered with WebGL 2.0`, "success");
+                    
+                    // Revoke object URLs to clear memory
+                    blobURLs.forEach(url => URL.revokeObjectURL(url));
+                    // Reset share URL hash triggers to stay clean
+                    history.replaceState(null, null, ' ');
+                },
+                (xhr) => {
+                    // Progress callback
+                    if (xhr.total > 0) {
+                        const percent = Math.round((xhr.loaded / xhr.total) * 100);
+                        updateLoadingProgress(percent, `Processing file bytes: ${percent}%`);
+                    }
+                },
+                (error) => {
+                    // Failure callback
+                    console.error(error);
+                    showLoading(false);
+                    showToast("Loading Error", "The file structure may be corrupted or contain unsaved external assets.", "error");
+                }
+            );
+        }
+
+        // Load model by dynamic remote address URL
+        function loadModelByUrl(url) {
+            showLoading(true, "Downloading Shared Model", "Pulling network assets from source...");
+            const loader = new THREE.GLTFLoader();
+            loader.load(
+                url,
+                (gltf) => {
+                    const filename = url.substring(url.lastIndexOf('/') + 1) || "External Model";
+                    setNewSceneModel(gltf, filename);
+                    showLoading(false);
+                    showToast("Network Model Loaded", `Successfully retrieved shared asset: ${filename}`, "success");
+                },
+                (xhr) => {
+                    if (xhr.total > 0) {
+                        const percent = Math.round((xhr.loaded / xhr.total) * 100);
+                        updateLoadingProgress(percent, `Downloading: ${percent}%`);
+                    } else {
+                        updateLoadingProgress(50, "Fetching file bytes...");
+                    }
+                },
+                (error) => {
+                    console.error(error);
+                    showLoading(false);
+                    showToast("Remote URL Error", "Could not fetch active file structure. Ensure CORS headers permit remote asset access.", "error");
+                }
+            );
+        }
+
+        // Load 3D model structures directly from a raw Base64 Data URI URL hash
+        function loadModelFromBase64(base64String) {
+            try {
+                showLoading(true, "Rebuilding Shared Model", "Reconstituting Base64 string into WebGL space...");
+                
+                // Decrypt and sanitize Base64
+                const jsonString = decodeURIComponent(escape(atob(base64String)));
+                const loader = new THREE.GLTFLoader();
+                
+                loader.parse(jsonString, '', (gltf) => {
+                    setNewSceneModel(gltf, "Embedded Share Model.gltf");
+                    showLoading(false);
+                    showToast("Embedded Model Restored", "Your self-contained model was loaded securely offline from the URL!", "success");
+                }, (error) => {
+                    console.error(error);
+                    showLoading(false);
+                    showToast("Decoder Error", "Could not map decoded JSON nodes to GLTF structures.", "error");
+                });
+            } catch (err) {
+                console.error(err);
+                showLoading(false);
+                showToast("Decoding Failed", "The model hash inside the URL parameters was malformed or incomplete.", "error");
+            }
+        }
+
+        // Trigger file picker input programmatically
+        function triggerFileInput() {
+            document.getElementById('file-input').click();
+        }
+
+        // Load model from standard Khronos GLTF database sample models
+        function loadSample(key) {
+            let modelURL = "";
+            switch (key) {
+                case "DamagedHelmet":
+                    modelURL = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb";
+                    break;
+                case "FlightHelmet":
+                    modelURL = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/FlightHelmet/glTF/FlightHelmet.gltf";
+                    break;
+                case "Avocado":
+                    modelURL = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Avocado/glTF-Binary/Avocado.glb";
+                    break;
+                case "Duck":
+                    modelURL = "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF-Binary/Duck.glb";
+                    break;
+            }
+
+            if (!modelURL) return;
+
+            // Clear hash tags on manual preset loads
+            history.replaceState(null, null, ' ');
+
+            showLoading(true, "Downloading Preset Sample", "Pulling models directly from Khronos repo...");
+            
+            const loader = new THREE.GLTFLoader();
+            loader.load(
+                modelURL,
+                (gltf) => {
+                    setNewSceneModel(gltf, `${key}.glb`);
+                    showLoading(false);
+                    showToast("Sample loaded", `${key} preset loaded in viewport.`, "success");
+                },
+                (xhr) => {
+                    if (xhr.total > 0) {
+                        const percent = Math.round((xhr.loaded / xhr.total) * 100);
+                        updateLoadingProgress(percent, `Fetching over HTTP: ${percent}%`);
+                    } else {
+                        updateLoadingProgress(50, "Fetching file bytes...");
+                    }
+                },
+                (error) => {
+                    console.error(error);
+                    showLoading(false);
+                    showToast("Remote Load Error", "Could not fetch sample from Khronos asset host. Check your internet connection.", "error");
+                }
+            );
+        }
+
+        // Detach old geometry and center new model on viewport camera focal target
+        function setNewSceneModel(gltf, fileName) {
+            // Remove previous active model
+            if (mainModel) {
+                scene.remove(mainModel);
+                // Traverse and dispose materials/geometries
+                mainModel.traverse((node) => {
+                    if (node.isMesh) {
+                        node.geometry.dispose();
+                        if (Array.isArray(node.material)) {
+                            node.material.forEach(m => m.dispose());
+                        } else {
+                            node.material.dispose();
+                        }
+                    }
+                });
+            }
+
+            // Stop any playing animation loops
+            if (mixer) {
+                mixer.stopAllAction();
+                mixer = null;
+            }
+
+            mainModel = gltf.scene;
+            scene.add(mainModel);
+
+            // Enable shadow generation for any meshes in loaded model
+            mainModel.traverse((node) => {
+                if (node.isMesh) {
+                    node.castShadow = true;
+                    node.receiveShadow = true;
+                }
+            });
+
+            // Adjust scene lighting targets or shadow box based on model dimensions
+            const bbox = new THREE.Box3().setFromObject(mainModel);
+            const size = bbox.getSize(new THREE.Vector3());
+            const center = bbox.getCenter(new THREE.Vector3());
+
+            // Center model geometry coordinate space
+            mainModel.position.sub(center);
+
+            // Dynamically scale/position grid and helpers
+            const maxDim = Math.max(size.x, size.y, size.z);
+            
+            // Re-aim shadow map frustum size for the new bounding limits
+            directionalLight.shadow.camera.left = -maxDim * 1.5;
+            directionalLight.shadow.camera.right = maxDim * 1.5;
+            directionalLight.shadow.camera.top = maxDim * 1.5;
+            directionalLight.shadow.camera.bottom = -maxDim * 1.5;
+            directionalLight.shadow.camera.updateProjectionMatrix();
+
+            // Set camera viewpoint to focus beautifully on object bounds
+            const fovRad = (camera.fov * Math.PI) / 180;
+            let cameraZ = Math.abs(maxDim / 2 / Math.tan(fovRad / 2));
+            cameraZ *= 2.2; // Extra padding
+            
+            camera.position.set(maxDim, maxDim, cameraZ);
+            camera.lookAt(new THREE.Vector3(0, 0, 0));
+            
+            controls.target.set(0, 0, 0);
+            controls.maxDistance = maxDim * 15;
+            controls.update();
+
+            // Setup and initialize animation actions
+            setupAnimations(gltf);
+
+            // Populate Metadata Info Box
+            fillMetadataInfo(fileName, gltf);
+
+            // Rebuild Scene tree nodes list
+            buildSceneHierarchyTree();
+
+            // Build customizable materials array
+            buildMaterialsUI();
+
+            // Update DOM headers
+            activeFilenameLabel.innerText = fileName;
+            fileBadge.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+        }
+
+        // Manage animation timelines
+        function setupAnimations(gltf) {
+            const dock = document.getElementById('animation-dock');
+            const selector = document.getElementById('animation-selector');
+            animationsList = gltf.animations;
+
+            if (!animationsList || animationsList.length === 0) {
+                dock.classList.add('hidden');
+                return;
+            }
+
+            // Show timeline player
+            dock.classList.remove('hidden');
+            selector.innerHTML = '';
+
+            mixer = new THREE.AnimationMixer(mainModel);
+
+            animationsList.forEach((clip, index) => {
+                const opt = document.createElement('option');
+                opt.value = index;
+                opt.textContent = clip.name || `Clip ${index + 1}`;
+                selector.appendChild(opt);
+            });
+
+            // Play the first animation clip automatically
+            playClip(0);
+        }
+
+        function playClip(index) {
+            if (!mixer || !animationsList[index]) return;
+
+            mixer.stopAllAction();
+            const clip = animationsList[index];
+            currentAction = mixer.clipAction(clip);
+            currentAction.setEffectiveWeight(1.0);
+            currentAction.play();
+
+            // Update duration markers
+            document.getElementById('anim-duration').innerText = clip.duration.toFixed(2) + 's';
+            document.getElementById('animation-scrubber').max = clip.duration;
+            document.getElementById('anim-play-icon').setAttribute('data-lucide', 'pause');
+            lucide.createIcons();
+        }
+
+        function switchAnimation() {
+            const index = document.getElementById('animation-selector').value;
+            playClip(index);
+        }
+
+        function toggleAnimationPlayback() {
+            if (!currentAction) return;
+
+            const icon = document.getElementById('anim-play-icon');
+            if (currentAction.paused) {
+                currentAction.paused = false;
+                icon.setAttribute('data-lucide', 'pause');
+            } else {
+                currentAction.paused = true;
+                icon.setAttribute('data-lucide', 'play');
+            }
+            lucide.createIcons();
+        }
+
+        function updateAnimationSpeed() {
+            const val = parseFloat(document.getElementById('animation-speed').value);
+            if (mixer) mixer.timeScale = val;
+        }
+
+        function scrubAnimation(value) {
+            if (currentAction) {
+                const isPlaying = !currentAction.paused;
+                currentAction.paused = true;
+                mixer.setTime(parseFloat(value));
+                if (isPlaying) {
+                    currentAction.paused = false;
+                }
+            }
+        }
+
+        // Inspect loaded structure and count geometry points
+        function fillMetadataInfo(name, gltf) {
+            let verts = 0, tris = 0, meshes = 0;
+            const mats = new Set();
+
+            gltf.scene.traverse((node) => {
+                if (node.isMesh) {
+                    meshes++;
+                    const geom = node.geometry;
+                    if (geom.index) {
+                        tris += geom.index.count / 3;
+                    } else if (geom.attributes.position) {
+                        tris += geom.attributes.position.count / 3;
+                    }
+                    if (geom.attributes.position) {
+                        verts += geom.attributes.position.count;
+                    }
+                    if (node.material) {
+                        if (Array.isArray(node.material)) {
+                            node.material.forEach(m => mats.add(m.name || m.uuid));
+                        } else {
+                            mats.add(node.material.name || node.material.uuid);
+                        }
+                    }
+                }
+            });
+
+            document.getElementById('meta-vertices').innerText = verts.toLocaleString();
+            document.getElementById('meta-triangles').innerText = Math.round(tris).toLocaleString();
+            document.getElementById('meta-meshes').innerText = meshes;
+            document.getElementById('meta-materials').innerText = mats.size;
+            document.getElementById('meta-animations').innerText = gltf.animations.length;
+            
+            document.getElementById('model-stats-card').classList.remove('hidden');
+        }
+
+        // Generate nested hierarchy tree of 3D object nodes
+        function buildSceneHierarchyTree() {
+            const rootContainer = document.getElementById('tree-root');
+            rootContainer.innerHTML = '';
+
+            if (!mainModel) {
+                rootContainer.innerHTML = '<div class="text-slate-500 italic text-center py-2">No model loaded yet</div>';
+                return;
+            }
+
+            const treeContainer = document.createElement('div');
+            treeContainer.className = 'space-y-1.5';
+            
+            // Build recursive node representation
+            buildTreeNode(mainModel, treeContainer);
+            rootContainer.appendChild(treeContainer);
+            lucide.createIcons();
+        }
+
+        function buildTreeNode(node, element) {
+            const hasChildren = node.children && node.children.length > 0;
+            const nodeDiv = document.createElement('div');
+            nodeDiv.className = 'flex items-center justify-between py-1 px-1.5 rounded hover:bg-slate-800/60 transition group text-[11px] code-font';
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'truncate cursor-pointer max-w-[140px] text-slate-300 group-hover:text-slate-100 flex items-center gap-1';
+            
+            // Set type icons
+            let iconStr = 'box';
+            if (node.isMesh) iconStr = 'triangle';
+            if (node.children && node.children.length > 0) iconStr = 'folder';
+            
+            nameSpan.innerHTML = `<i data-lucide="${iconStr}" class="w-3 h-3 inline text-slate-500"></i> ${node.name || 'unnamed_node'}`;
+            nameSpan.onclick = () => {
+                // Flash color or select object
+                focusOnNode(node);
+            };
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'flex items-center gap-2 opacity-50 group-hover:opacity-100 transition';
+
+            const toggleVisibleBtn = document.createElement('button');
+            toggleVisibleBtn.className = 'text-slate-400 hover:text-white transition';
+            toggleVisibleBtn.innerHTML = node.visible ? '<i data-lucide="eye" class="w-3.5 h-3.5"></i>' : '<i data-lucide="eye-off" class="w-3.5 h-3.5 text-rose-500"></i>';
+            toggleVisibleBtn.onclick = (e) => {
+                e.stopPropagation();
+                node.visible = !node.visible;
+                toggleVisibleBtn.innerHTML = node.visible ? '<i data-lucide="eye" class="w-3.5 h-3.5"></i>' : '<i data-lucide="eye-off" class="w-3.5 h-3.5 text-rose-500"></i>';
+                lucide.createIcons();
+            };
+
+            actionsDiv.appendChild(toggleVisibleBtn);
+            nodeDiv.appendChild(nameSpan);
+            nodeDiv.appendChild(actionsDiv);
+            element.appendChild(nodeDiv);
+
+            if (hasChildren) {
+                const childWrapper = document.createElement('div');
+                childWrapper.className = 'pl-3 border-l border-slate-800/80 ml-1.5 space-y-1';
+                node.children.forEach(child => {
+                    buildTreeNode(child, childWrapper);
+                });
+                element.appendChild(childWrapper);
+            }
+        }
+
+        // Animate bounding helper briefly around selected tree node
+        let currentSelectionHelper = null;
+        function focusOnNode(node) {
+            if (currentSelectionHelper) {
+                scene.remove(currentSelectionHelper);
+            }
+            currentSelectionHelper = new THREE.BoxHelper(node, 0x818cf8);
+            scene.add(currentSelectionHelper);
+            showToast("Focused Node", `Inspecting coordinate structure of "${node.name || 'Node'}"`, "info");
+            
+            // Remove helper after 3 seconds
+            setTimeout(() => {
+                if (currentSelectionHelper) {
+                    scene.remove(currentSelectionHelper);
+                    currentSelectionHelper = null;
+                }
+            }, 3000);
+        }
+
+        // Fetch all unique material structures and render parametric inputs
+        function buildMaterialsUI() {
+            const container = document.getElementById('materials-container');
+            container.innerHTML = '';
+
+            if (!mainModel) {
+                container.innerHTML = '<div class="text-slate-500 italic text-center py-2 text-xs">No materials inspected</div>';
+                return;
+            }
+
+            const uniqueMaterials = {};
+            mainModel.traverse((node) => {
+                if (node.isMesh && node.material) {
+                    const mats = Array.isArray(node.material) ? node.material : [node.material];
+                    mats.forEach(mat => {
+                        if (!uniqueMaterials[mat.uuid]) {
+                            uniqueMaterials[mat.uuid] = mat;
+                        }
+                    });
+                }
+            });
+
+            const keys = Object.keys(uniqueMaterials);
+            if (keys.length === 0) {
+                container.innerHTML = '<div class="text-slate-500 italic text-center py-2 text-xs">No active mesh materials</div>';
+                return;
+            }
+
+            keys.forEach(uuid => {
+                const mat = uniqueMaterials[uuid];
+                const card = document.createElement('div');
+                card.className = 'bg-slate-950/70 border border-slate-800 rounded-xl p-3 space-y-2 text-xs';
+
+                const header = document.createElement('div');
+                header.className = 'font-bold text-indigo-300 truncate pb-1 border-b border-slate-800 flex justify-between items-center';
+                header.innerHTML = `<span>${mat.name || 'unnamed_mat'}</span><span class="text-[9px] font-mono text-slate-500">${mat.type}</span>`;
+                card.appendChild(header);
+
+                // Wireframe controls
+                const wfRow = document.createElement('div');
+                wfRow.className = 'flex justify-between items-center';
+                wfRow.innerHTML = `<span class="text-slate-400 text-[11px]">Wireframe mode</span>`;
+                const wfInput = document.createElement('input');
+                wfInput.type = 'checkbox';
+                wfInput.checked = !!mat.wireframe;
+                wfInput.className = 'rounded border-slate-700 text-indigo-600 bg-slate-950';
+                wfInput.onchange = () => { mat.wireframe = wfInput.checked; };
+                wfRow.appendChild(wfInput);
+                card.appendChild(wfRow);
+
+                // Material Base Color edit
+                if (mat.color) {
+                    const colorRow = document.createElement('div');
+                    colorRow.className = 'flex justify-between items-center';
+                    colorRow.innerHTML = `<span class="text-slate-400 text-[11px]">Base Color Override</span>`;
+                    const colorInput = document.createElement('input');
+                    colorInput.type = 'color';
+                    colorInput.value = '#' + mat.color.getHexString();
+                    colorInput.className = 'w-8 h-5 rounded border-0 cursor-pointer bg-transparent';
+                    colorInput.oninput = () => { mat.color.set(colorInput.value); };
+                    colorRow.appendChild(colorInput);
+                    card.appendChild(colorRow);
+                }
+
+                // Roughness slider
+                if (mat.roughness !== undefined) {
+                    const rRow = document.createElement('div');
+                    rRow.className = 'flex justify-between items-center gap-2';
+                    rRow.innerHTML = `<span class="text-slate-400 text-[11px] shrink-0">Roughness</span>`;
+                    const rInput = document.createElement('input');
+                    rInput.type = 'range';
+                    rInput.min = '0';
+                    rInput.max = '1';
+                    rInput.step = '0.05';
+                    rInput.value = mat.roughness;
+                    rInput.className = 'w-24 accent-indigo-500';
+                    rInput.oninput = () => { mat.roughness = parseFloat(rInput.value); };
+                    rRow.appendChild(rInput);
+                    card.appendChild(rRow);
+                }
+
+                // Metalness slider
+                if (mat.metalness !== undefined) {
+                    const mRow = document.createElement('div');
+                    mRow.className = 'flex justify-between items-center gap-2';
+                    mRow.innerHTML = `<span class="text-slate-400 text-[11px] shrink-0">Metalness</span>`;
+                    const mInput = document.createElement('input');
+                    mInput.type = 'range';
+                    mInput.min = '0';
+                    mInput.max = '1';
+                    mInput.step = '0.05';
+                    mInput.value = mat.metalness;
+                    mInput.className = 'w-24 accent-indigo-500';
+                    mInput.oninput = () => { mat.metalness = parseFloat(mInput.value); };
+                    mRow.appendChild(mInput);
+                    card.appendChild(mRow);
+                }
+
+                container.appendChild(card);
+            });
+        }
+
+        // Share Workspace dialog actions and triggers
+        function openShareModal() {
+            const modal = document.getElementById('share-modal');
+            modal.classList.remove('pointer-events-none', 'opacity-0');
+            modal.querySelector('div').classList.remove('scale-95');
+            modal.querySelector('div').classList.add('scale-100');
+
+            // Pre-calculate embedded data link
+            generateEmbeddedShareLink();
+        }
+
+        function closeShareModal() {
+            const modal = document.getElementById('share-modal');
+            modal.classList.add('pointer-events-none', 'opacity-0');
+            modal.querySelector('div').classList.remove('scale-100');
+            modal.querySelector('div').classList.add('scale-95');
+        }
+
+        function switchShareMode(mode) {
+            currentShareMode = mode;
+            const tabEmbed = document.getElementById('share-tab-embedded');
+            const tabExt = document.getElementById('share-tab-external');
+            const panelEmbed = document.getElementById('share-panel-embedded');
+            const panelExt = document.getElementById('share-panel-external');
+
+            if (mode === 'embedded') {
+                tabEmbed.className = 'flex-1 py-2 text-center rounded-lg font-semibold bg-slate-800 text-white transition';
+                tabExt.className = 'flex-1 py-2 text-center rounded-lg font-semibold text-slate-400 hover:text-slate-200 transition';
+                panelEmbed.classList.remove('hidden');
+                panelExt.classList.add('hidden');
+                generateEmbeddedShareLink();
+            } else {
+                tabExt.className = 'flex-1 py-2 text-center rounded-lg font-semibold bg-slate-800 text-white transition';
+                tabEmbed.className = 'flex-1 py-2 text-center rounded-lg font-semibold text-slate-400 hover:text-slate-200 transition';
+                panelExt.classList.remove('hidden');
+                panelEmbed.classList.add('hidden');
+                generateExternalShareLink();
+            }
+        }
+
+        // Export active model to Base64 in URL parameter
+        function generateEmbeddedShareLink() {
+            const embedInput = document.getElementById('embed-share-input');
+            const payloadSizeLabel = document.getElementById('embed-payload-size');
+            const warningBox = document.getElementById('embed-limit-warning');
+
+            if (!mainModel) {
+                embedInput.value = "Please load a 3D model first!";
+                payloadSizeLabel.innerText = "0 KB";
+                warningBox.classList.add('hidden');
+                return;
+            }
+
+            payloadSizeLabel.innerText = "Serializing geometry...";
+            embedInput.value = "Preparing workspace data...";
+
+            const exporter = new THREE.GLTFExporter();
+            exporter.parse(
+                mainModel,
+                (gltf) => {
+                    const jsonString = JSON.stringify(gltf);
+                    // Safe UTF-8 Base64 encryption
+                    const base64Data = btoa(unescape(encodeURIComponent(jsonString)));
+                    const payloadSizeKb = Math.round(base64Data.length / 1024);
+
+                    payloadSizeLabel.innerText = `${payloadSizeKb.toLocaleString()} KB`;
+
+                    // Most browsers handle up to ~150-200KB URL hashes seamlessly
+                    if (payloadSizeKb > 150) {
+                        warningBox.classList.remove('hidden');
+                    } else {
+                        warningBox.classList.add('hidden');
+                    }
+
+                    const shareURL = window.location.origin + window.location.pathname + '#data=' + base64Data;
+                    embedInput.value = shareURL;
+                },
+                (error) => {
+                    console.error("Failed to parse GLTF for sharing link", error);
+                    embedInput.value = "Error: Could not convert model assets.";
+                    payloadSizeLabel.innerText = "0 KB";
+                },
+                { binary: false }
+            );
+        }
+
+        // Handle generation of sharing URLs using external URL inputs
+        function generateExternalShareLink() {
+            const inputVal = document.getElementById('external-url-input').value.trim();
+            const outputField = document.getElementById('external-share-output');
+            const copyBtn = document.getElementById('external-copy-btn');
+
+            if (!inputVal) {
+                outputField.value = "Waiting for direct input URL...";
+                copyBtn.disabled = true;
+                copyBtn.className = "bg-slate-800 text-slate-500 px-4 py-2 rounded-xl text-xs font-semibold transition shrink-0 cursor-not-allowed";
+                return;
+            }
+
+            const generatedUrl = window.location.origin + window.location.pathname + '#model=' + encodeURIComponent(inputVal);
+            outputField.value = generatedUrl;
+            copyBtn.disabled = false;
+            copyBtn.className = "bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-xs font-semibold transition shrink-0 flex items-center gap-1 cursor-pointer";
+        }
+
+        // Copy input values safely (accounting for iframe/sandbox limitations)
+        function copyToClipboard(elementId) {
+            const inputElement = document.getElementById(elementId);
+            inputElement.select();
+            inputElement.setSelectionRange(0, 99999); // Mobile compatibility
+
+            try {
+                // Compatible fallback for embedded canvas structures
+                document.execCommand('copy');
+                showToast("Link Copied!", "The shareable Workspace URL has been saved to your clipboard.", "success");
+            } catch (err) {
+                console.error("Unable to execute copy command", err);
+                showToast("Copy Failed", "Please manually select and copy the text inside the input box.", "error");
+            }
+        }
+
+        // Real-time lighting modifiers
+        function updateLights() {
+            const intensity = parseFloat(document.getElementById('sun-intensity').value);
+            const color = document.getElementById('sun-color').value;
+            const yElevation = parseFloat(document.getElementById('sun-y').value);
+
+            directionalLight.intensity = intensity;
+            directionalLight.color.set(color);
+            directionalLight.position.y = yElevation;
+
+            const skyInt = parseFloat(document.getElementById('hemi-sky-intensity').value);
+            const skyCol = document.getElementById('hemi-sky-color').value;
+            const groundCol = document.getElementById('hemi-ground-color').value;
+
+            hemisphereLight.intensity = skyInt;
+            hemisphereLight.color.set(skyCol);
+            hemisphereLight.groundColor.set(groundCol);
+        }
+
+        function toggleHelpers() {
+            const gridCheck = document.getElementById('toggle-grid').checked;
+            const axesCheck = document.getElementById('toggle-axes').checked;
+
+            gridHelper.visible = gridCheck;
+            axesHelper.visible = axesCheck;
+        }
+
+        function toggleShadows() {
+            const enabled = document.getElementById('toggle-shadows').checked;
+            renderer.shadowMap.enabled = enabled;
+            // Traverse and update all materials to apply maps
+            scene.traverse((node) => {
+                if (node.isMesh && node.material) {
+                    if (Array.isArray(node.material)) {
+                        node.material.forEach(m => m.needsUpdate = true);
+                    } else {
+                        node.material.needsUpdate = true;
+                    }
+                }
+            });
+        }
+
+        function toggleAutoRotate() {
+            controls.autoRotate = document.getElementById('auto-rotate').checked;
+        }
+
+        function updateAutoRotateSpeed() {
+            controls.autoRotateSpeed = parseFloat(document.getElementById('rotate-speed').value);
+        }
+
+        // Apply Viewport Background Mode
+        function setBackgroundColor(hex) {
+            backgroundMode = 'color';
+            scene.background = new THREE.Color(hex);
+            canvasContainer.style.background = 'none';
+        }
+
+        // Apply visual atmospheric gradient
+        function setBackgroundGradient() {
+            backgroundMode = 'gradient';
+            scene.background = null;
+            canvasContainer.style.background = bgGradient;
+        }
+
+        function applyBackgroundColor() {
+            if (backgroundMode === 'gradient') {
+                scene.background = null;
+                canvasContainer.style.background = bgGradient;
+            } else {
+                scene.background = new THREE.Color('#020617');
+                canvasContainer.style.background = 'none';
+            }
+        }
+
+        // Camera viewpoint hotkeys
+        function setView(viewName) {
+            if (!mainModel) return;
+
+            // Re-center focal bounds
+            const bbox = new THREE.Box3().setFromObject(mainModel);
+            const size = bbox.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const dist = maxDim * 2.2;
+
+            controls.target.set(0, 0, 0);
+
+            switch (viewName) {
+                case 'front':
+                    camera.position.set(0, 0, dist);
+                    break;
+                case 'back':
+                    camera.position.set(0, 0, -dist);
+                    break;
+                case 'top':
+                    camera.position.set(0, dist, 0);
+                    break;
+                case 'left':
+                    camera.position.set(-dist, 0, 0);
+                    break;
+                case 'iso':
+                    camera.position.set(dist, dist, dist);
+                    break;
+            }
+            camera.lookAt(0, 0, 0);
+            controls.update();
+        }
+
+        // Capture viewport as PNG and trigger system download
+        function triggerScreenshot() {
+            // Force rendering before taking snapshot to guarantee correct buffer capture
+            renderer.render(scene, camera);
+            const dataURL = renderer.domElement.toDataURL('image/png');
+
+            const link = document.createElement('a');
+            link.download = 'render-snapshot.png';
+            link.href = dataURL;
+            link.click();
+            showToast("Snapshot Saved", "Render viewport exported successfully as PNG.", "success");
+        }
+
+        // Export active scene changes as a standard GLTF model format
+        function exportToGLTF() {
+            if (!mainModel) {
+                showToast("No Model Loaded", "Load a 3D asset first before attempting exports.", "error");
+                return;
+            }
+
+            const exporter = new THREE.GLTFExporter();
+            exporter.parse(
+                mainModel,
+                (gltf) => {
+                    const output = JSON.stringify(gltf, null, 2);
+                    const blob = new Blob([output], { type: 'text/plain' });
+                    const link = document.createElement('a');
+                    link.download = 'visualizer_export.gltf';
+                    link.href = URL.createObjectURL(blob);
+                    link.click();
+                    showToast("Export Completed", "Adjusted model exported as standard GLTF.", "success");
+                },
+                (error) => {
+                    console.error("GLTF Export failed", error);
+                    showToast("Export Failed", "Could not serialize the changes made to the materials.", "error");
+                },
+                { binary: false }
+            );
+        }
+
+        // Switch side menu sections
+        function switchTab(tabId) {
+            document.getElementById(activeTab).classList.add('hidden');
+            document.getElementById(`btn-${activeTab}`).classList.remove('tab-active');
+            document.getElementById(`btn-${activeTab}`).classList.add('text-slate-400');
+
+            activeTab = tabId;
+
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById(`btn-${tabId}`).classList.add('tab-active');
+            document.getElementById(`btn-${tabId}`).classList.remove('text-slate-400');
+        }
+
+        // Render Frame loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const now = performance.now();
+            const delta = (now - lastTime) / 1000;
+            
+            // Animation Mixer updates
+            if (mixer) {
+                mixer.update(delta);
+                
+                // Track timeline timeline scrubbing values
+                if (currentAction && !currentAction.paused) {
+                    const progressVal = mixer.time % currentAction.getClip().duration;
+                    document.getElementById('animation-scrubber').value = progressVal;
+                    document.getElementById('anim-current-time').innerText = progressVal.toFixed(2) + 's';
+                }
+            }
+
+            // Update OrbitControls
+            controls.update();
+
+            // Render call
+            renderer.render(scene, camera);
+
+            // FPS frame calculation
+            frameCount++;
+            if (now - lastTime >= 1000) {
+                document.getElementById('perf-fps').innerText = frameCount;
+                frameCount = 0;
+                lastTime = now;
+                
+                // Read approximate geometry memory usage
+                const info = renderer.info.memory;
+                const memoryUsage = ((info.geometries * 100 + info.textures * 200) / 1024).toFixed(2);
+                document.getElementById('perf-geom').innerText = `${memoryUsage} MB`;
+            }
+        }
+
+        // Loader interface methods
+        function showLoading(show, title = "", desc = "") {
+            const duration = 200;
+            if (show) {
+                document.getElementById('loading-title').innerText = title;
+                document.getElementById('loading-progress-txt').innerText = desc;
+                loadingOverlay.classList.remove('pointer-events-none');
+                loadingOverlay.classList.add('opacity-100');
+                updateLoadingProgress(10);
+            } else {
+                loadingOverlay.classList.remove('opacity-100');
+                loadingOverlay.classList.add('pointer-events-none');
+            }
+        }
+
+        function updateLoadingProgress(percent, label = "") {
+            document.getElementById('loading-bar-fill').style.width = `${percent}%`;
+            if (label) {
+                document.getElementById('loading-progress-txt').innerText = label;
+            }
+        }
+
+        // Notification utility
+        let toastTimeout = null;
+        function showToast(title, desc, type = "info") {
+            const toast = document.getElementById('toast-message');
+            const wrapper = document.getElementById('toast-icon-wrapper');
+            
+            document.getElementById('toast-title').innerText = title;
+            document.getElementById('toast-desc').innerText = desc;
+
+            // Apply contextual colors to the toast icon wrapper
+            wrapper.className = "p-1.5 rounded-lg ";
+            if (type === "success") {
+                wrapper.className += "bg-emerald-500/10 text-emerald-400";
+                wrapper.innerHTML = '<i data-lucide="check-circle" class="w-5 h-5"></i>';
+            } else if (type === "error") {
+                wrapper.className += "bg-rose-500/10 text-rose-400";
+                wrapper.innerHTML = '<i data-lucide="alert-triangle" class="w-5 h-5"></i>';
+            } else {
+                wrapper.className += "bg-indigo-500/10 text-indigo-400";
+                wrapper.innerHTML = '<i data-lucide="info" class="w-5 h-5"></i>';
+            }
+            lucide.createIcons();
+
+            // Slide up and make visible
+            toast.classList.remove('translate-y-12', 'opacity-0', 'pointer-events-none');
+
+            // Hide after duration
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(hideToast, 4500);
+        }
+
+        function hideToast() {
+            const toast = document.getElementById('toast-message');
+            toast.classList.add('translate-y-12', 'opacity-0', 'pointer-events-none');
+        }
+    </script>
+</body>
+</html>
