@@ -8,3 +8,4 @@ A curated collection of AI-built alternatives to everyday tools and applications
 - ~~Miro~~ [Continuum](Continuum.000.001.001.html) ([Try](https://7bp.github.io/aislop/Continuum.000.001.001.html)) - A one-man Miro board experience with import and export
 - ~~OmniFocus~~ [OmniHorizon](OmniHorizon.000.001.000.html) ([Try](https://7bp.github.io/aislop/OmniHorizon.000.001.000.html)) - Project-style todo lists? You got it!
 - ~~Character.ai~~ [Conclave](Conclave.000.001.000.html) ([Try](https://7bp.github.io/aislop/Conclave.000.001.000.html)) - Multilayered AI Group Chat (BYOK)
+- ~~Loom~~ [Reelight](Reelight.000.001.000.html) ([Try](https://7bp.github.io/aislop/Reelight.000.001.000.html)) - Screen &amp; camera recording studio, 100% on-device
