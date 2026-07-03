@@ -14,3 +14,4 @@ A curated collection of AI-built alternatives to everyday tools and applications
 - ~~1Password~~ [Bastion](Bastion.000.001.000.html) ([Try](https://7bp.github.io/aislop/Bastion.000.001.000.html)) - Offline password vault, AES-256-GCM encrypted, nothing leaves your device
 - ~~FreshBooks~~ [Tally](Tally.000.001.000.html) ([Try](https://7bp.github.io/aislop/Tally.000.001.000.html)) - Invoice builder with live totals, tax/discount, saved drafts &amp; PDF export
 - ~~Snagit~~ [Inkling](Inkling.000.001.000.html) ([Try](https://7bp.github.io/aislop/Inkling.000.001.000.html)) - Screenshot annotator: arrows, boxes, text, highlighter, blur-to-redact, export/copy
+- ~~Coolors~~ [Chroma](Chroma.000.001.000.html) ([Try](https://7bp.github.io/aislop/Chroma.000.001.000.html)) - Color palette studio: harmonies, lock &amp; generate, WCAG contrast, share links
