@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inkling — Screenshot Annotator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: "#fdf4ff", 100: "#fae8ff", 200: "#f5d0fe", 300: "#f0abfc", 400: "#e879f9",
+                500: "#d946ef", 600: "#c026d3", 700: "#a21caf", 800: "#86198f", 900: "#701a75",
+              },
+            },
+            fontFamily: {
+              sans: ["Plus Jakarta Sans", "sans-serif"],
+              brand: ["Space Grotesk", "sans-serif"],
+            },
+            animation: {
+              "fade-in": "fadeIn 0.35s ease both",
+              "pop-in": "popIn 0.22s cubic-bezier(.2,.9,.3,1.25) both",
+            },
+            keyframes: {
+              fadeIn: { from: { opacity: "0", transform: "translateY(6px)" }, to: { opacity: "1", transform: "translateY(0)" } },
+              popIn: { from: { opacity: "0", transform: "scale(0.97)" }, to: { opacity: "1", transform: "scale(1)" } },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        background:
+          radial-gradient(1100px 560px at 14% -10%, rgba(217, 70, 239, 0.14), transparent 60%),
+          radial-gradient(900px 620px at 110% 8%, rgba(99, 102, 241, 0.1), transparent 55%),
+          #0b080d;
+      }
+      .brand-font { font-family: "Space Grotesk", sans-serif; }
+      ::-webkit-scrollbar { width: 9px; height: 9px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 9999px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+      .glass {
+        background: rgba(22, 16, 26, 0.62);
+        backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .glass-soft { background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(255, 255, 255, 0.07); }
+      .glow-btn { box-shadow: 0 10px 30px -8px rgba(217, 70, 239, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.22); }
+      .tool {
+        width: 42px; height: 42px; border-radius: 0.7rem; display: grid; place-items: center;
+        background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.07);
+        color: rgba(255,255,255,0.7); transition: 0.14s; cursor: pointer;
+      }
+      .tool:hover { background: rgba(255,255,255,0.1); color: #fff; }
+      .tool.active { background: linear-gradient(180deg, rgba(217,70,239,0.32), rgba(217,70,239,0.14)); border-color: rgba(217,70,239,0.6); color: #fff; box-shadow: 0 0 0 1px rgba(217,70,239,0.3); }
+      .swatch { width: 26px; height: 26px; border-radius: 9999px; cursor: pointer; border: 2px solid rgba(255,255,255,0.2); transition: 0.12s; }
+      .swatch:hover { transform: scale(1.12); }
+      .swatch.active { border-color: #fff; box-shadow: 0 0 0 2px rgba(217,70,239,0.6); }
+      input[type="range"] { -webkit-appearance: none; appearance: none; height: 5px; border-radius: 9999px; background: rgba(255,255,255,0.12); outline: none; }
+      input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; border-radius: 50%; background: #d946ef; cursor: pointer; border: 2px solid #fff; }
+      #stage { background-image: linear-gradient(45deg, #1a1420 25%, transparent 25%), linear-gradient(-45deg, #1a1420 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #1a1420 75%), linear-gradient(-45deg, transparent 75%, #1a1420 75%); background-size: 22px 22px; background-position: 0 0, 0 11px, 11px -11px, -11px 0; }
+      #canvas { touch-action: none; max-width: 100%; max-height: 72vh; box-shadow: 0 20px 60px -20px rgba(0,0,0,0.8); border-radius: 6px; }
+      .grain::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: 0.5; z-index: 0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E"); }
+    </style>
+  </head>
+  <body class="dark text-white min-h-screen grain overflow-x-hidden">
+    <header class="relative z-10 px-5 sm:px-8 pt-5 pb-3 flex items-center justify-between gap-4 flex-wrap">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 grid place-items-center glow-btn">
+          <i class="fa-solid fa-pen-ruler text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="brand-font text-xl font-bold tracking-tight leading-none">Inkling</h1>
+          <p class="text-[11px] text-white/45 mt-0.5 font-medium">Screenshot Annotator</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="newBtn" class="flex items-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm"><i class="fa-solid fa-image"></i> <span class="hidden sm:inline">Open</span></button>
+        <button id="copyBtn" class="flex items-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm disabled:opacity-40" disabled><i class="fa-solid fa-clipboard"></i> <span class="hidden sm:inline">Copy</span></button>
+        <button id="dlBtn" class="flex items-center gap-2 bg-gradient-to-b from-brand-400 to-brand-600 hover:from-brand-300 text-white font-semibold px-4 py-2.5 rounded-xl glow-btn transition active:scale-95 text-sm disabled:opacity-40" disabled><i class="fa-solid fa-download"></i> PNG</button>
+      </div>
+    </header>
+
+    <main class="relative z-10 px-5 sm:px-8 pb-10 max-w-[1400px] mx-auto">
+      <!-- Toolbar -->
+      <div id="toolbar" class="glass rounded-2xl p-2.5 flex items-center gap-1.5 flex-wrap mb-4 animate-fade-in">
+        <div class="flex items-center gap-1.5" id="tools">
+          <button class="tool active" data-tool="arrow" title="Arrow (A)"><i class="fa-solid fa-arrow-up-long -rotate-45"></i></button>
+          <button class="tool" data-tool="rect" title="Rectangle (R)"><i class="fa-regular fa-square"></i></button>
+          <button class="tool" data-tool="ellipse" title="Ellipse (O)"><i class="fa-regular fa-circle"></i></button>
+          <button class="tool" data-tool="line" title="Line (L)"><i class="fa-solid fa-minus"></i></button>
+          <button class="tool" data-tool="pen" title="Pen (P)"><i class="fa-solid fa-pencil"></i></button>
+          <button class="tool" data-tool="highlight" title="Highlighter (H)"><i class="fa-solid fa-highlighter"></i></button>
+          <button class="tool" data-tool="text" title="Text (T)"><i class="fa-solid fa-font"></i></button>
+          <button class="tool" data-tool="blur" title="Blur / redact (B)"><i class="fa-solid fa-droplet"></i></button>
+        </div>
+        <div class="w-px h-7 bg-white/10 mx-1.5"></div>
+        <div class="flex items-center gap-1.5" id="swatches"></div>
+        <input id="customColor" type="color" value="#d946ef" class="w-8 h-8 rounded-lg bg-transparent border border-white/10 cursor-pointer p-0.5" title="Custom colour" />
+        <div class="w-px h-7 bg-white/10 mx-1.5"></div>
+        <div class="flex items-center gap-2 px-1">
+          <i class="fa-solid fa-pen-nib text-white/40 text-xs"></i>
+          <input id="widthRange" type="range" min="1" max="30" value="6" class="w-24" />
+          <span id="widthVal" class="text-xs font-mono text-white/50 w-6">6</span>
+        </div>
+        <div class="w-px h-7 bg-white/10 mx-1.5"></div>
+        <button id="undoBtn" class="tool" title="Undo (Ctrl+Z)"><i class="fa-solid fa-rotate-left"></i></button>
+        <button id="redoBtn" class="tool" title="Redo (Ctrl+Y)"><i class="fa-solid fa-rotate-right"></i></button>
+        <button id="clearBtn" class="tool hover:!text-rose-300" title="Clear annotations"><i class="fa-solid fa-eraser"></i></button>
+      </div>
+
+      <!-- Stage -->
+      <div id="stage" class="rounded-3xl border border-white/10 min-h-[62vh] grid place-items-center p-4 relative overflow-auto">
+        <!-- Empty -->
+        <div id="empty" class="text-center px-6 select-none">
+          <div class="w-20 h-20 mx-auto rounded-3xl bg-white/5 border border-white/10 grid place-items-center mb-5">
+            <i class="fa-solid fa-image text-3xl text-brand-300"></i>
+          </div>
+          <p class="text-lg font-semibold">Drop, paste or open an image</p>
+          <p class="text-white/40 text-sm mt-1.5 max-w-md mx-auto">Press <kbd class="px-1.5 py-0.5 rounded bg-white/10 text-xs font-mono">Ctrl/⌘+V</kbd> to paste a screenshot, drag a file in, or click Open. Markup happens entirely in your browser.</p>
+          <button id="openBtn2" class="mt-6 inline-flex items-center gap-2 bg-gradient-to-b from-brand-400 to-brand-600 text-white font-semibold px-5 py-3 rounded-2xl glow-btn transition active:scale-95"><i class="fa-solid fa-folder-open"></i> Open image</button>
+        </div>
+        <!-- Canvas + text input overlay live here -->
+        <div id="canvasWrap" class="hidden relative">
+          <canvas id="canvas"></canvas>
+          <input id="textInput" class="hidden absolute z-20 bg-transparent outline-none font-semibold" style="border:1px dashed rgba(255,255,255,0.6);padding:0 2px;" />
+        </div>
+      </div>
+      <p class="text-center text-[11px] text-white/25 mt-3">Tip: number your steps with the arrow tool, redact secrets with blur, then Copy straight to your clipboard.</p>
+    </main>
+
+    <input id="fileInput" type="file" accept="image/*" class="hidden" />
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-3 glass px-5 py-3 rounded-2xl text-sm font-medium shadow-2xl">
+      <i id="toastIcon" class="fa-solid fa-circle-info text-brand-300"></i>
+      <span id="toastMsg"></span>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const canvas = $("canvas");
+      const ctx = canvas.getContext("2d");
+
+      const PALETTE = ["#ef4444", "#f97316", "#facc15", "#22c55e", "#3b82f6", "#a855f7", "#111827", "#ffffff"];
+      const state = {
+        tool: "arrow",
+        color: "#ef4444",
+        width: 6,
+        shapes: [],
+        redo: [],
+        drawing: false,
+        draft: null,
+        img: null, // HTMLImageElement / canvas source
+      };
+
+      function toast(msg, icon = "circle-info", color = "text-brand-300") {
+        const t = $("toast");
+        $("toastMsg").textContent = msg;
+        $("toastIcon").className = `fa-solid fa-${icon} ${color}`;
+        t.classList.remove("hidden"); t.classList.add("flex");
+        clearTimeout(t._to); t._to = setTimeout(() => { t.classList.add("hidden"); t.classList.remove("flex"); }, 2600);
+      }
+
+      // ---------- swatches ----------
+      const sw = $("swatches");
+      PALETTE.forEach((c, i) => {
+        const b = document.createElement("button");
+        b.className = "swatch" + (i === 0 ? " active" : "");
+        b.style.background = c;
+        b.dataset.color = c;
+        b.addEventListener("click", () => setColor(c, b));
+        sw.appendChild(b);
+      });
+      function setColor(c, el) {
+        state.color = c;
+        document.querySelectorAll(".swatch").forEach((s) => s.classList.toggle("active", s === el));
+        $("customColor").value = /^#[0-9a-f]{6}$/i.test(c) ? c : $("customColor").value;
+      }
+      $("customColor").addEventListener("input", (e) => { state.color = e.target.value; document.querySelectorAll(".swatch").forEach((s) => s.classList.remove("active")); });
+
+      // ---------- tools ----------
+      document.querySelectorAll("[data-tool]").forEach((b) =>
+        b.addEventListener("click", () => selectTool(b.dataset.tool))
+      );
+      function selectTool(t) {
+        state.tool = t;
+        document.querySelectorAll("[data-tool]").forEach((b) => b.classList.toggle("active", b.dataset.tool === t));
+      }
+      $("widthRange").addEventListener("input", (e) => { state.width = +e.target.value; $("widthVal").textContent = e.target.value; });
+
+      // ---------- image load ----------
+      function loadImageFromSrc(src) {
+        const img = new Image();
+        img.onload = () => {
+          state.img = img;
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          state.shapes = [];
+          state.redo = [];
+          $("empty").classList.add("hidden");
+          $("canvasWrap").classList.remove("hidden");
+          $("copyBtn").disabled = false;
+          $("dlBtn").disabled = false;
+          render();
+        };
+        img.onerror = () => toast("Couldn't load that image", "triangle-exclamation", "text-amber-300");
+        img.src = src;
+      }
+      function loadFile(file) {
+        if (!file || !/^image\//.test(file.type)) return;
+        const r = new FileReader();
+        r.onload = () => loadImageFromSrc(r.result);
+        r.readAsDataURL(file);
+      }
+      $("fileInput").addEventListener("change", (e) => { loadFile(e.target.files[0]); e.target.value = ""; });
+      const pick = () => $("fileInput").click();
+      $("newBtn").addEventListener("click", pick);
+      $("openBtn2").addEventListener("click", pick);
+
+      // paste
+      window.addEventListener("paste", (e) => {
+        const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith("image/"));
+        if (item) { loadFile(item.getAsFile()); toast("Pasted image", "clipboard-check", "text-emerald-300"); }
+      });
+      // drop
+      ["dragover", "drop"].forEach((ev) => window.addEventListener(ev, (e) => e.preventDefault()));
+      window.addEventListener("drop", (e) => { const f = e.dataTransfer?.files?.[0]; if (f) loadFile(f); });
+
+      // ---------- coordinate mapping ----------
+      function pos(e) {
+        const r = canvas.getBoundingClientRect();
+        return {
+          x: (e.clientX - r.left) * (canvas.width / r.width),
+          y: (e.clientY - r.top) * (canvas.height / r.height),
+        };
+      }
+
+      // ---------- drawing ----------
+      canvas.addEventListener("pointerdown", (e) => {
+        if (!state.img) return;
+        if (state.tool === "text") { placeText(e); return; }
+        state.drawing = true;
+        const p = pos(e);
+        const base = { type: state.tool, color: state.color, width: state.width };
+        if (state.tool === "pen" || state.tool === "highlight") state.draft = { ...base, points: [p] };
+        else state.draft = { ...base, x1: p.x, y1: p.y, x2: p.x, y2: p.y };
+        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+        render();
+      });
+      canvas.addEventListener("pointermove", (e) => {
+        if (!state.drawing || !state.draft) return;
+        const p = pos(e);
+        if (state.draft.points) state.draft.points.push(p);
+        else { state.draft.x2 = p.x; state.draft.y2 = p.y; }
+        render();
+      });
+      function endDraw() {
+        if (!state.drawing) return;
+        state.drawing = false;
+        const d = state.draft;
+        state.draft = null;
+        if (d && isValidShape(d)) { state.shapes.push(d); state.redo = []; }
+        render();
+      }
+      canvas.addEventListener("pointerup", endDraw);
+      canvas.addEventListener("pointercancel", endDraw);
+
+      function isValidShape(d) {
+        if (d.points) return d.points.length > 1;
+        return Math.hypot(d.x2 - d.x1, d.y2 - d.y1) > 3;
+      }
+
+      // ---------- text ----------
+      function placeText(e) {
+        const input = $("textInput");
+        const r = canvas.getBoundingClientRect();
+        const wrapR = $("canvasWrap").getBoundingClientRect();
+        const p = pos(e);
+        const cssScale = r.width / canvas.width;
+        input.style.left = (e.clientX - wrapR.left) + "px";
+        input.style.top = (e.clientY - wrapR.top) + "px";
+        input.style.color = state.color;
+        input.style.fontSize = Math.max(12, state.width * 3.2 * cssScale) + "px";
+        input.value = "";
+        input.dataset.x = p.x;
+        input.dataset.y = p.y;
+        input.classList.remove("hidden");
+        setTimeout(() => input.focus(), 10);
+      }
+      const textInput = $("textInput");
+      function commitText() {
+        const v = textInput.value.trim();
+        if (v) {
+          state.shapes.push({ type: "text", color: state.color, width: state.width, x: +textInput.dataset.x, y: +textInput.dataset.y, text: v, size: state.width * 3.2 });
+          state.redo = [];
+        }
+        textInput.classList.add("hidden");
+        textInput.value = "";
+        render();
+      }
+      textInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); commitText(); } else if (e.key === "Escape") { textInput.classList.add("hidden"); textInput.value = ""; } });
+      textInput.addEventListener("blur", commitText);
+
+      // ---------- render ----------
+      function render() {
+        if (!state.img) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(state.img, 0, 0, canvas.width, canvas.height);
+        const all = state.draft ? state.shapes.concat([state.draft]) : state.shapes;
+        all.forEach((s) => drawShape(s));
+      }
+
+      function drawShape(s) {
+        ctx.save();
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.strokeStyle = s.color;
+        ctx.fillStyle = s.color;
+        ctx.lineWidth = s.width;
+
+        if (s.type === "rect") {
+          const x = Math.min(s.x1, s.x2), y = Math.min(s.y1, s.y2);
+          ctx.strokeRect(x, y, Math.abs(s.x2 - s.x1), Math.abs(s.y2 - s.y1));
+        } else if (s.type === "ellipse") {
+          ctx.beginPath();
+          ctx.ellipse((s.x1 + s.x2) / 2, (s.y1 + s.y2) / 2, Math.abs(s.x2 - s.x1) / 2, Math.abs(s.y2 - s.y1) / 2, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (s.type === "line") {
+          ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke();
+        } else if (s.type === "arrow") {
+          drawArrow(s);
+        } else if (s.type === "pen") {
+          strokePath(s.points);
+        } else if (s.type === "highlight") {
+          ctx.globalAlpha = 0.35;
+          ctx.lineWidth = s.width * 2.5;
+          ctx.strokeStyle = s.color;
+          strokePath(s.points);
+        } else if (s.type === "text") {
+          ctx.font = `600 ${s.size}px "Plus Jakarta Sans", sans-serif`;
+          ctx.textBaseline = "top";
+          s.text.split("\n").forEach((line, i) => ctx.fillText(line, s.x, s.y + i * s.size * 1.2));
+        } else if (s.type === "blur") {
+          drawBlur(s);
+        }
+        ctx.restore();
+      }
+      function strokePath(pts) {
+        if (!pts || pts.length < 1) return;
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.stroke();
+      }
+      function drawArrow(s) {
+        const { x1, y1, x2, y2, width } = s;
+        const ang = Math.atan2(y2 - y1, x2 - x1);
+        const head = Math.max(12, width * 3);
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(x2 - head * Math.cos(ang - Math.PI / 6), y2 - head * Math.sin(ang - Math.PI / 6));
+        ctx.lineTo(x2 - head * Math.cos(ang + Math.PI / 6), y2 - head * Math.sin(ang + Math.PI / 6));
+        ctx.closePath();
+        ctx.fill();
+      }
+      function drawBlur(s) {
+        const x = Math.min(s.x1, s.x2), y = Math.min(s.y1, s.y2);
+        const w = Math.abs(s.x2 - s.x1), h = Math.abs(s.y2 - s.y1);
+        if (w < 2 || h < 2) return;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y, w, h);
+        ctx.clip();
+        // pixelate: downscale then upscale from base image region
+        const px = Math.max(6, Math.round(Math.min(w, h) / 12));
+        const tmp = document.createElement("canvas");
+        const sw2 = Math.max(1, Math.round(w / px)), sh2 = Math.max(1, Math.round(h / px));
+        tmp.width = sw2; tmp.height = sh2;
+        const tctx = tmp.getContext("2d");
+        tctx.drawImage(canvas, x, y, w, h, 0, 0, sw2, sh2);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(tmp, 0, 0, sw2, sh2, x, y, w, h);
+        ctx.restore();
+      }
+
+      // ---------- history ----------
+      function undo() { if (!state.shapes.length) return; state.redo.push(state.shapes.pop()); render(); }
+      function redo() { if (!state.redo.length) return; state.shapes.push(state.redo.pop()); render(); }
+      $("undoBtn").addEventListener("click", undo);
+      $("redoBtn").addEventListener("click", redo);
+      $("clearBtn").addEventListener("click", () => { if (state.shapes.length) { state.redo = state.shapes.slice().reverse().concat(state.redo); state.shapes = []; render(); toast("Annotations cleared", "eraser"); } });
+
+      // ---------- export ----------
+      function exportBlob() { return new Promise((res) => canvas.toBlob(res, "image/png")); }
+      $("dlBtn").addEventListener("click", async () => {
+        if (!state.img) return;
+        const blob = await exportBlob();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `inkling-${new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19)}.png`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+        toast("Saved PNG", "circle-check", "text-emerald-300");
+      });
+      $("copyBtn").addEventListener("click", async () => {
+        if (!state.img) return;
+        try {
+          const blob = await exportBlob();
+          await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+          toast("Copied to clipboard", "clipboard-check", "text-emerald-300");
+        } catch (e) {
+          toast("Clipboard image copy unsupported here — use PNG", "triangle-exclamation", "text-amber-300");
+        }
+      });
+
+      // ---------- keyboard ----------
+      const KEYS = { a: "arrow", r: "rect", o: "ellipse", l: "line", p: "pen", h: "highlight", t: "text", b: "blur" };
+      document.addEventListener("keydown", (e) => {
+        if (e.target === textInput || ["INPUT", "TEXTAREA"].includes(e.target.tagName)) return;
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); undo(); }
+        else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === "y" || (e.shiftKey && e.key.toLowerCase() === "z"))) { e.preventDefault(); redo(); }
+        else if (KEYS[e.key.toLowerCase()] && state.img) selectTool(KEYS[e.key.toLowerCase()]);
+      });
+    </script>
+  </body>
+</html>
