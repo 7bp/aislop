@@ -2,16 +2,42 @@
 
 A curated collection of AI-built alternatives to everyday tools and applications.
 
-- ~~FlipaClip~~ [FlipGlide Studio Pro](FlipGlide-Studio-Pro.000.002.000.html) ([Try](https://7bp.github.io/aislop/FlipGlide-Studio-Pro.000.002.000.html)) - A canvas animator board with import and export features
-- ~~Forest~~ [AetherFlow](AetherFlow.000.001.000.html) ([Try](https://7bp.github.io/aislop/AetherFlow.000.001.000.html)) - A gamification inspired Focus Timer
-- ~~Qrafter~~ [QRCode Labs](QRCodeLabs.000.001.000.html) ([Try](https://7bp.github.io/aislop/QRCodeLabs.000.001.000.html)) - A fancy QRCode Generator and Reader
-- ~~Miro~~ [Continuum](Continuum.000.001.001.html) ([Try](https://7bp.github.io/aislop/Continuum.000.001.001.html)) - A one-man Miro board experience with import and export
-- ~~OmniFocus~~ [OmniHorizon](OmniHorizon.000.001.000.html) ([Try](https://7bp.github.io/aislop/OmniHorizon.000.001.000.html)) - Project-style todo lists? You got it!
-- ~~Character.ai~~ [Conclave](Conclave.000.001.000.html) ([Try](https://7bp.github.io/aislop/Conclave.000.001.000.html)) - Multilayered AI Group Chat (BYOK)
-- ~~Loom~~ [Reelight](Reelight.000.001.000.html) ([Try](https://7bp.github.io/aislop/Reelight.000.001.000.html)) - Screen &amp; camera recording studio, 100% on-device
-- ~~Smallpdf~~ [Quire](Quire.000.001.000.html) ([Try](https://7bp.github.io/aislop/Quire.000.001.000.html)) - Private PDF studio: merge, reorder, rotate &amp; delete pages, nothing uploaded
-- ~~TinyPNG~~ [Plume](Plume.000.001.000.html) ([Try](https://7bp.github.io/aislop/Plume.000.001.000.html)) - Batch image compressor &amp; converter (WebP/JPEG/PNG), fully on-device
-- ~~1Password~~ [Bastion](Bastion.000.001.000.html) ([Try](https://7bp.github.io/aislop/Bastion.000.001.000.html)) - Offline password vault, AES-256-GCM encrypted, nothing leaves your device
-- ~~FreshBooks~~ [Tally](Tally.000.001.000.html) ([Try](https://7bp.github.io/aislop/Tally.000.001.000.html)) - Invoice builder with live totals, tax/discount, saved drafts &amp; PDF export
-- ~~Snagit~~ [Inkling](Inkling.000.001.000.html) ([Try](https://7bp.github.io/aislop/Inkling.000.001.000.html)) - Screenshot annotator: arrows, boxes, text, highlighter, blur-to-redact, export/copy
-- ~~Coolors~~ [Chroma](Chroma.000.001.000.html) ([Try](https://7bp.github.io/aislop/Chroma.000.001.000.html)) - Color palette studio: harmonies, lock &amp; generate, WCAG contrast, share links
+Every entry is a **single, self-contained HTML file** — open it in a browser and it just runs.
+No build step, no accounts, no servers: all logic lives in vanilla JavaScript using standard
+browser APIs (Canvas, WebCrypto, MediaRecorder, `localStorage`, …), with Tailwind and Font Awesome
+pulled from a CDN purely for styling. Unless noted, your data never leaves the page.
+
+| | Replaces | Under the hood | Est. cost avoided |
+|---|---|---|---|
+| [FlipGlide Studio Pro](FlipGlide-Studio-Pro.000.002.000.html) ([Try](https://7bp.github.io/aislop/FlipGlide-Studio-Pro.000.002.000.html)) — canvas animator with import/export | FlipaClip | Frame-by-frame `<canvas>` drawing with onion-skinning; frames played in sequence and exported via file APIs | ~$36/yr (Plus) |
+| [AetherFlow](AetherFlow.000.001.000.html) ([Try](https://7bp.github.io/aislop/AetherFlow.000.001.000.html)) — gamified focus timer | Forest | Pomodoro timer driven by timestamps/`setInterval`, streak state in `localStorage` | ~$4 one-time |
+| [QRCode Labs](QRCodeLabs.000.001.000.html) ([Try](https://7bp.github.io/aislop/QRCodeLabs.000.001.000.html)) — QR generator &amp; reader | Qrafter | Renders QR codes to canvas and scans them from the live camera via `getUserMedia` | ~$4 one-time |
+| [Continuum](Continuum.000.001.001.html) ([Try](https://7bp.github.io/aislop/Continuum.000.001.001.html)) — one-person whiteboard | Miro | Infinite pan/zoom canvas with notes &amp; shapes; board serialized to JSON for import/export | ~$96–192/user/yr |
+| [OmniHorizon](OmniHorizon.000.001.000.html) ([Try](https://7bp.github.io/aislop/OmniHorizon.000.001.000.html)) — project-style todo lists | OmniFocus | GTD-style nested projects/tasks persisted to `localStorage` | ~$75 one-time or ~$100/yr |
+| [Conclave](Conclave.000.001.000.html) ([Try](https://7bp.github.io/aislop/Conclave.000.001.000.html)) — multi-persona AI group chat (BYOK) | Character.ai | Calls an LLM API with your own key; personas &amp; conversation held in-browser | ~$120/yr (+ your token usage) |
+| [Reelight](Reelight.000.001.000.html) ([Try](https://7bp.github.io/aislop/Reelight.000.001.000.html)) — screen &amp; camera recorder | Loom | `getDisplayMedia` + `getUserMedia`, canvas compositing for the webcam bubble, Web Audio mixing, `MediaRecorder` → WebM | ~$150–180/user/yr |
+| [Quire](Quire.000.001.000.html) ([Try](https://7bp.github.io/aislop/Quire.000.001.000.html)) — private PDF studio | Smallpdf | `pdf.js` renders page thumbnails; `pdf-lib` assembles merged/reordered/rotated output — all client-side | ~$108–144/yr |
+| [Plume](Plume.000.001.000.html) ([Try](https://7bp.github.io/aislop/Plume.000.001.000.html)) — image compressor &amp; converter | TinyPNG | Decodes to `<canvas>` and re-encodes via `canvas.toBlob` (WebP/JPEG/PNG) with quality + resize; strips metadata | ~$39/yr (beyond free quota) |
+| [Bastion](Bastion.000.001.000.html) ([Try](https://7bp.github.io/aislop/Bastion.000.001.000.html)) — offline password vault | 1Password | WebCrypto PBKDF2-SHA256 (250k iters) → AES-256-GCM; vault encrypted at rest, master password never stored | ~$36–48/yr |
+| [Tally](Tally.000.001.000.html) ([Try](https://7bp.github.io/aislop/Tally.000.001.000.html)) — invoice builder | FreshBooks | Live totals with `Intl.NumberFormat` + tax/discount math; profile &amp; invoices in `localStorage`; PDF via print stylesheet | ~$200+/yr |
+| [Inkling](Inkling.000.001.000.html) ([Try](https://7bp.github.io/aislop/Inkling.000.001.000.html)) — screenshot annotator | Snagit | Full-res `<canvas>` markup with vector shape objects + undo/redo; pixelate-region redaction; PNG or clipboard export | ~$40–63 one-time |
+| [Chroma](Chroma.000.001.000.html) ([Try](https://7bp.github.io/aislop/Chroma.000.001.000.html)) — color palette studio | Coolors | HSL harmony generation, WCAG relative-luminance contrast, palette encoded in the URL hash for sharing | ~$36–60/yr |
+| [Tempo](Tempo.000.001.000.html) ([Try](https://7bp.github.io/aislop/Tempo.000.001.000.html)) — time tracker | Toggl | Timestamp-based timers with live `setInterval` updates, projects, weekly aggregation, CSV export — all in `localStorage` | ~$108–120/user/yr |
+
+Swapping the subscription tools above for these clones adds up to **well north of ~$1,000/year** in
+avoided recurring fees for a typical solo user — before counting the one-time-license tools.
+
+---
+
+### ⚠️ Disclaimer
+
+These are **AI-generated, single-file hobby clones**, provided **as-is with no warranty** of any
+kind. They implement the common-case features of the tools they reference — not every capability, edge
+case, or guarantee of the originals — and should not be relied upon for critical, sensitive, or
+business-critical data without your own review and backups.
+
+The **"estimated cost avoided"** figures are rough, list-price approximations for a typical paid tier
+around 2025. Real prices vary by plan, seat count, region, currency, promotions, and change over time,
+and most of the originals also offer free tiers — treat the numbers as illustrative, not financial
+advice. Nothing here is affiliated with, endorsed by, or an official replacement for any named product,
+and all product names and trademarks belong to their respective owners.

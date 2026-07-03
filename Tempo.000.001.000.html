@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tempo — Time Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: "#ecfeff", 100: "#cffafe", 200: "#a5f3fc", 300: "#67e8f9", 400: "#22d3ee",
+                500: "#06b6d4", 600: "#0891b2", 700: "#0e7490", 800: "#155e75", 900: "#164e63",
+              },
+            },
+            fontFamily: {
+              sans: ["Plus Jakarta Sans", "sans-serif"],
+              brand: ["Space Grotesk", "sans-serif"],
+              mono: ["JetBrains Mono", "monospace"],
+            },
+            animation: {
+              "fade-in": "fadeIn 0.3s ease both",
+              "pop-in": "popIn 0.2s cubic-bezier(.2,.9,.3,1.25) both",
+            },
+            keyframes: {
+              fadeIn: { from: { opacity: "0", transform: "translateY(6px)" }, to: { opacity: "1", transform: "translateY(0)" } },
+              popIn: { from: { opacity: "0", transform: "scale(0.97)" }, to: { opacity: "1", transform: "scale(1)" } },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        background:
+          radial-gradient(1100px 560px at 14% -10%, rgba(6, 182, 212, 0.14), transparent 60%),
+          radial-gradient(900px 620px at 110% 8%, rgba(59, 130, 246, 0.1), transparent 55%),
+          #07090c;
+      }
+      .brand-font { font-family: "Space Grotesk", sans-serif; }
+      ::-webkit-scrollbar { width: 9px; height: 9px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 9999px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+      .glass { background: rgba(15, 20, 26, 0.62); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255, 255, 255, 0.08); }
+      .glass-soft { background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(255, 255, 255, 0.07); }
+      .glow-btn { box-shadow: 0 10px 30px -8px rgba(6, 182, 212, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.22); }
+      .field { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); border-radius: 0.7rem; padding: 0.6rem 0.8rem; color: #fff; font-size: 0.9rem; transition: 0.15s; outline: none; }
+      .field:focus { border-color: rgba(6,182,212,0.7); box-shadow: 0 0 0 3px rgba(6,182,212,0.16); }
+      .field::placeholder { color: rgba(255,255,255,0.3); }
+      .lbl { font-size: 0.72rem; font-weight: 600; color: rgba(255,255,255,0.45); padding-left: 0.15rem; text-transform: uppercase; letter-spacing: 0.03em; }
+      .grain::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: 0.5; z-index: 0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E"); }
+      .modal-back { background: rgba(4,6,10,0.72); backdrop-filter: blur(6px); }
+    </style>
+  </head>
+  <body class="dark text-white min-h-screen grain overflow-x-hidden">
+    <header class="relative z-10 px-5 sm:px-8 pt-5 pb-3 flex items-center justify-between gap-4 flex-wrap">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-300 to-brand-600 grid place-items-center glow-btn">
+          <i class="fa-solid fa-stopwatch text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="brand-font text-xl font-bold tracking-tight leading-none">Tempo</h1>
+          <p class="text-[11px] text-white/45 mt-0.5 font-medium">Time Tracker</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="projectsBtn" class="flex items-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm"><i class="fa-solid fa-layer-group"></i> <span class="hidden sm:inline">Projects</span></button>
+        <button id="manualBtn" class="flex items-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm"><i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Manual</span></button>
+        <button id="exportBtn" class="flex items-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm"><i class="fa-solid fa-file-csv"></i> <span class="hidden sm:inline">CSV</span></button>
+      </div>
+    </header>
+
+    <main class="relative z-10 px-5 sm:px-8 pb-16 max-w-[900px] mx-auto">
+      <!-- Tracker bar -->
+      <div class="glass rounded-2xl p-3 flex items-center gap-3 flex-wrap sticky top-3 z-20 animate-fade-in">
+        <input id="descInput" class="field flex-1 min-w-[160px] !py-3 text-base" placeholder="What are you working on?" />
+        <div class="relative">
+          <select id="projSelect" class="field !py-3 appearance-none pr-9 min-w-[140px]"></select>
+          <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/40 pointer-events-none"></i>
+        </div>
+        <div id="bigTimer" class="font-mono text-2xl font-semibold tabular-nums tracking-tight w-[112px] text-center">0:00:00</div>
+        <button id="toggleBtn" class="w-14 h-14 rounded-2xl grid place-items-center text-white text-xl transition active:scale-95 bg-gradient-to-b from-brand-400 to-brand-600 glow-btn">
+          <i class="fa-solid fa-play"></i>
+        </button>
+      </div>
+
+      <!-- Week chart -->
+      <div class="glass rounded-2xl p-4 mt-4 animate-fade-in">
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-[11px] uppercase tracking-wider text-white/40 font-bold px-1">This week</p>
+          <p class="text-sm font-mono font-semibold text-brand-300" id="weekTotal">0:00:00</p>
+        </div>
+        <div id="weekChart" class="flex items-end justify-between gap-2 h-24"></div>
+      </div>
+
+      <!-- Search -->
+      <div class="relative mt-4">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-white/35 text-sm"></i>
+        <input id="search" class="field pl-10" placeholder="Search entries…" />
+      </div>
+
+      <!-- Entries -->
+      <div id="entries" class="mt-4 space-y-5"></div>
+      <div id="emptyState" class="hidden text-center py-16">
+        <div class="w-20 h-20 mx-auto rounded-3xl bg-white/5 border border-white/10 grid place-items-center mb-5"><i class="fa-solid fa-hourglass-half text-3xl text-brand-300"></i></div>
+        <p class="text-lg font-semibold">No time tracked yet</p>
+        <p class="text-white/40 text-sm mt-1.5">Type what you're doing and hit play to start the clock.</p>
+      </div>
+    </main>
+
+    <!-- Manual / edit modal -->
+    <div id="entryModal" class="hidden fixed inset-0 z-40 modal-back grid place-items-center p-4">
+      <div class="glass rounded-3xl w-full max-w-md p-6 animate-pop-in">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="brand-font text-lg font-bold" id="entryModalTitle">Add time entry</h2>
+          <button id="entryModalClose" class="w-9 h-9 grid place-items-center glass-soft rounded-lg hover:bg-white/10 transition"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="space-y-3.5">
+          <div><p class="lbl">Description</p><input id="mDesc" class="field mt-1" placeholder="What did you work on?" /></div>
+          <div><p class="lbl">Project</p>
+            <div class="relative mt-1"><select id="mProj" class="field appearance-none pr-9"></select><i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/40 pointer-events-none"></i></div>
+          </div>
+          <div><p class="lbl">Date</p><input id="mDate" type="date" class="field mt-1" /></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><p class="lbl">Start</p><input id="mStart" type="time" step="1" class="field mt-1" /></div>
+            <div><p class="lbl">End</p><input id="mEnd" type="time" step="1" class="field mt-1" /></div>
+          </div>
+          <p id="mError" class="hidden text-rose-300 text-xs px-1"></p>
+        </div>
+        <div class="flex items-center gap-2 mt-6">
+          <button id="mDelete" class="hidden flex items-center gap-2 text-rose-300 hover:bg-rose-500/10 border border-rose-400/30 font-semibold px-4 py-2.5 rounded-xl transition text-sm"><i class="fa-solid fa-trash-can"></i> Delete</button>
+          <button id="mSave" class="ml-auto flex items-center gap-2 bg-gradient-to-b from-brand-400 to-brand-600 text-white font-semibold px-6 py-2.5 rounded-xl glow-btn transition active:scale-95"><i class="fa-solid fa-check"></i> Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Projects modal -->
+    <div id="projModal" class="hidden fixed inset-0 z-40 modal-back grid place-items-center p-4">
+      <div class="glass rounded-3xl w-full max-w-md p-6 animate-pop-in">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="brand-font text-lg font-bold">Projects</h2>
+          <button id="projModalClose" class="w-9 h-9 grid place-items-center glass-soft rounded-lg hover:bg-white/10 transition"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="flex items-center gap-2 mb-4">
+          <input id="newProjName" class="field flex-1" placeholder="New project name" />
+          <input id="newProjColor" type="color" value="#06b6d4" class="w-11 h-11 rounded-lg bg-transparent border border-white/10 cursor-pointer p-1" />
+          <button id="addProjBtn" class="bg-gradient-to-b from-brand-400 to-brand-600 text-white font-semibold px-4 py-2.5 rounded-xl glow-btn transition active:scale-95"><i class="fa-solid fa-plus"></i></button>
+        </div>
+        <div id="projList" class="space-y-2 max-h-72 overflow-y-auto"></div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-3 glass px-5 py-3 rounded-2xl text-sm font-medium shadow-2xl">
+      <i id="toastIcon" class="fa-solid fa-circle-info text-brand-300"></i>
+      <span id="toastMsg"></span>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const KEY = "tempo.data.v1";
+      const PALETTE = ["#06b6d4", "#ef4444", "#f59e0b", "#22c55e", "#8b5cf6", "#ec4899", "#3b82f6", "#f97316", "#14b8a6"];
+
+      let data = { projects: [], entries: [] };
+      try { data = { projects: [], entries: [], ...JSON.parse(localStorage.getItem(KEY) || "{}") }; } catch (e) {}
+      let runningId = data.entries.find((e) => !e.end)?.id || null;
+      let tick = null;
+      let editingId = null;
+
+      function save() { localStorage.setItem(KEY, JSON.stringify(data)); }
+      function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+      function toast(msg, icon = "circle-info", color = "text-brand-300") {
+        const t = $("toast");
+        $("toastMsg").textContent = msg;
+        $("toastIcon").className = `fa-solid fa-${icon} ${color}`;
+        t.classList.remove("hidden"); t.classList.add("flex");
+        clearTimeout(t._to); t._to = setTimeout(() => { t.classList.add("hidden"); t.classList.remove("flex"); }, 2400);
+      }
+
+      // ---------- time helpers ----------
+      function fmtDur(sec) {
+        sec = Math.max(0, Math.floor(sec));
+        const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+        return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      }
+      function entrySec(e) { return ((e.end || Date.now()) - e.start) / 1000; }
+      function dayKey(ms) { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+      function startOfDay(ms) { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); }
+      function humanDay(key) {
+        const today = dayKey(Date.now());
+        const yest = dayKey(Date.now() - 864e5);
+        if (key === today) return "Today";
+        if (key === yest) return "Yesterday";
+        const [y, m, d] = key.split("-").map(Number);
+        return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+      }
+      function clockTime(ms) { return new Date(ms).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }); }
+
+      // ---------- projects ----------
+      function projById(id) { return data.projects.find((p) => p.id === id); }
+      function fillProjectSelects() {
+        [$("projSelect"), $("mProj")].forEach((sel) => {
+          const cur = sel.value;
+          sel.innerHTML = '<option value="">No project</option>' + data.projects.map((p) => `<option value="${p.id}">${escHtml(p.name)}</option>`).join("");
+          sel.value = cur;
+        });
+      }
+      function escHtml(s) { return (s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+      $("projectsBtn").addEventListener("click", () => { renderProjList(); openM("projModal"); });
+      $("addProjBtn").addEventListener("click", () => {
+        const name = $("newProjName").value.trim();
+        if (!name) return;
+        data.projects.push({ id: uid(), name, color: $("newProjColor").value });
+        $("newProjName").value = "";
+        $("newProjColor").value = PALETTE[data.projects.length % PALETTE.length];
+        save(); fillProjectSelects(); renderProjList(); render();
+      });
+      $("newProjName").addEventListener("keydown", (e) => { if (e.key === "Enter") $("addProjBtn").click(); });
+      function renderProjList() {
+        const list = $("projList");
+        list.innerHTML = data.projects.length ? "" : '<p class="text-white/40 text-sm text-center py-6">No projects yet.</p>';
+        data.projects.forEach((p) => {
+          const row = document.createElement("div");
+          row.className = "flex items-center gap-3 glass-soft rounded-xl p-2.5";
+          row.innerHTML = `
+            <span class="w-4 h-4 rounded-full flex-shrink-0" style="background:${p.color}"></span>
+            <input class="bg-transparent outline-none flex-1 text-sm font-medium" value="${escHtml(p.name)}" data-rename="${p.id}" />
+            <button data-delproj="${p.id}" class="w-8 h-8 grid place-items-center rounded-lg hover:bg-rose-500/20 text-white/50 hover:text-rose-300 transition"><i class="fa-solid fa-trash-can text-xs"></i></button>`;
+          list.appendChild(row);
+        });
+        list.querySelectorAll("[data-rename]").forEach((el) => el.addEventListener("change", () => { const p = projById(el.dataset.rename); if (p) { p.name = el.value.trim() || p.name; save(); fillProjectSelects(); render(); } }));
+        list.querySelectorAll("[data-delproj]").forEach((b) => b.addEventListener("click", () => {
+          if (!confirm("Delete this project? Its entries are kept but unassigned.")) return;
+          data.entries.forEach((e) => { if (e.projectId === b.dataset.delproj) e.projectId = ""; });
+          data.projects = data.projects.filter((p) => p.id !== b.dataset.delproj);
+          save(); fillProjectSelects(); renderProjList(); render();
+        }));
+      }
+
+      // ---------- timer ----------
+      function startTimer() {
+        if (runningId) stopTimer();
+        const e = { id: uid(), desc: $("descInput").value.trim(), projectId: $("projSelect").value, start: Date.now(), end: null };
+        data.entries.push(e);
+        runningId = e.id;
+        save();
+        setToggle(true);
+        startTick();
+        render();
+      }
+      function stopTimer() {
+        const e = data.entries.find((x) => x.id === runningId);
+        if (e) e.end = Date.now();
+        runningId = null;
+        save();
+        setToggle(false);
+        stopTick();
+        $("bigTimer").textContent = "0:00:00";
+        render();
+      }
+      $("toggleBtn").addEventListener("click", () => (runningId ? stopTimer() : startTimer()));
+      $("descInput").addEventListener("keydown", (e) => { if (e.key === "Enter" && !runningId) startTimer(); });
+      function setToggle(running) {
+        $("toggleBtn").innerHTML = running ? '<i class="fa-solid fa-stop"></i>' : '<i class="fa-solid fa-play"></i>';
+        $("toggleBtn").classList.toggle("from-rose-400", running);
+        $("toggleBtn").classList.toggle("to-rose-600", running);
+        $("toggleBtn").classList.toggle("from-brand-400", !running);
+        $("toggleBtn").classList.toggle("to-brand-600", !running);
+      }
+      function startTick() {
+        stopTick();
+        tick = setInterval(() => {
+          const e = data.entries.find((x) => x.id === runningId);
+          if (!e) return;
+          $("bigTimer").textContent = fmtDur(entrySec(e));
+          const live = document.querySelector(`[data-dur="${e.id}"]`);
+          if (live) live.textContent = fmtDur(entrySec(e));
+          const wt = $("weekTotal"); if (wt) wt.textContent = fmtDur(weekSeconds());
+        }, 1000);
+      }
+      function stopTick() { if (tick) clearInterval(tick); tick = null; }
+
+      function playAgain(entry) {
+        $("descInput").value = entry.desc || "";
+        $("projSelect").value = entry.projectId || "";
+        startTimer();
+      }
+
+      // ---------- week ----------
+      function weekSeconds() {
+        const weekStart = startOfDay(Date.now() - 6 * 864e5);
+        return data.entries.filter((e) => (e.end || Date.now()) >= weekStart).reduce((s, e) => s + entrySec(e), 0);
+      }
+      function renderWeek() {
+        const chart = $("weekChart");
+        chart.innerHTML = "";
+        const days = [];
+        for (let i = 6; i >= 0; i--) {
+          const ms = Date.now() - i * 864e5;
+          const key = dayKey(ms);
+          const sec = data.entries.filter((e) => dayKey(e.start) === key).reduce((s, e) => s + entrySec(e), 0);
+          days.push({ key, ms, sec });
+        }
+        const max = Math.max(1, ...days.map((d) => d.sec));
+        days.forEach((d) => {
+          const h = Math.round((d.sec / max) * 100);
+          const isToday = d.key === dayKey(Date.now());
+          const col = document.createElement("div");
+          col.className = "flex-1 flex flex-col items-center gap-1.5 group";
+          col.innerHTML = `
+            <div class="w-full flex-1 flex items-end" style="min-height:1px">
+              <div class="w-full rounded-md transition-all ${isToday ? "bg-gradient-to-t from-brand-500 to-brand-300" : "bg-white/15 group-hover:bg-white/25"}" style="height:${d.sec ? Math.max(4, h) : 0}%" title="${fmtDur(d.sec)}"></div>
+            </div>
+            <span class="text-[10px] ${isToday ? "text-brand-300 font-bold" : "text-white/35"}">${new Date(d.ms).toLocaleDateString(undefined, { weekday: "short" })[0]}</span>`;
+          chart.appendChild(col);
+        });
+        $("weekTotal").textContent = fmtDur(weekSeconds());
+      }
+
+      // ---------- entries render ----------
+      function render() {
+        fillProjectSelects();
+        renderWeek();
+        const q = $("search").value.trim().toLowerCase();
+        const list = data.entries
+          .filter((e) => e.end || e.id === runningId)
+          .filter((e) => { if (!q) return true; const p = projById(e.projectId); return (e.desc || "").toLowerCase().includes(q) || (p && p.name.toLowerCase().includes(q)); })
+          .sort((a, b) => b.start - a.start);
+
+        $("emptyState").classList.toggle("hidden", data.entries.length > 0);
+
+        // group by day
+        const groups = {};
+        list.forEach((e) => { const k = dayKey(e.start); (groups[k] = groups[k] || []).push(e); });
+
+        const box = $("entries");
+        box.innerHTML = "";
+        Object.keys(groups).sort((a, b) => b.localeCompare(a)).forEach((key) => {
+          const items = groups[key];
+          const total = items.reduce((s, e) => s + entrySec(e), 0);
+          const wrap = document.createElement("div");
+          wrap.className = "animate-fade-in";
+          wrap.innerHTML = `
+            <div class="flex items-center justify-between px-1 mb-2">
+              <p class="text-sm font-bold text-white/70">${humanDay(key)}</p>
+              <p class="text-xs font-mono text-white/40">${fmtDur(total)}</p>
+            </div>`;
+          const inner = document.createElement("div");
+          inner.className = "glass rounded-2xl divide-y divide-white/5 overflow-hidden";
+          items.forEach((e) => {
+            const p = projById(e.projectId);
+            const running = e.id === runningId;
+            const row = document.createElement("div");
+            row.className = "flex items-center gap-3 p-3 hover:bg-white/[0.04] transition group";
+            row.innerHTML = `
+              <div class="min-w-0 flex-1">
+                <p class="font-semibold truncate ${e.desc ? "" : "text-white/40 italic"}">${escHtml(e.desc) || "(no description)"}</p>
+                <p class="text-xs mt-0.5 flex items-center gap-1.5">
+                  ${p ? `<span class="w-2 h-2 rounded-full" style="background:${p.color}"></span><span style="color:${p.color}">${escHtml(p.name)}</span><span class="text-white/25">·</span>` : ""}
+                  <span class="text-white/40">${clockTime(e.start)} – ${e.end ? clockTime(e.end) : "now"}</span>
+                </p>
+              </div>
+              <div class="font-mono text-sm font-semibold tabular-nums ${running ? "text-rose-300" : "text-white/80"}" data-dur="${e.id}">${fmtDur(entrySec(e))}</div>
+              <div class="flex items-center gap-1 ${running ? "" : "opacity-0 group-hover:opacity-100"} transition">
+                ${running
+                  ? `<button data-stop class="w-8 h-8 grid place-items-center rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 transition" title="Stop"><i class="fa-solid fa-stop text-xs"></i></button>`
+                  : `<button data-again="${e.id}" class="w-8 h-8 grid place-items-center rounded-lg glass-soft hover:bg-white/10 transition" title="Resume"><i class="fa-solid fa-play text-xs"></i></button>
+                     <button data-edit="${e.id}" class="w-8 h-8 grid place-items-center rounded-lg glass-soft hover:bg-white/10 transition" title="Edit"><i class="fa-solid fa-pen text-xs"></i></button>
+                     <button data-del="${e.id}" class="w-8 h-8 grid place-items-center rounded-lg glass-soft hover:bg-rose-500/20 hover:text-rose-300 transition" title="Delete"><i class="fa-solid fa-trash-can text-xs"></i></button>`}
+              </div>`;
+            inner.appendChild(row);
+          });
+          wrap.appendChild(inner);
+          box.appendChild(wrap);
+        });
+
+        box.querySelectorAll("[data-again]").forEach((b) => b.addEventListener("click", () => playAgain(data.entries.find((e) => e.id === b.dataset.again))));
+        box.querySelectorAll("[data-stop]").forEach((b) => b.addEventListener("click", stopTimer));
+        box.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openEdit(b.dataset.edit)));
+        box.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => {
+          data.entries = data.entries.filter((e) => e.id !== b.dataset.del);
+          save(); render();
+        }));
+      }
+      $("search").addEventListener("input", render);
+
+      // ---------- manual / edit modal ----------
+      function openM(id) { $(id).classList.remove("hidden"); $(id).classList.add("flex"); }
+      function closeM(id) { $(id).classList.add("hidden"); $(id).classList.remove("flex"); }
+      $("entryModalClose").addEventListener("click", () => closeM("entryModal"));
+      $("projModalClose").addEventListener("click", () => closeM("projModal"));
+      [ "entryModal", "projModal" ].forEach((id) => $(id).addEventListener("click", (e) => { if (e.target === $(id)) closeM(id); }));
+
+      function toTimeVal(ms) { const d = new Date(ms); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`; }
+
+      $("manualBtn").addEventListener("click", () => {
+        editingId = null;
+        $("entryModalTitle").textContent = "Add time entry";
+        $("mDesc").value = ""; $("mProj").value = "";
+        const now = new Date();
+        $("mDate").value = dayKey(now.getTime());
+        $("mStart").value = toTimeVal(now.getTime() - 3600e3);
+        $("mEnd").value = toTimeVal(now.getTime());
+        $("mDelete").classList.add("hidden");
+        $("mError").classList.add("hidden");
+        openM("entryModal");
+      });
+      function openEdit(id) {
+        const e = data.entries.find((x) => x.id === id);
+        if (!e) return;
+        editingId = id;
+        $("entryModalTitle").textContent = "Edit time entry";
+        $("mDesc").value = e.desc || ""; $("mProj").value = e.projectId || "";
+        $("mDate").value = dayKey(e.start);
+        $("mStart").value = toTimeVal(e.start);
+        $("mEnd").value = toTimeVal(e.end || Date.now());
+        $("mDelete").classList.remove("hidden");
+        $("mError").classList.add("hidden");
+        openM("entryModal");
+      }
+      $("mSave").addEventListener("click", () => {
+        const date = $("mDate").value;
+        if (!date) return showMErr("Pick a date.");
+        const start = new Date(`${date}T${$("mStart").value || "00:00:00"}`).getTime();
+        let end = new Date(`${date}T${$("mEnd").value || "00:00:00"}`).getTime();
+        if (isNaN(start) || isNaN(end)) return showMErr("Invalid time.");
+        if (end <= start) return showMErr("End must be after start.");
+        if (editingId) {
+          const e = data.entries.find((x) => x.id === editingId);
+          if (e.id === runningId) { runningId = null; stopTick(); setToggle(false); }
+          Object.assign(e, { desc: $("mDesc").value.trim(), projectId: $("mProj").value, start, end });
+        } else {
+          data.entries.push({ id: uid(), desc: $("mDesc").value.trim(), projectId: $("mProj").value, start, end });
+        }
+        save(); closeM("entryModal"); render();
+        toast("Entry saved", "circle-check", "text-emerald-300");
+      });
+      function showMErr(m) { const el = $("mError"); el.textContent = m; el.classList.remove("hidden"); }
+      $("mDelete").addEventListener("click", () => {
+        if (!editingId) return;
+        data.entries = data.entries.filter((e) => e.id !== editingId);
+        save(); closeM("entryModal"); render();
+      });
+
+      // ---------- CSV ----------
+      $("exportBtn").addEventListener("click", () => {
+        if (!data.entries.length) return toast("Nothing to export yet", "circle-info");
+        const rows = [["Description", "Project", "Start", "End", "Duration", "Seconds"]];
+        data.entries.slice().sort((a, b) => a.start - b.start).forEach((e) => {
+          const p = projById(e.projectId);
+          rows.push([e.desc || "", p ? p.name : "", new Date(e.start).toISOString(), e.end ? new Date(e.end).toISOString() : "", fmtDur(entrySec(e)), Math.round(entrySec(e))]);
+        });
+        const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+        const blob = new Blob([csv], { type: "text/csv" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `tempo-${dayKey(Date.now())}.csv`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+        toast("CSV exported", "circle-check", "text-emerald-300");
+      });
+
+      // ---------- init ----------
+      function init() {
+        if (!data.projects.length) {
+          data.projects = [ { id: uid(), name: "General", color: "#06b6d4" }, { id: uid(), name: "Client work", color: "#f59e0b" } ];
+          save();
+        }
+        fillProjectSelects();
+        if (runningId) {
+          const e = data.entries.find((x) => x.id === runningId);
+          if (e) { $("descInput").value = e.desc || ""; $("projSelect").value = e.projectId || ""; setToggle(true); startTick(); }
+        }
+        render();
+      }
+      init();
+    </script>
+  </body>
+</html>
