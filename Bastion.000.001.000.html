@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bastion — Offline Password Vault</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: "#eef2ff",
+                100: "#e0e7ff",
+                200: "#c7d2fe",
+                300: "#a5b4fc",
+                400: "#818cf8",
+                500: "#6366f1",
+                600: "#4f46e5",
+                700: "#4338ca",
+                800: "#3730a3",
+                900: "#312e81",
+              },
+            },
+            fontFamily: {
+              sans: ["Plus Jakarta Sans", "sans-serif"],
+              brand: ["Space Grotesk", "sans-serif"],
+              mono: ["JetBrains Mono", "monospace"],
+            },
+            animation: {
+              "fade-in": "fadeIn 0.35s ease both",
+              "pop-in": "popIn 0.24s cubic-bezier(.2,.9,.3,1.25) both",
+            },
+            keyframes: {
+              fadeIn: { from: { opacity: "0", transform: "translateY(6px)" }, to: { opacity: "1", transform: "translateY(0)" } },
+              popIn: { from: { opacity: "0", transform: "scale(0.96)" }, to: { opacity: "1", transform: "scale(1)" } },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        background:
+          radial-gradient(1100px 560px at 14% -10%, rgba(99, 102, 241, 0.16), transparent 60%),
+          radial-gradient(900px 620px at 110% 10%, rgba(139, 92, 246, 0.12), transparent 55%),
+          #08090f;
+      }
+      .brand-font { font-family: "Space Grotesk", sans-serif; }
+      ::-webkit-scrollbar { width: 9px; height: 9px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 9999px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+      .glass {
+        background: rgba(17, 19, 30, 0.65);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .glass-soft { background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(255, 255, 255, 0.07); }
+      .glow-btn { box-shadow: 0 10px 30px -8px rgba(99, 102, 241, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.22); }
+      .field {
+        width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+        border-radius: 0.85rem; padding: 0.7rem 0.9rem; color: #fff; font-size: 0.9rem; transition: 0.15s; outline: none;
+      }
+      .field:focus { border-color: rgba(99,102,241,0.7); box-shadow: 0 0 0 3px rgba(99,102,241,0.18); }
+      .field::placeholder { color: rgba(255,255,255,0.3); }
+      input[type="range"] {
+        -webkit-appearance: none; appearance: none; height: 5px; border-radius: 9999px;
+        background: rgba(255, 255, 255, 0.12); outline: none;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%;
+        background: #6366f1; cursor: pointer; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(99, 102, 241, 0.6);
+      }
+      .grain::before {
+        content: ""; position: fixed; inset: 0; pointer-events: none; opacity: 0.5; z-index: 0;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+      }
+      .modal-back { background: rgba(4,5,10,0.72); backdrop-filter: blur(6px); }
+    </style>
+  </head>
+  <body class="dark text-white min-h-screen grain overflow-x-hidden">
+    <!-- ============ LOCK SCREEN ============ -->
+    <div id="lockScreen" class="relative z-10 min-h-screen grid place-items-center px-5">
+      <div class="glass rounded-3xl p-8 w-full max-w-sm animate-pop-in text-center">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 grid place-items-center glow-btn mb-5">
+          <i class="fa-solid fa-shield-halved text-white text-2xl"></i>
+        </div>
+        <h1 class="brand-font text-2xl font-bold tracking-tight">Bastion</h1>
+        <p class="text-white/45 text-sm mt-1" id="lockSubtitle">Unlock your vault</p>
+
+        <form id="unlockForm" class="mt-6 space-y-3 text-left">
+          <div>
+            <label class="text-xs text-white/50 font-medium px-1">Master password</label>
+            <div class="relative mt-1">
+              <input id="masterInput" type="password" class="field pr-11" placeholder="••••••••••••" autocomplete="off" />
+              <button type="button" id="masterReveal" class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-white/40 hover:text-white transition" tabindex="-1">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          <div id="confirmWrap" class="hidden">
+            <label class="text-xs text-white/50 font-medium px-1">Confirm master password</label>
+            <input id="confirmInput" type="password" class="field mt-1" placeholder="Repeat it" autocomplete="off" />
+            <div class="mt-2 flex items-center gap-2">
+              <div class="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                <div id="newStrengthBar" class="h-full w-0 transition-all duration-300"></div>
+              </div>
+              <span id="newStrengthLabel" class="text-[11px] text-white/40 w-16 text-right"></span>
+            </div>
+          </div>
+          <p id="lockError" class="hidden text-rose-300 text-xs px-1 flex items-center gap-1.5">
+            <i class="fa-solid fa-circle-exclamation"></i><span></span>
+          </p>
+          <button id="unlockBtn" type="submit" class="w-full bg-gradient-to-b from-brand-500 to-brand-600 hover:from-brand-400 text-white font-semibold px-4 py-3 rounded-xl glow-btn transition active:scale-95 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-lock-open"></i> <span id="unlockBtnLabel">Unlock</span>
+          </button>
+        </form>
+
+        <div class="mt-5 pt-5 border-t border-white/10 flex items-center justify-center gap-4 text-[11px] text-white/40">
+          <button id="importLockBtn" class="hover:text-white transition flex items-center gap-1.5"><i class="fa-solid fa-file-import"></i> Import vault</button>
+          <button id="resetLockBtn" class="hidden hover:text-rose-300 transition flex items-center gap-1.5"><i class="fa-solid fa-trash-can"></i> Reset</button>
+        </div>
+        <p class="text-[11px] text-white/25 mt-4 leading-relaxed">
+          Encrypted locally with AES-256-GCM. Your master password never leaves this device and
+          isn't stored — if you forget it, the vault can't be recovered.
+        </p>
+      </div>
+    </div>
+
+    <!-- ============ APP ============ -->
+    <div id="app" class="hidden relative z-10 min-h-screen flex flex-col">
+      <header class="px-5 sm:px-8 pt-5 pb-3 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 grid place-items-center glow-btn">
+            <i class="fa-solid fa-shield-halved text-white"></i>
+          </div>
+          <div>
+            <h1 class="brand-font text-lg font-bold tracking-tight leading-none">Bastion</h1>
+            <p class="text-[11px] text-white/45 mt-0.5"><span id="entryCount">0</span> items · locks after <span id="idleLabel">5m</span> idle</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="settingsBtn" class="w-10 h-10 grid place-items-center glass-soft rounded-xl hover:bg-white/10 transition" title="Settings"><i class="fa-solid fa-gear"></i></button>
+          <button id="lockBtn" class="flex items-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm"><i class="fa-solid fa-lock"></i> Lock</button>
+        </div>
+      </header>
+
+      <div class="px-5 sm:px-8 pb-8 flex-1 max-w-[1100px] w-full mx-auto">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="relative flex-1">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-white/35 text-sm"></i>
+            <input id="search" class="field pl-10" placeholder="Search items…" />
+          </div>
+          <button id="addBtn" class="flex items-center gap-2 bg-gradient-to-b from-brand-500 to-brand-600 hover:from-brand-400 text-white font-semibold px-4 py-3 rounded-xl glow-btn transition active:scale-95 whitespace-nowrap">
+            <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">New item</span>
+          </button>
+        </div>
+
+        <div id="list" class="grid gap-2.5"></div>
+
+        <div id="emptyState" class="hidden text-center py-20">
+          <div class="w-20 h-20 mx-auto rounded-3xl bg-white/5 border border-white/10 grid place-items-center mb-5">
+            <i class="fa-solid fa-key text-3xl text-brand-300"></i>
+          </div>
+          <p class="text-lg font-semibold" id="emptyTitle">Your vault is empty</p>
+          <p class="text-white/40 text-sm mt-1.5" id="emptySub">Add your first login to get started.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ ENTRY MODAL ============ -->
+    <div id="entryModal" class="hidden fixed inset-0 z-40 modal-back grid place-items-center p-4">
+      <div class="glass rounded-3xl w-full max-w-lg p-6 animate-pop-in max-h-[92vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="brand-font text-lg font-bold" id="modalTitle">New item</h2>
+          <button id="modalClose" class="w-9 h-9 grid place-items-center glass-soft rounded-lg hover:bg-white/10 transition"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="space-y-3.5">
+          <div>
+            <label class="text-xs text-white/50 font-medium px-1">Name</label>
+            <input id="fTitle" class="field mt-1" placeholder="e.g. GitHub" />
+          </div>
+          <div>
+            <label class="text-xs text-white/50 font-medium px-1">Username / email</label>
+            <div class="relative mt-1">
+              <input id="fUser" class="field pr-11" placeholder="you@example.com" autocomplete="off" />
+              <button data-copy="fUser" class="copy-btn absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center text-white/40 hover:text-brand-300 transition" title="Copy"><i class="fa-solid fa-copy"></i></button>
+            </div>
+          </div>
+          <div>
+            <label class="text-xs text-white/50 font-medium px-1">Password</label>
+            <div class="relative mt-1">
+              <input id="fPass" type="password" class="field pr-24 font-mono" placeholder="••••••••" autocomplete="off" />
+              <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center">
+                <button id="fPassReveal" class="w-8 h-8 grid place-items-center text-white/40 hover:text-white transition" title="Show"><i class="fa-solid fa-eye"></i></button>
+                <button data-copy="fPass" class="copy-btn w-8 h-8 grid place-items-center text-white/40 hover:text-brand-300 transition" title="Copy"><i class="fa-solid fa-copy"></i></button>
+              </div>
+            </div>
+            <div class="mt-2 flex items-center gap-2">
+              <div class="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                <div id="strengthBar" class="h-full w-0 transition-all duration-300"></div>
+              </div>
+              <span id="strengthLabel" class="text-[11px] text-white/40 w-16 text-right"></span>
+            </div>
+          </div>
+
+          <!-- Generator -->
+          <div class="glass-soft rounded-xl p-3.5">
+            <div class="flex items-center justify-between mb-2.5">
+              <p class="text-xs font-semibold text-white/70 flex items-center gap-2"><i class="fa-solid fa-wand-magic-sparkles text-brand-300"></i> Generator</p>
+              <button id="genBtn" class="text-xs font-semibold bg-brand-500/20 hover:bg-brand-500/30 text-brand-200 px-3 py-1.5 rounded-lg transition">Generate &amp; use</button>
+            </div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-[11px] text-white/40 w-12">Length</span>
+              <input id="genLen" type="range" min="8" max="48" value="20" class="flex-1" />
+              <span id="genLenVal" class="text-[11px] font-mono text-white/60 w-6 text-right">20</span>
+            </div>
+            <div class="flex flex-wrap gap-1.5 text-[11px]">
+              <label class="gen-opt"><input type="checkbox" id="genUpper" checked class="accent-brand-500" /> A-Z</label>
+              <label class="gen-opt"><input type="checkbox" id="genLower" checked class="accent-brand-500" /> a-z</label>
+              <label class="gen-opt"><input type="checkbox" id="genNum" checked class="accent-brand-500" /> 0-9</label>
+              <label class="gen-opt"><input type="checkbox" id="genSym" checked class="accent-brand-500" /> !@#</label>
+              <label class="gen-opt"><input type="checkbox" id="genAmb" class="accent-brand-500" /> avoid look-alikes</label>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label class="text-xs text-white/50 font-medium px-1">Website</label>
+              <input id="fUrl" class="field mt-1" placeholder="https://…" autocomplete="off" />
+            </div>
+            <div>
+              <label class="text-xs text-white/50 font-medium px-1">Category</label>
+              <input id="fCat" class="field mt-1" placeholder="e.g. Work" autocomplete="off" />
+            </div>
+          </div>
+          <div>
+            <label class="text-xs text-white/50 font-medium px-1">Notes</label>
+            <textarea id="fNotes" class="field mt-1 resize-none" rows="2" placeholder="Anything else…"></textarea>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 mt-6">
+          <button id="deleteBtn" class="hidden flex items-center gap-2 text-rose-300 hover:bg-rose-500/10 border border-rose-400/30 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm"><i class="fa-solid fa-trash-can"></i> Delete</button>
+          <button id="saveBtn" class="ml-auto flex items-center gap-2 bg-gradient-to-b from-brand-500 to-brand-600 hover:from-brand-400 text-white font-semibold px-6 py-2.5 rounded-xl glow-btn transition active:scale-95"><i class="fa-solid fa-check"></i> Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ SETTINGS MODAL ============ -->
+    <div id="settingsModal" class="hidden fixed inset-0 z-40 modal-back grid place-items-center p-4">
+      <div class="glass rounded-3xl w-full max-w-md p-6 animate-pop-in">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="brand-font text-lg font-bold">Settings</h2>
+          <button id="settingsClose" class="w-9 h-9 grid place-items-center glass-soft rounded-lg hover:bg-white/10 transition"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <p class="text-xs uppercase tracking-wider text-white/40 font-bold mb-2">Auto-lock after idle</p>
+            <div class="grid grid-cols-4 gap-2" id="idleGroup">
+              <button data-idle="60" class="idle-btn glass-soft rounded-lg py-2 text-xs font-semibold transition">1m</button>
+              <button data-idle="300" class="idle-btn glass-soft rounded-lg py-2 text-xs font-semibold transition">5m</button>
+              <button data-idle="900" class="idle-btn glass-soft rounded-lg py-2 text-xs font-semibold transition">15m</button>
+              <button data-idle="0" class="idle-btn glass-soft rounded-lg py-2 text-xs font-semibold transition">Off</button>
+            </div>
+          </div>
+          <div class="pt-1">
+            <p class="text-xs uppercase tracking-wider text-white/40 font-bold mb-2">Backup</p>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="exportBtn" class="flex items-center justify-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm"><i class="fa-solid fa-file-export"></i> Export</button>
+              <button id="importBtn" class="flex items-center justify-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm"><i class="fa-solid fa-file-import"></i> Import</button>
+            </div>
+            <p class="text-[11px] text-white/30 mt-2 leading-relaxed">The backup file is itself encrypted with your master password.</p>
+          </div>
+          <div class="pt-1">
+            <p class="text-xs uppercase tracking-wider text-white/40 font-bold mb-2">Master password</p>
+            <button id="changeMasterBtn" class="w-full flex items-center justify-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm"><i class="fa-solid fa-key"></i> Change master password</button>
+          </div>
+          <div class="pt-3 border-t border-white/10">
+            <button id="resetBtn" class="w-full flex items-center justify-center gap-2 text-rose-300 hover:bg-rose-500/10 border border-rose-400/30 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm"><i class="fa-solid fa-triangle-exclamation"></i> Erase vault from this device</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <input id="importFile" type="file" accept=".vault,.json,application/json" class="hidden" />
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-3 glass px-5 py-3 rounded-2xl text-sm font-medium shadow-2xl">
+      <i id="toastIcon" class="fa-solid fa-circle-info text-brand-300"></i>
+      <span id="toastMsg"></span>
+    </div>
+
+    <style>
+      .gen-opt { display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding: 3px 8px; border-radius: 8px; cursor: pointer; color: rgba(255,255,255,0.6); }
+      .gen-opt:hover { color: #fff; }
+      .idle-btn.active, .seg-active { background: linear-gradient(180deg, rgba(99,102,241,0.3), rgba(99,102,241,0.12)); border-color: rgba(99,102,241,0.6) !important; color: #fff; }
+    </style>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const LS_KEY = "bastion.vault.v1";
+      const PREF_KEY = "bastion.prefs.v1";
+      const ITER = 250000;
+      const enc = new TextEncoder();
+      const dec = new TextDecoder();
+
+      // ---------- crypto ----------
+      const b64 = {
+        enc: (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))),
+        dec: (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0)),
+      };
+      async function deriveKey(password, salt, iter) {
+        const base = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+        return crypto.subtle.deriveKey(
+          { name: "PBKDF2", salt, iterations: iter, hash: "SHA-256" },
+          base,
+          { name: "AES-GCM", length: 256 },
+          false,
+          ["encrypt", "decrypt"]
+        );
+      }
+      async function encryptVault(key, salt, iter, payloadObj) {
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(JSON.stringify(payloadObj)));
+        return { v: 1, kdf: "PBKDF2-SHA256", iter, salt: b64.enc(salt), iv: b64.enc(iv), ct: b64.enc(ct) };
+      }
+      async function decryptVault(key, rec) {
+        const pt = await crypto.subtle.decrypt(
+          { name: "AES-GCM", iv: b64.dec(rec.iv) },
+          key,
+          b64.dec(rec.ct)
+        );
+        return JSON.parse(dec.decode(pt));
+      }
+
+      // ---------- state ----------
+      let vaultKey = null; // CryptoKey in memory only
+      let vaultSalt = null; // Uint8Array
+      let entries = [];
+      let editingId = null;
+      let prefs = { idle: 300 };
+      try { prefs = { ...prefs, ...JSON.parse(localStorage.getItem(PREF_KEY) || "{}") }; } catch (e) {}
+
+      function toast(msg, icon = "circle-info", color = "text-brand-300") {
+        const t = $("toast");
+        $("toastMsg").textContent = msg;
+        $("toastIcon").className = `fa-solid fa-${icon} ${color}`;
+        t.classList.remove("hidden");
+        t.classList.add("flex");
+        clearTimeout(t._to);
+        t._to = setTimeout(() => { t.classList.add("hidden"); t.classList.remove("flex"); }, 3000);
+      }
+
+      const hasVault = () => !!localStorage.getItem(LS_KEY);
+
+      // ---------- lock screen ----------
+      function initLockScreen() {
+        const firstRun = !hasVault();
+        $("confirmWrap").classList.toggle("hidden", !firstRun);
+        $("resetLockBtn").classList.toggle("hidden", !hasVault());
+        $("lockSubtitle").textContent = firstRun ? "Create a master password" : "Unlock your vault";
+        $("unlockBtnLabel").textContent = firstRun ? "Create vault" : "Unlock";
+        $("masterInput").value = "";
+        $("confirmInput").value = "";
+        hideLockError();
+        setTimeout(() => $("masterInput").focus(), 50);
+      }
+      function showLockError(msg) {
+        const e = $("lockError");
+        e.querySelector("span").textContent = msg;
+        e.classList.remove("hidden");
+        e.classList.add("flex");
+      }
+      function hideLockError() { $("lockError").classList.add("hidden"); $("lockError").classList.remove("flex"); }
+
+      $("masterReveal").addEventListener("click", () => {
+        const inp = $("masterInput");
+        inp.type = inp.type === "password" ? "text" : "password";
+        $("masterReveal").querySelector("i").className = inp.type === "password" ? "fa-solid fa-eye" : "fa-solid fa-eye-slash";
+      });
+
+      $("confirmInput").addEventListener("input", () => {
+        const s = estimateStrength($("masterInput").value);
+        paintStrength($("newStrengthBar"), $("newStrengthLabel"), s, $("masterInput").value);
+      });
+      $("masterInput").addEventListener("input", () => {
+        if (!$("confirmWrap").classList.contains("hidden")) {
+          const s = estimateStrength($("masterInput").value);
+          paintStrength($("newStrengthBar"), $("newStrengthLabel"), s, $("masterInput").value);
+        }
+      });
+
+      $("unlockForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        hideLockError();
+        const pw = $("masterInput").value;
+        if (!pw) return showLockError("Enter your master password.");
+        const firstRun = !hasVault();
+        const btn = $("unlockBtn");
+        btn.disabled = true;
+        btn.querySelector("span").textContent = firstRun ? "Creating…" : "Unlocking…";
+        try {
+          if (firstRun) {
+            if (pw.length < 8) throw new Error("Use at least 8 characters.");
+            if (pw !== $("confirmInput").value) throw new Error("Passwords don't match.");
+            vaultSalt = crypto.getRandomValues(new Uint8Array(16));
+            vaultKey = await deriveKey(pw, vaultSalt, ITER);
+            entries = [];
+            await persist();
+            openApp();
+            toast("Vault created", "circle-check", "text-emerald-300");
+          } else {
+            const rec = JSON.parse(localStorage.getItem(LS_KEY));
+            const salt = b64.dec(rec.salt);
+            const key = await deriveKey(pw, salt, rec.iter || ITER);
+            let payload;
+            try {
+              payload = await decryptVault(key, rec);
+            } catch (err) {
+              throw new Error("Wrong master password.");
+            }
+            vaultKey = key;
+            vaultSalt = salt;
+            entries = payload.entries || [];
+            openApp();
+          }
+        } catch (err) {
+          showLockError(err.message || "Something went wrong.");
+        } finally {
+          btn.disabled = false;
+          btn.querySelector("span").textContent = firstRun ? "Create vault" : "Unlock";
+        }
+      });
+
+      $("resetLockBtn").addEventListener("click", eraseVault);
+      $("importLockBtn").addEventListener("click", () => $("importFile").click());
+
+      // ---------- persistence ----------
+      async function persist() {
+        const rec = await encryptVault(vaultKey, vaultSalt, ITER, { entries, savedAt: Date.now() });
+        localStorage.setItem(LS_KEY, JSON.stringify(rec));
+      }
+      function savePrefs() { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); }
+
+      // ---------- app open/lock ----------
+      function openApp() {
+        $("lockScreen").classList.add("hidden");
+        $("app").classList.remove("hidden");
+        $("search").value = "";
+        renderList();
+        refreshIdleUI();
+        resetIdleTimer();
+      }
+      function lock() {
+        vaultKey = null;
+        vaultSalt = null;
+        entries = [];
+        editingId = null;
+        clearTimeout(idleTimer);
+        closeModal();
+        $("settingsModal").classList.add("hidden");
+        $("app").classList.add("hidden");
+        $("lockScreen").classList.remove("hidden");
+        initLockScreen();
+      }
+      $("lockBtn").addEventListener("click", lock);
+
+      // ---------- idle auto-lock ----------
+      let idleTimer = null;
+      function resetIdleTimer() {
+        clearTimeout(idleTimer);
+        if (!vaultKey || !prefs.idle) return;
+        idleTimer = setTimeout(() => { lock(); toast("Locked after inactivity", "lock"); }, prefs.idle * 1000);
+      }
+      ["mousedown", "keydown", "touchstart", "scroll"].forEach((ev) =>
+        window.addEventListener(ev, () => { if (vaultKey) resetIdleTimer(); }, { passive: true })
+      );
+      function refreshIdleUI() {
+        $("idleLabel").textContent = prefs.idle ? (prefs.idle >= 60 ? prefs.idle / 60 + "m" : prefs.idle + "s") : "never";
+        document.querySelectorAll(".idle-btn").forEach((b) => b.classList.toggle("active", +b.dataset.idle === prefs.idle));
+      }
+
+      // ---------- list rendering ----------
+      function faviconLetter(t) { return (t || "?").trim().charAt(0).toUpperCase() || "?"; }
+      function hueFor(str) { let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) % 360; return h; }
+
+      function renderList() {
+        $("entryCount").textContent = entries.length;
+        const q = $("search").value.trim().toLowerCase();
+        const filtered = entries
+          .filter((e) => !q || [e.title, e.username, e.url, e.category].some((f) => (f || "").toLowerCase().includes(q)))
+          .sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+
+        const list = $("list");
+        list.innerHTML = "";
+        $("emptyState").classList.toggle("hidden", filtered.length > 0);
+        if (!entries.length) {
+          $("emptyTitle").textContent = "Your vault is empty";
+          $("emptySub").textContent = "Add your first login to get started.";
+        } else if (!filtered.length) {
+          $("emptyTitle").textContent = "No matches";
+          $("emptySub").textContent = "Try a different search.";
+        }
+
+        filtered.forEach((e) => {
+          const hue = hueFor(e.title || e.id);
+          const row = document.createElement("div");
+          row.className = "glass-soft rounded-2xl p-3 flex items-center gap-3.5 hover:bg-white/[0.07] transition cursor-pointer group animate-pop-in";
+          row.innerHTML = `
+            <div class="w-11 h-11 rounded-xl grid place-items-center font-bold text-lg flex-shrink-0" style="background:hsl(${hue} 60% 22%);color:hsl(${hue} 80% 75%)">${faviconLetter(e.title)}</div>
+            <div class="min-w-0 flex-1">
+              <p class="font-semibold truncate">${escapeHtml(e.title || "Untitled")}</p>
+              <p class="text-xs text-white/45 truncate">${escapeHtml(e.username || e.url || "—")}</p>
+            </div>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition" data-actions>
+              <button data-act="user" class="w-9 h-9 grid place-items-center glass-soft rounded-lg hover:bg-white/10 transition" title="Copy username"><i class="fa-solid fa-user text-xs"></i></button>
+              <button data-act="pass" class="w-9 h-9 grid place-items-center glass-soft rounded-lg hover:bg-white/10 transition" title="Copy password"><i class="fa-solid fa-key text-xs"></i></button>
+              ${e.url ? `<a href="${escapeAttr(e.url)}" target="_blank" rel="noopener" data-act="open" class="w-9 h-9 grid place-items-center glass-soft rounded-lg hover:bg-white/10 transition" title="Open site"><i class="fa-solid fa-arrow-up-right-from-square text-xs"></i></a>` : ""}
+            </div>
+            <i class="fa-solid fa-chevron-right text-white/25 text-xs group-hover:hidden"></i>`;
+
+          row.addEventListener("click", (ev) => {
+            const actBtn = ev.target.closest("[data-act]");
+            if (actBtn) {
+              ev.stopPropagation();
+              const act = actBtn.dataset.act;
+              if (act === "user") copyValue(e.username, "Username");
+              else if (act === "pass") copyValue(e.password, "Password");
+              return;
+            }
+            openEntry(e.id);
+          });
+          list.appendChild(row);
+        });
+      }
+      function escapeHtml(s) { return (s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+      function escapeAttr(s) { return escapeHtml(s).replace(/"/g, "&quot;"); }
+
+      $("search").addEventListener("input", renderList);
+
+      // ---------- clipboard ----------
+      let clipTimer = null;
+      async function copyValue(val, label) {
+        if (!val) return toast(`No ${label.toLowerCase()} to copy`, "circle-info");
+        try {
+          await navigator.clipboard.writeText(val);
+          toast(`${label} copied — clears in 20s`, "clipboard-check", "text-emerald-300");
+          clearTimeout(clipTimer);
+          clipTimer = setTimeout(async () => {
+            try { await navigator.clipboard.writeText(""); } catch (e) {}
+          }, 20000);
+        } catch (e) {
+          toast("Clipboard blocked by browser", "triangle-exclamation", "text-amber-300");
+        }
+      }
+      document.querySelectorAll(".copy-btn").forEach((b) =>
+        b.addEventListener("click", () => {
+          const el = $(b.dataset.copy);
+          copyValue(el.value, b.dataset.copy === "fPass" ? "Password" : "Username");
+        })
+      );
+
+      // ---------- entry modal ----------
+      function openEntry(id) {
+        editingId = id;
+        const e = entries.find((x) => x.id === id) || {};
+        $("modalTitle").textContent = id ? "Edit item" : "New item";
+        $("fTitle").value = e.title || "";
+        $("fUser").value = e.username || "";
+        $("fPass").value = e.password || "";
+        $("fUrl").value = e.url || "";
+        $("fCat").value = e.category || "";
+        $("fNotes").value = e.notes || "";
+        $("fPass").type = "password";
+        $("fPassReveal").querySelector("i").className = "fa-solid fa-eye";
+        $("deleteBtn").classList.toggle("hidden", !id);
+        updateStrength();
+        $("entryModal").classList.remove("hidden");
+        $("entryModal").classList.add("flex");
+        setTimeout(() => $("fTitle").focus(), 50);
+      }
+      function closeModal() {
+        $("entryModal").classList.add("hidden");
+        $("entryModal").classList.remove("flex");
+        editingId = null;
+      }
+      $("addBtn").addEventListener("click", () => openEntry(null));
+      $("modalClose").addEventListener("click", closeModal);
+      $("entryModal").addEventListener("click", (e) => { if (e.target === $("entryModal")) closeModal(); });
+
+      $("fPassReveal").addEventListener("click", () => {
+        const p = $("fPass");
+        p.type = p.type === "password" ? "text" : "password";
+        $("fPassReveal").querySelector("i").className = p.type === "password" ? "fa-solid fa-eye" : "fa-solid fa-eye-slash";
+      });
+      $("fPass").addEventListener("input", updateStrength);
+
+      $("saveBtn").addEventListener("click", async () => {
+        const title = $("fTitle").value.trim();
+        if (!title && !$("fUser").value && !$("fPass").value) return toast("Add a name at least", "circle-info");
+        const data = {
+          title: title || "Untitled",
+          username: $("fUser").value,
+          password: $("fPass").value,
+          url: $("fUrl").value.trim(),
+          category: $("fCat").value.trim(),
+          notes: $("fNotes").value,
+          updatedAt: Date.now(),
+        };
+        if (editingId) {
+          const idx = entries.findIndex((x) => x.id === editingId);
+          entries[idx] = { ...entries[idx], ...data };
+        } else {
+          entries.push({ id: "e" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), createdAt: Date.now(), ...data });
+        }
+        await persist();
+        closeModal();
+        renderList();
+        toast("Saved", "circle-check", "text-emerald-300");
+      });
+
+      $("deleteBtn").addEventListener("click", async () => {
+        if (!editingId) return;
+        if (!confirm("Delete this item? This cannot be undone.")) return;
+        entries = entries.filter((x) => x.id !== editingId);
+        await persist();
+        closeModal();
+        renderList();
+        toast("Deleted", "trash-can", "text-white/70");
+      });
+
+      // ---------- password strength ----------
+      function estimateStrength(pw) {
+        if (!pw) return 0;
+        let pool = 0;
+        if (/[a-z]/.test(pw)) pool += 26;
+        if (/[A-Z]/.test(pw)) pool += 26;
+        if (/[0-9]/.test(pw)) pool += 10;
+        if (/[^a-zA-Z0-9]/.test(pw)) pool += 32;
+        const bits = pw.length * Math.log2(pool || 1);
+        return bits; // entropy bits
+      }
+      function paintStrength(bar, label, bits) {
+        let pct, color, text;
+        if (bits < 40) { pct = 25; color = "#f43f5e"; text = "Weak"; }
+        else if (bits < 60) { pct = 50; color = "#f59e0b"; text = "Fair"; }
+        else if (bits < 80) { pct = 75; color = "#10b981"; text = "Good"; }
+        else { pct = 100; color = "#34d399"; text = "Strong"; }
+        bar.style.width = pct + "%";
+        bar.style.background = color;
+        label.textContent = text;
+        label.style.color = color;
+      }
+      function updateStrength() {
+        paintStrength($("strengthBar"), $("strengthLabel"), estimateStrength($("fPass").value));
+      }
+
+      // ---------- generator ----------
+      const SETS = { upper: "ABCDEFGHIJKLMNOPQRSTUVWXYZ", lower: "abcdefghijklmnopqrstuvwxyz", num: "0123456789", sym: "!@#$%^&*()-_=+[]{};:,.?/" };
+      const AMBIG = /[Il1O0o]/g;
+      $("genLen").addEventListener("input", (e) => ($("genLenVal").textContent = e.target.value));
+      $("genBtn").addEventListener("click", () => {
+        const len = +$("genLen").value;
+        let pool = "";
+        if ($("genUpper").checked) pool += SETS.upper;
+        if ($("genLower").checked) pool += SETS.lower;
+        if ($("genNum").checked) pool += SETS.num;
+        if ($("genSym").checked) pool += SETS.sym;
+        if ($("genAmb").checked) pool = pool.replace(AMBIG, "");
+        if (!pool) return toast("Pick at least one character set", "circle-info");
+        const arr = crypto.getRandomValues(new Uint32Array(len));
+        let out = "";
+        for (let i = 0; i < len; i++) out += pool[arr[i] % pool.length];
+        $("fPass").value = out;
+        $("fPass").type = "text";
+        $("fPassReveal").querySelector("i").className = "fa-solid fa-eye-slash";
+        updateStrength();
+      });
+
+      // ---------- settings ----------
+      $("settingsBtn").addEventListener("click", () => { refreshIdleUI(); $("settingsModal").classList.remove("hidden"); $("settingsModal").classList.add("flex"); });
+      $("settingsClose").addEventListener("click", () => { $("settingsModal").classList.add("hidden"); $("settingsModal").classList.remove("flex"); });
+      $("settingsModal").addEventListener("click", (e) => { if (e.target === $("settingsModal")) { $("settingsModal").classList.add("hidden"); $("settingsModal").classList.remove("flex"); } });
+      document.querySelectorAll(".idle-btn").forEach((b) =>
+        b.addEventListener("click", () => { prefs.idle = +b.dataset.idle; savePrefs(); refreshIdleUI(); resetIdleTimer(); })
+      );
+
+      // export / import
+      $("exportBtn").addEventListener("click", () => {
+        const rec = localStorage.getItem(LS_KEY);
+        if (!rec) return;
+        const blob = new Blob([rec], { type: "application/json" });
+        const a = document.createElement("a");
+        const ts = new Date().toISOString().slice(0, 10);
+        a.href = URL.createObjectURL(blob);
+        a.download = `bastion-vault-${ts}.vault`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+        toast("Encrypted backup exported", "circle-check", "text-emerald-300");
+      });
+      $("importBtn").addEventListener("click", () => $("importFile").click());
+      $("importFile").addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        e.target.value = "";
+        if (!file) return;
+        try {
+          const text = await file.text();
+          const rec = JSON.parse(text);
+          if (!rec.ct || !rec.salt || !rec.iv) throw new Error("Not a valid Bastion vault file.");
+          const pw = prompt("Enter the master password for this backup:");
+          if (pw == null) return;
+          const key = await deriveKey(pw, b64.dec(rec.salt), rec.iter || ITER);
+          let payload;
+          try { payload = await decryptVault(key, rec); }
+          catch (err) { throw new Error("Wrong master password for this file."); }
+          // adopt imported vault wholesale
+          localStorage.setItem(LS_KEY, JSON.stringify(rec));
+          vaultKey = key;
+          vaultSalt = b64.dec(rec.salt);
+          entries = payload.entries || [];
+          $("settingsModal").classList.add("hidden");
+          $("settingsModal").classList.remove("flex");
+          openApp();
+          toast(`Imported ${entries.length} item${entries.length === 1 ? "" : "s"}`, "circle-check", "text-emerald-300");
+        } catch (err) {
+          toast(err.message || "Import failed", "triangle-exclamation", "text-amber-300");
+        }
+      });
+
+      $("changeMasterBtn").addEventListener("click", async () => {
+        const cur = prompt("Confirm your current master password:");
+        if (cur == null) return;
+        const key = await deriveKey(cur, vaultSalt, ITER);
+        try { await decryptVault(key, JSON.parse(localStorage.getItem(LS_KEY))); }
+        catch (e) { return toast("Current password is incorrect", "triangle-exclamation", "text-amber-300"); }
+        const nw = prompt("New master password (min 8 characters):");
+        if (nw == null) return;
+        if (nw.length < 8) return toast("Too short — use at least 8 characters", "circle-info");
+        vaultSalt = crypto.getRandomValues(new Uint8Array(16));
+        vaultKey = await deriveKey(nw, vaultSalt, ITER);
+        await persist();
+        toast("Master password changed", "circle-check", "text-emerald-300");
+      });
+
+      $("resetBtn").addEventListener("click", eraseVault);
+      function eraseVault() {
+        if (!confirm("Erase the entire vault from this device? This is permanent and cannot be undone.")) return;
+        localStorage.removeItem(LS_KEY);
+        lock();
+        toast("Vault erased from this device", "trash-can", "text-white/70");
+      }
+
+      // keyboard: Esc closes modals
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          if (!$("entryModal").classList.contains("hidden")) closeModal();
+          else if (!$("settingsModal").classList.contains("hidden")) { $("settingsModal").classList.add("hidden"); $("settingsModal").classList.remove("flex"); }
+        }
+      });
+
+      // guard: require WebCrypto
+      if (!(window.crypto && crypto.subtle)) {
+        showLockError("This browser lacks WebCrypto — Bastion can't run securely here.");
+        $("unlockBtn").disabled = true;
+      }
+
+      // ---------- boot ----------
+      initLockScreen();
+    </script>
+  </body>
+</html>
