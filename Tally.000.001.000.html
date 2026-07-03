@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tally — Invoice Builder &amp; PDF Export</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: "#fffbeb",
+                100: "#fef3c7",
+                200: "#fde68a",
+                300: "#fcd34d",
+                400: "#fbbf24",
+                500: "#f59e0b",
+                600: "#d97706",
+                700: "#b45309",
+                800: "#92400e",
+                900: "#78350f",
+              },
+            },
+            fontFamily: {
+              sans: ["Plus Jakarta Sans", "sans-serif"],
+              brand: ["Space Grotesk", "sans-serif"],
+              mono: ["JetBrains Mono", "monospace"],
+            },
+            animation: {
+              "fade-in": "fadeIn 0.35s ease both",
+              "pop-in": "popIn 0.22s cubic-bezier(.2,.9,.3,1.25) both",
+            },
+            keyframes: {
+              fadeIn: { from: { opacity: "0", transform: "translateY(6px)" }, to: { opacity: "1", transform: "translateY(0)" } },
+              popIn: { from: { opacity: "0", transform: "scale(0.97)" }, to: { opacity: "1", transform: "scale(1)" } },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        background:
+          radial-gradient(1100px 560px at 14% -10%, rgba(245, 158, 11, 0.14), transparent 60%),
+          radial-gradient(900px 620px at 110% 8%, rgba(217, 119, 6, 0.1), transparent 55%),
+          #0b0a07;
+      }
+      .brand-font { font-family: "Space Grotesk", sans-serif; }
+      ::-webkit-scrollbar { width: 9px; height: 9px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 9999px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+      .glass {
+        background: rgba(24, 21, 14, 0.62);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .glass-soft { background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(255, 255, 255, 0.07); }
+      .glow-btn { box-shadow: 0 10px 30px -8px rgba(245, 158, 11, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.22); }
+      .field {
+        width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+        border-radius: 0.7rem; padding: 0.55rem 0.75rem; color: #fff; font-size: 0.875rem; transition: 0.15s; outline: none;
+      }
+      .field:focus { border-color: rgba(245,158,11,0.7); box-shadow: 0 0 0 3px rgba(245,158,11,0.16); }
+      .field::placeholder { color: rgba(255,255,255,0.3); }
+      .lbl { font-size: 0.72rem; font-weight: 600; color: rgba(255,255,255,0.45); padding-left: 0.15rem; text-transform: uppercase; letter-spacing: 0.03em; }
+      .grain::before {
+        content: ""; position: fixed; inset: 0; pointer-events: none; opacity: 0.5; z-index: 0;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+      }
+
+      /* ---------- Invoice paper ---------- */
+      #paper {
+        color: #1a1a1a;
+        background: #ffffff;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      #paper .muted { color: #6b7280; }
+      #paper .rule { border-color: #e5e7eb; }
+      #paper table { width: 100%; border-collapse: collapse; }
+      #paper th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: #9ca3af; padding: 8px 10px; border-bottom: 1px solid #e5e7eb; }
+      #paper td { padding: 10px; border-bottom: 1px solid #f1f3f5; vertical-align: top; }
+      #paper .accent { color: var(--accent, #d97706); }
+
+      /* ---------- Print ---------- */
+      @media print {
+        @page { margin: 14mm; }
+        body { background: #fff !important; }
+        .no-print { display: none !important; }
+        #paperWrap { position: static !important; padding: 0 !important; }
+        #paper { box-shadow: none !important; border: none !important; border-radius: 0 !important; max-width: none !important; width: 100% !important; }
+        html, body { height: auto !important; overflow: visible !important; }
+      }
+    </style>
+  </head>
+  <body class="dark text-white min-h-screen grain">
+    <!-- Header -->
+    <header class="no-print relative z-10 px-5 sm:px-8 pt-5 pb-3 flex items-center justify-between gap-4 flex-wrap">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-300 to-brand-600 grid place-items-center glow-btn">
+          <i class="fa-solid fa-receipt text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="brand-font text-xl font-bold tracking-tight leading-none">Tally</h1>
+          <p class="text-[11px] text-white/45 mt-0.5 font-medium">Invoice Builder &amp; PDF Export</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="drawerBtn" class="flex items-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm">
+          <i class="fa-solid fa-folder-open"></i> <span class="hidden sm:inline">Saved</span> <span id="savedCount" class="text-white/40"></span>
+        </button>
+        <button id="newBtn" class="flex items-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm">
+          <i class="fa-solid fa-file-circle-plus"></i> <span class="hidden sm:inline">New</span>
+        </button>
+        <button id="saveBtn" class="flex items-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm">
+          <i class="fa-solid fa-floppy-disk"></i> <span class="hidden sm:inline">Save</span>
+        </button>
+        <button id="pdfBtn" class="flex items-center gap-2 bg-gradient-to-b from-brand-400 to-brand-600 hover:from-brand-300 text-white font-semibold px-4 py-2.5 rounded-xl glow-btn transition active:scale-95 text-sm">
+          <i class="fa-solid fa-file-arrow-down"></i> PDF
+        </button>
+      </div>
+    </header>
+
+    <main class="relative z-10 px-5 sm:px-8 pb-16 max-w-[1500px] mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,440px)_1fr] gap-6">
+      <!-- ============ EDITOR ============ -->
+      <section class="no-print space-y-4 animate-fade-in">
+        <!-- Parties -->
+        <div class="glass rounded-2xl p-4 space-y-4">
+          <div class="flex items-center justify-between">
+            <p class="text-[11px] uppercase tracking-wider text-white/40 font-bold px-1">Your business</p>
+            <label class="text-[11px] text-brand-300 hover:text-brand-200 cursor-pointer flex items-center gap-1.5">
+              <i class="fa-solid fa-image"></i> <span id="logoLabel">Add logo</span>
+              <input id="logoInput" type="file" accept="image/*" class="hidden" />
+            </label>
+          </div>
+          <div class="flex gap-3 items-start">
+            <div id="logoPreview" class="hidden w-14 h-14 rounded-xl bg-white/5 border border-white/10 overflow-hidden flex-shrink-0 grid place-items-center">
+              <img class="max-w-full max-h-full object-contain" />
+            </div>
+            <div class="flex-1 space-y-2">
+              <input data-f="from.name" class="field" placeholder="Business name" />
+              <input data-f="from.email" class="field" placeholder="you@business.com" />
+            </div>
+          </div>
+          <textarea data-f="from.address" class="field resize-none" rows="2" placeholder="Address, VAT no, etc."></textarea>
+          <button id="clearLogo" class="hidden text-[11px] text-white/40 hover:text-rose-300 transition">Remove logo</button>
+        </div>
+
+        <div class="glass rounded-2xl p-4 space-y-2">
+          <p class="text-[11px] uppercase tracking-wider text-white/40 font-bold px-1 mb-1">Bill to</p>
+          <input data-f="to.name" class="field" placeholder="Client name" />
+          <input data-f="to.email" class="field" placeholder="client@email.com" />
+          <textarea data-f="to.address" class="field resize-none" rows="2" placeholder="Client address"></textarea>
+        </div>
+
+        <!-- Meta -->
+        <div class="glass rounded-2xl p-4 grid grid-cols-2 gap-3">
+          <div>
+            <p class="lbl">Invoice #</p>
+            <input data-f="number" class="field mt-1" placeholder="INV-0001" />
+          </div>
+          <div>
+            <p class="lbl">Currency</p>
+            <select data-f="currency" id="currency" class="field mt-1 appearance-none"></select>
+          </div>
+          <div>
+            <p class="lbl">Issue date</p>
+            <input data-f="issueDate" type="date" class="field mt-1" />
+          </div>
+          <div>
+            <p class="lbl">Due date</p>
+            <input data-f="dueDate" type="date" class="field mt-1" />
+          </div>
+        </div>
+
+        <!-- Items -->
+        <div class="glass rounded-2xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <p class="text-[11px] uppercase tracking-wider text-white/40 font-bold px-1">Line items</p>
+            <button id="addItem" class="text-[11px] font-semibold bg-brand-500/20 hover:bg-brand-500/30 text-brand-200 px-3 py-1.5 rounded-lg transition"><i class="fa-solid fa-plus"></i> Add row</button>
+          </div>
+          <div id="items" class="space-y-2"></div>
+        </div>
+
+        <!-- Adjustments -->
+        <div class="glass rounded-2xl p-4 grid grid-cols-2 gap-3">
+          <div>
+            <p class="lbl">Tax rate %</p>
+            <input data-f="taxRate" type="number" min="0" step="0.1" class="field mt-1" placeholder="0" />
+          </div>
+          <div>
+            <p class="lbl">Discount</p>
+            <div class="flex gap-2 mt-1">
+              <select data-f="discountType" id="discountType" class="field w-24 appearance-none">
+                <option value="none">None</option>
+                <option value="pct">%</option>
+                <option value="flat">Flat</option>
+              </select>
+              <input data-f="discountValue" type="number" min="0" step="0.01" class="field" placeholder="0" />
+            </div>
+          </div>
+          <div class="col-span-2">
+            <p class="lbl">Notes / terms</p>
+            <textarea data-f="notes" class="field mt-1 resize-none" rows="2" placeholder="Payment terms, thank-you note, bank details…"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ PREVIEW ============ -->
+      <section id="paperWrap" class="animate-fade-in">
+        <div id="paper" class="mx-auto max-w-[820px] rounded-xl shadow-2xl p-8 sm:p-10">
+          <!-- Header -->
+          <div class="flex justify-between items-start gap-6 flex-wrap">
+            <div class="flex items-center gap-3">
+              <img id="pLogo" class="hidden max-h-14 max-w-[160px] object-contain" />
+              <div>
+                <div id="pFromName" class="text-lg font-bold" style="font-family:'Space Grotesk'">Your business</div>
+                <div id="pFromEmail" class="muted text-xs"></div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-2xl font-bold tracking-tight accent" style="font-family:'Space Grotesk'">INVOICE</div>
+              <div id="pNumber" class="muted text-xs mt-0.5">INV-0001</div>
+            </div>
+          </div>
+          <div id="pFromAddress" class="muted text-xs whitespace-pre-line mt-2"></div>
+
+          <hr class="rule my-6" />
+
+          <div class="flex justify-between gap-6 flex-wrap">
+            <div>
+              <div class="muted text-[11px] uppercase tracking-wide font-semibold mb-1">Bill to</div>
+              <div id="pToName" class="font-semibold">Client name</div>
+              <div id="pToEmail" class="muted text-xs"></div>
+              <div id="pToAddress" class="muted text-xs whitespace-pre-line mt-0.5"></div>
+            </div>
+            <div class="text-right text-xs">
+              <div class="flex gap-6 justify-end"><span class="muted">Issued</span><span id="pIssue" class="font-medium">—</span></div>
+              <div class="flex gap-6 justify-end mt-1"><span class="muted">Due</span><span id="pDue" class="font-medium">—</span></div>
+            </div>
+          </div>
+
+          <table class="mt-6">
+            <thead>
+              <tr><th style="width:52%">Description</th><th class="text-right">Qty</th><th class="text-right">Unit price</th><th class="text-right">Amount</th></tr>
+            </thead>
+            <tbody id="pItems"></tbody>
+          </table>
+
+          <div class="flex justify-end mt-5">
+            <div class="w-64 text-sm space-y-1.5">
+              <div class="flex justify-between"><span class="muted">Subtotal</span><span id="pSubtotal">—</span></div>
+              <div id="pDiscountRow" class="hidden justify-between"><span class="muted">Discount</span><span id="pDiscount" class="text-emerald-600">—</span></div>
+              <div id="pTaxRow" class="hidden justify-between"><span class="muted" id="pTaxLabel">Tax</span><span id="pTax">—</span></div>
+              <div class="flex justify-between pt-2 mt-1 border-t rule text-base font-bold"><span>Total</span><span id="pTotal" class="accent">—</span></div>
+            </div>
+          </div>
+
+          <div id="pNotesWrap" class="hidden mt-8 pt-5 border-t rule">
+            <div class="muted text-[11px] uppercase tracking-wide font-semibold mb-1">Notes</div>
+            <div id="pNotes" class="muted text-xs whitespace-pre-line"></div>
+          </div>
+
+          <div class="mt-8 text-center muted text-[10px]">Generated with Tally · thank you for your business</div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ============ SAVED DRAWER ============ -->
+    <div id="drawer" class="no-print hidden fixed inset-0 z-40">
+      <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="drawerBack"></div>
+      <aside class="absolute right-0 top-0 h-full w-full max-w-sm glass border-l border-white/10 p-5 overflow-y-auto animate-fade-in">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="brand-font text-lg font-bold">Saved invoices</h2>
+          <button id="drawerClose" class="w-9 h-9 grid place-items-center glass-soft rounded-lg hover:bg-white/10 transition"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="drawerList" class="space-y-2"></div>
+        <p id="drawerEmpty" class="hidden text-white/40 text-sm text-center py-10">No saved invoices yet.<br />Hit <b>Save</b> to keep one here.</p>
+      </aside>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="no-print fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-3 glass px-5 py-3 rounded-2xl text-sm font-medium shadow-2xl">
+      <i id="toastIcon" class="fa-solid fa-circle-info text-brand-300"></i>
+      <span id="toastMsg"></span>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const INV_KEY = "tally.invoices.v1";
+      const PROF_KEY = "tally.profile.v1";
+
+      const CURRENCIES = [
+        ["USD", "$"], ["EUR", "€"], ["GBP", "£"], ["JPY", "¥"], ["CAD", "$"], ["AUD", "$"],
+        ["CHF", "Fr"], ["CNY", "¥"], ["INR", "₹"], ["BRL", "R$"], ["ZAR", "R"], ["SEK", "kr"],
+        ["NOK", "kr"], ["DKK", "kr"], ["PLN", "zł"], ["MXN", "$"], ["SGD", "$"], ["NZD", "$"], ["AED", "د.إ"],
+      ];
+
+      function toast(msg, icon = "circle-info", color = "text-brand-300") {
+        const t = $("toast");
+        $("toastMsg").textContent = msg;
+        $("toastIcon").className = `fa-solid fa-${icon} ${color}`;
+        t.classList.remove("hidden");
+        t.classList.add("flex");
+        clearTimeout(t._to);
+        t._to = setTimeout(() => { t.classList.add("hidden"); t.classList.remove("flex"); }, 2800);
+      }
+
+      // ---------- state ----------
+      function blankInvoice() {
+        const today = new Date().toISOString().slice(0, 10);
+        const due = new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10);
+        return {
+          id: null,
+          number: nextNumber(),
+          currency: profile.currency || "USD",
+          issueDate: today,
+          dueDate: due,
+          from: { ...profile.from },
+          to: { name: "", email: "", address: "" },
+          logo: profile.logo || "",
+          items: [{ desc: "", qty: 1, price: 0 }],
+          taxRate: 0,
+          discountType: "none",
+          discountValue: 0,
+          notes: profile.notes || "",
+        };
+      }
+
+      let profile = { from: { name: "", email: "", address: "" }, logo: "", currency: "USD", notes: "", counter: 1 };
+      try { profile = { ...profile, ...JSON.parse(localStorage.getItem(PROF_KEY) || "{}") }; } catch (e) {}
+      let invoices = [];
+      try { invoices = JSON.parse(localStorage.getItem(INV_KEY) || "[]"); } catch (e) {}
+      let inv = null;
+
+      function nextNumber() {
+        const n = profile.counter || 1;
+        return "INV-" + String(n).padStart(4, "0");
+      }
+      function saveInvoices() { localStorage.setItem(INV_KEY, JSON.stringify(invoices)); }
+      function saveProfile() { localStorage.setItem(PROF_KEY, JSON.stringify(profile)); }
+
+      // ---------- currency ----------
+      function fmtMoney(v) {
+        try {
+          return new Intl.NumberFormat(undefined, { style: "currency", currency: inv.currency || "USD" }).format(v || 0);
+        } catch (e) {
+          return (inv.currency || "") + " " + (v || 0).toFixed(2);
+        }
+      }
+
+      // ---------- compute ----------
+      function totals() {
+        const subtotal = inv.items.reduce((s, it) => s + (parseFloat(it.qty) || 0) * (parseFloat(it.price) || 0), 0);
+        let discount = 0;
+        if (inv.discountType === "pct") discount = subtotal * (parseFloat(inv.discountValue) || 0) / 100;
+        else if (inv.discountType === "flat") discount = parseFloat(inv.discountValue) || 0;
+        discount = Math.min(discount, subtotal);
+        const taxable = subtotal - discount;
+        const tax = taxable * (parseFloat(inv.taxRate) || 0) / 100;
+        const total = taxable + tax;
+        return { subtotal, discount, tax, total };
+      }
+
+      // ---------- editor binding ----------
+      function getPath(obj, path) { return path.split(".").reduce((o, k) => (o ? o[k] : undefined), obj); }
+      function setPath(obj, path, val) {
+        const keys = path.split(".");
+        let o = obj;
+        for (let i = 0; i < keys.length - 1; i++) o = o[keys[i]] = o[keys[i]] || {};
+        o[keys[keys.length - 1]] = val;
+      }
+
+      function bindFields() {
+        document.querySelectorAll("[data-f]").forEach((el) => {
+          el.addEventListener("input", () => {
+            let v = el.value;
+            if (el.type === "number") v = el.value;
+            setPath(inv, el.dataset.f, v);
+            // persist business fields to profile for next time
+            if (el.dataset.f.startsWith("from.")) { setPath(profile, el.dataset.f, v); saveProfile(); }
+            if (el.dataset.f === "currency") { profile.currency = v; saveProfile(); }
+            if (el.dataset.f === "notes") { profile.notes = v; saveProfile(); }
+            renderPaper();
+          });
+        });
+      }
+
+      function loadEditor() {
+        document.querySelectorAll("[data-f]").forEach((el) => {
+          const v = getPath(inv, el.dataset.f);
+          el.value = v == null ? "" : v;
+        });
+        // logo
+        if (inv.logo) {
+          $("logoPreview").classList.remove("hidden");
+          $("logoPreview").querySelector("img").src = inv.logo;
+          $("clearLogo").classList.remove("hidden");
+          $("logoLabel").textContent = "Change";
+        } else {
+          $("logoPreview").classList.add("hidden");
+          $("clearLogo").classList.add("hidden");
+          $("logoLabel").textContent = "Add logo";
+        }
+        renderItems();
+        renderPaper();
+      }
+
+      // ---------- items ----------
+      function renderItems() {
+        const box = $("items");
+        box.innerHTML = "";
+        inv.items.forEach((it, i) => {
+          const row = document.createElement("div");
+          row.className = "grid grid-cols-[1fr_58px_84px_28px] gap-2 items-center animate-pop-in";
+          row.innerHTML = `
+            <input class="field" placeholder="Description" value="${escAttr(it.desc)}" data-i="${i}" data-k="desc" />
+            <input class="field text-right" type="number" min="0" step="1" placeholder="Qty" value="${it.qty}" data-i="${i}" data-k="qty" />
+            <input class="field text-right" type="number" min="0" step="0.01" placeholder="Price" value="${it.price}" data-i="${i}" data-k="price" />
+            <button class="w-7 h-7 grid place-items-center text-white/35 hover:text-rose-300 transition" data-del="${i}" title="Remove"><i class="fa-solid fa-xmark"></i></button>`;
+          box.appendChild(row);
+        });
+        box.querySelectorAll("input").forEach((el) =>
+          el.addEventListener("input", () => {
+            inv.items[+el.dataset.i][el.dataset.k] = el.value;
+            renderPaper();
+          })
+        );
+        box.querySelectorAll("[data-del]").forEach((b) =>
+          b.addEventListener("click", () => {
+            inv.items.splice(+b.dataset.del, 1);
+            if (!inv.items.length) inv.items.push({ desc: "", qty: 1, price: 0 });
+            renderItems();
+            renderPaper();
+          })
+        );
+      }
+      $("addItem").addEventListener("click", () => {
+        inv.items.push({ desc: "", qty: 1, price: 0 });
+        renderItems();
+        renderPaper();
+      });
+
+      // ---------- render paper ----------
+      function escHtml(s) { return (s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+      function escAttr(s) { return escHtml(s).replace(/"/g, "&quot;"); }
+      function fmtDate(d) {
+        if (!d) return "—";
+        try { return new Date(d + "T00:00:00").toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }); }
+        catch (e) { return d; }
+      }
+
+      function renderPaper() {
+        $("pFromName").textContent = inv.from.name || "Your business";
+        $("pFromEmail").textContent = inv.from.email || "";
+        $("pFromAddress").textContent = inv.from.address || "";
+        $("pNumber").textContent = inv.number || "";
+        $("pToName").textContent = inv.to.name || "Client name";
+        $("pToEmail").textContent = inv.to.email || "";
+        $("pToAddress").textContent = inv.to.address || "";
+        $("pIssue").textContent = fmtDate(inv.issueDate);
+        $("pDue").textContent = fmtDate(inv.dueDate);
+
+        const logo = $("pLogo");
+        if (inv.logo) { logo.src = inv.logo; logo.classList.remove("hidden"); }
+        else logo.classList.add("hidden");
+
+        const tb = $("pItems");
+        tb.innerHTML = "";
+        inv.items.forEach((it) => {
+          const amt = (parseFloat(it.qty) || 0) * (parseFloat(it.price) || 0);
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${escHtml(it.desc) || '<span style="color:#c7ccd1">—</span>'}</td>
+            <td class="text-right">${parseFloat(it.qty) || 0}</td>
+            <td class="text-right">${fmtMoney(parseFloat(it.price) || 0)}</td>
+            <td class="text-right font-medium">${fmtMoney(amt)}</td>`;
+          tb.appendChild(tr);
+        });
+
+        const t = totals();
+        $("pSubtotal").textContent = fmtMoney(t.subtotal);
+        if (t.discount > 0) {
+          $("pDiscountRow").classList.remove("hidden");
+          $("pDiscountRow").classList.add("flex");
+          $("pDiscount").textContent = "−" + fmtMoney(t.discount);
+        } else {
+          $("pDiscountRow").classList.add("hidden");
+          $("pDiscountRow").classList.remove("flex");
+        }
+        if (t.tax > 0 || (parseFloat(inv.taxRate) || 0) > 0) {
+          $("pTaxRow").classList.remove("hidden");
+          $("pTaxRow").classList.add("flex");
+          $("pTaxLabel").textContent = "Tax (" + (parseFloat(inv.taxRate) || 0) + "%)";
+          $("pTax").textContent = fmtMoney(t.tax);
+        } else {
+          $("pTaxRow").classList.add("hidden");
+          $("pTaxRow").classList.remove("flex");
+        }
+        $("pTotal").textContent = fmtMoney(t.total);
+
+        if (inv.notes && inv.notes.trim()) {
+          $("pNotesWrap").classList.remove("hidden");
+          $("pNotes").textContent = inv.notes;
+        } else $("pNotesWrap").classList.add("hidden");
+      }
+
+      // ---------- logo ----------
+      $("logoInput").addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        e.target.value = "";
+        if (!file) return;
+        const r = new FileReader();
+        r.onload = () => {
+          inv.logo = r.result;
+          profile.logo = r.result;
+          saveProfile();
+          loadEditor();
+        };
+        r.readAsDataURL(file);
+      });
+      $("clearLogo").addEventListener("click", () => {
+        inv.logo = "";
+        profile.logo = "";
+        saveProfile();
+        loadEditor();
+      });
+
+      // ---------- save / new / load ----------
+      $("saveBtn").addEventListener("click", () => {
+        if (inv.id) {
+          const idx = invoices.findIndex((x) => x.id === inv.id);
+          invoices[idx] = { ...inv, savedAt: Date.now() };
+        } else {
+          inv.id = "inv" + Date.now().toString(36);
+          invoices.unshift({ ...inv, savedAt: Date.now() });
+          // advance the running counter when a fresh invoice is first saved
+          const m = /(\d+)\s*$/.exec(inv.number || "");
+          if (m) profile.counter = parseInt(m[1], 10) + 1;
+          else profile.counter = (profile.counter || 1) + 1;
+          saveProfile();
+        }
+        saveInvoices();
+        refreshSavedCount();
+        toast("Invoice saved", "circle-check", "text-emerald-300");
+      });
+
+      $("newBtn").addEventListener("click", () => {
+        inv = blankInvoice();
+        loadEditor();
+        toast("New invoice — " + inv.number, "file-circle-plus");
+      });
+
+      function refreshSavedCount() {
+        $("savedCount").textContent = invoices.length ? "(" + invoices.length + ")" : "";
+      }
+
+      // ---------- drawer ----------
+      function openDrawer() {
+        renderDrawer();
+        $("drawer").classList.remove("hidden");
+      }
+      function closeDrawer() { $("drawer").classList.add("hidden"); }
+      $("drawerBtn").addEventListener("click", openDrawer);
+      $("drawerClose").addEventListener("click", closeDrawer);
+      $("drawerBack").addEventListener("click", closeDrawer);
+
+      function renderDrawer() {
+        const list = $("drawerList");
+        list.innerHTML = "";
+        $("drawerEmpty").classList.toggle("hidden", invoices.length > 0);
+        invoices
+          .slice()
+          .sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))
+          .forEach((v) => {
+            const savedInv = inv; // for currency fmt use its own
+            const total = (() => {
+              const sub = v.items.reduce((s, it) => s + (parseFloat(it.qty) || 0) * (parseFloat(it.price) || 0), 0);
+              let disc = v.discountType === "pct" ? sub * (parseFloat(v.discountValue) || 0) / 100 : v.discountType === "flat" ? parseFloat(v.discountValue) || 0 : 0;
+              disc = Math.min(disc, sub);
+              const taxable = sub - disc;
+              return taxable + taxable * (parseFloat(v.taxRate) || 0) / 100;
+            })();
+            let totalStr;
+            try { totalStr = new Intl.NumberFormat(undefined, { style: "currency", currency: v.currency || "USD" }).format(total); }
+            catch (e) { totalStr = (v.currency || "") + " " + total.toFixed(2); }
+            const row = document.createElement("div");
+            row.className = "glass-soft rounded-xl p-3 flex items-center gap-3 hover:bg-white/[0.07] transition group";
+            row.innerHTML = `
+              <div class="min-w-0 flex-1 cursor-pointer" data-load="${v.id}">
+                <p class="font-semibold truncate">${escHtml(v.number || "—")} ${v.to?.name ? '· <span class="text-white/50 font-normal">' + escHtml(v.to.name) + "</span>" : ""}</p>
+                <p class="text-xs text-white/40">${totalStr} · ${new Date(v.savedAt || Date.now()).toLocaleDateString()}</p>
+              </div>
+              <button data-dup="${v.id}" class="w-8 h-8 grid place-items-center glass-soft rounded-lg hover:bg-white/10 transition opacity-0 group-hover:opacity-100" title="Duplicate"><i class="fa-solid fa-copy text-xs"></i></button>
+              <button data-delinv="${v.id}" class="w-8 h-8 grid place-items-center glass-soft rounded-lg hover:bg-rose-500/20 transition opacity-0 group-hover:opacity-100" title="Delete"><i class="fa-solid fa-trash-can text-xs"></i></button>`;
+            list.appendChild(row);
+          });
+
+        list.querySelectorAll("[data-load]").forEach((el) =>
+          el.addEventListener("click", () => {
+            const v = invoices.find((x) => x.id === el.dataset.load);
+            if (v) { inv = JSON.parse(JSON.stringify(v)); loadEditor(); closeDrawer(); toast("Loaded " + (v.number || ""), "folder-open"); }
+          })
+        );
+        list.querySelectorAll("[data-dup]").forEach((b) =>
+          b.addEventListener("click", () => {
+            const v = invoices.find((x) => x.id === b.dataset.dup);
+            if (v) { inv = JSON.parse(JSON.stringify(v)); inv.id = null; inv.number = nextNumber(); loadEditor(); closeDrawer(); toast("Duplicated as " + inv.number, "copy"); }
+          })
+        );
+        list.querySelectorAll("[data-delinv]").forEach((b) =>
+          b.addEventListener("click", () => {
+            if (!confirm("Delete this saved invoice?")) return;
+            invoices = invoices.filter((x) => x.id !== b.dataset.delinv);
+            saveInvoices();
+            refreshSavedCount();
+            renderDrawer();
+          })
+        );
+      }
+
+      // ---------- PDF ----------
+      $("pdfBtn").addEventListener("click", () => window.print());
+
+      // ---------- init ----------
+      function initCurrencies() {
+        const sel = $("currency");
+        CURRENCIES.forEach(([code]) => {
+          const o = document.createElement("option");
+          o.value = code;
+          o.textContent = code;
+          sel.appendChild(o);
+        });
+      }
+      initCurrencies();
+      bindFields();
+      inv = blankInvoice();
+      loadEditor();
+      refreshSavedCount();
+    </script>
+  </body>
+</html>

@@ -12,3 +12,4 @@ A curated collection of AI-built alternatives to everyday tools and applications
 - ~~Smallpdf~~ [Quire](Quire.000.001.000.html) ([Try](https://7bp.github.io/aislop/Quire.000.001.000.html)) - Private PDF studio: merge, reorder, rotate &amp; delete pages, nothing uploaded
 - ~~TinyPNG~~ [Plume](Plume.000.001.000.html) ([Try](https://7bp.github.io/aislop/Plume.000.001.000.html)) - Batch image compressor &amp; converter (WebP/JPEG/PNG), fully on-device
 - ~~1Password~~ [Bastion](Bastion.000.001.000.html) ([Try](https://7bp.github.io/aislop/Bastion.000.001.000.html)) - Offline password vault, AES-256-GCM encrypted, nothing leaves your device
+- ~~FreshBooks~~ [Tally](Tally.000.001.000.html) ([Try](https://7bp.github.io/aislop/Tally.000.001.000.html)) - Invoice builder with live totals, tax/discount, saved drafts &amp; PDF export
