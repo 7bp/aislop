@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trellis — Kanban Board</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: "#f0f9ff", 100: "#e0f2fe", 200: "#bae6fd", 300: "#7dd3fc", 400: "#38bdf8",
+                500: "#0ea5e9", 600: "#0284c7", 700: "#0369a1", 800: "#075985", 900: "#0c4a6e",
+              },
+            },
+            fontFamily: {
+              sans: ["Plus Jakarta Sans", "sans-serif"],
+              brand: ["Space Grotesk", "sans-serif"],
+            },
+            animation: {
+              "fade-in": "fadeIn 0.3s ease both",
+              "pop-in": "popIn 0.2s cubic-bezier(.2,.9,.3,1.25) both",
+            },
+            keyframes: {
+              fadeIn: { from: { opacity: "0", transform: "translateY(6px)" }, to: { opacity: "1", transform: "translateY(0)" } },
+              popIn: { from: { opacity: "0", transform: "scale(0.97)" }, to: { opacity: "1", transform: "scale(1)" } },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      html, body { height: 100%; }
+      body { font-family: "Plus Jakarta Sans", sans-serif; overflow: hidden;
+        background:
+          radial-gradient(1100px 560px at 14% -10%, rgba(14, 165, 233, 0.15), transparent 60%),
+          radial-gradient(900px 620px at 110% 8%, rgba(2, 132, 199, 0.1), transparent 55%),
+          #070b0f;
+      }
+      .brand-font { font-family: "Space Grotesk", sans-serif; }
+      ::-webkit-scrollbar { width: 9px; height: 9px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 9999px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+      .glass { background: rgba(15, 20, 26, 0.62); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255, 255, 255, 0.08); }
+      .glass-soft { background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(255, 255, 255, 0.07); }
+      .glow-btn { box-shadow: 0 10px 30px -8px rgba(14, 165, 233, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.22); }
+      .field { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); border-radius: 0.6rem; padding: 0.5rem 0.7rem; color: #fff; font-size: 0.875rem; transition: 0.15s; outline: none; }
+      .field:focus { border-color: rgba(14,165,233,0.7); box-shadow: 0 0 0 3px rgba(14,165,233,0.16); }
+      .field::placeholder { color: rgba(255,255,255,0.3); }
+      .lbl { font-size: 0.72rem; font-weight: 600; color: rgba(255,255,255,0.45); padding-left: 0.15rem; text-transform: uppercase; letter-spacing: 0.03em; }
+      .col { width: 300px; flex: 0 0 auto; }
+      .card { cursor: grab; }
+      .card.dragging { opacity: 0.45; }
+      .col-body.drop-hint { background: rgba(14,165,233,0.06); outline: 2px dashed rgba(14,165,233,0.4); outline-offset: -2px; }
+      .modal-back { background: rgba(4,6,10,0.72); backdrop-filter: blur(6px); }
+    </style>
+  </head>
+  <body class="dark text-white">
+    <div class="flex flex-col h-screen">
+      <header class="glass z-20 px-5 sm:px-7 py-3 flex items-center gap-3 flex-wrap">
+        <div class="flex items-center gap-2.5 mr-1">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-300 to-brand-600 grid place-items-center glow-btn"><i class="fa-solid fa-table-columns text-white"></i></div>
+          <div class="leading-none">
+            <input id="boardTitle" class="brand-font text-lg font-bold tracking-tight bg-transparent outline-none w-44 focus:bg-white/5 rounded px-1" value="My Board" />
+            <p class="text-[10px] text-white/40 mt-0.5 px-1">Kanban Board</p>
+          </div>
+        </div>
+        <div class="relative flex-1 max-w-xs">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-white/35 text-xs"></i>
+          <input id="search" class="field pl-9 !py-2" placeholder="Search cards…" />
+        </div>
+        <div class="ml-auto flex items-center gap-2">
+          <span id="stats" class="text-xs text-white/40 hidden sm:block"></span>
+          <button id="exportBtn" class="glass-soft hover:bg-white/10 font-semibold px-3.5 py-2 rounded-lg transition active:scale-95 text-sm" title="Export JSON"><i class="fa-solid fa-download"></i></button>
+          <button id="importBtn" class="glass-soft hover:bg-white/10 font-semibold px-3.5 py-2 rounded-lg transition active:scale-95 text-sm" title="Import JSON"><i class="fa-solid fa-upload"></i></button>
+          <button id="labelsBtn" class="glass-soft hover:bg-white/10 font-semibold px-3.5 py-2 rounded-lg transition active:scale-95 text-sm"><i class="fa-solid fa-tags"></i> <span class="hidden sm:inline">Labels</span></button>
+        </div>
+      </header>
+
+      <main id="board" class="flex-1 min-h-0 flex gap-4 overflow-x-auto overflow-y-hidden p-5 items-start"></main>
+    </div>
+
+    <input id="importFile" type="file" accept="application/json,.json" class="hidden" />
+
+    <!-- Card modal -->
+    <div id="cardModal" class="hidden fixed inset-0 z-40 modal-back grid place-items-center p-4">
+      <div class="glass rounded-3xl w-full max-w-lg p-6 animate-pop-in">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="brand-font text-lg font-bold" id="cardModalTitle">Card</h2>
+          <button id="cardModalClose" class="w-9 h-9 grid place-items-center glass-soft rounded-lg hover:bg-white/10 transition"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="space-y-3.5">
+          <div><p class="lbl">Title</p><input id="cTitle" class="field mt-1" placeholder="Card title" /></div>
+          <div><p class="lbl">Description</p><textarea id="cDesc" class="field mt-1 resize-none" rows="3" placeholder="Add more detail…"></textarea></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><p class="lbl">Due date</p><input id="cDue" type="date" class="field mt-1" /></div>
+            <div><p class="lbl">List</p><div class="relative mt-1"><select id="cList" class="field appearance-none pr-8"></select><i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/40 pointer-events-none"></i></div></div>
+          </div>
+          <div><p class="lbl mb-1.5">Labels</p><div id="cLabels" class="flex flex-wrap gap-2"></div></div>
+        </div>
+        <div class="flex items-center gap-2 mt-6">
+          <button id="cDelete" class="hidden flex items-center gap-2 text-rose-300 hover:bg-rose-500/10 border border-rose-400/30 font-semibold px-4 py-2.5 rounded-xl transition text-sm"><i class="fa-solid fa-trash-can"></i> Delete</button>
+          <button id="cSave" class="ml-auto flex items-center gap-2 bg-gradient-to-b from-brand-400 to-brand-600 text-white font-semibold px-6 py-2.5 rounded-xl glow-btn transition active:scale-95"><i class="fa-solid fa-check"></i> Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Labels modal -->
+    <div id="labelsModal" class="hidden fixed inset-0 z-40 modal-back grid place-items-center p-4">
+      <div class="glass rounded-3xl w-full max-w-md p-6 animate-pop-in">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="brand-font text-lg font-bold">Labels</h2>
+          <button id="labelsModalClose" class="w-9 h-9 grid place-items-center glass-soft rounded-lg hover:bg-white/10 transition"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="labelList" class="space-y-2 mb-4"></div>
+        <div class="flex items-center gap-2">
+          <input id="newLabelName" class="field flex-1" placeholder="New label name" />
+          <input id="newLabelColor" type="color" value="#0ea5e9" class="w-11 h-11 rounded-lg bg-transparent border border-white/10 cursor-pointer p-1" />
+          <button id="addLabelBtn" class="bg-gradient-to-b from-brand-400 to-brand-600 text-white font-semibold px-4 py-2.5 rounded-xl glow-btn transition active:scale-95"><i class="fa-solid fa-plus"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-3 glass px-5 py-3 rounded-2xl text-sm font-medium shadow-2xl">
+      <i id="toastIcon" class="fa-solid fa-circle-info text-brand-300"></i>
+      <span id="toastMsg"></span>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const KEY = "trellis.board.v1";
+
+      let board = null;
+      let editingCard = null; // { colId, cardId } or { colId, cardId:null } for new
+      let dragCardId = null;
+      let dragColId = null;
+
+      function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+      function save() { localStorage.setItem(KEY, JSON.stringify(board)); }
+      function toast(msg, icon = "circle-info", color = "text-brand-300") {
+        const t = $("toast"); $("toastMsg").textContent = msg; $("toastIcon").className = `fa-solid fa-${icon} ${color}`;
+        t.classList.remove("hidden"); t.classList.add("flex");
+        clearTimeout(t._to); t._to = setTimeout(() => { t.classList.add("hidden"); t.classList.remove("flex"); }, 2200);
+      }
+      function escHtml(s) { return (s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+      function seed() {
+        return {
+          title: "My Board",
+          labels: [
+            { id: uid(), name: "Bug", color: "#ef4444" },
+            { id: uid(), name: "Feature", color: "#22c55e" },
+            { id: uid(), name: "Urgent", color: "#f59e0b" },
+            { id: uid(), name: "Idea", color: "#8b5cf6" },
+          ],
+          columns: [
+            { id: uid(), title: "To do", cards: [] },
+            { id: uid(), title: "In progress", cards: [] },
+            { id: uid(), title: "Done", cards: [] },
+          ],
+        };
+      }
+      function load() {
+        try { board = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+        if (!board || !board.columns) board = seed();
+      }
+
+      // ---------- lookups ----------
+      function colById(id) { return board.columns.find((c) => c.id === id); }
+      function findCard(cardId) {
+        for (const col of board.columns) { const c = col.cards.find((x) => x.id === cardId); if (c) return { col, card: c }; }
+        return null;
+      }
+      function labelById(id) { return board.labels.find((l) => l.id === id); }
+
+      // ---------- card operations (top-level = testable) ----------
+      function addCard(colId, title) {
+        const col = colById(colId); if (!col || !title.trim()) return;
+        col.cards.push({ id: uid(), title: title.trim(), desc: "", labels: [], due: "" });
+        save(); render();
+      }
+      function moveCard(cardId, toColId, index) {
+        const src = findCard(cardId); const dst = colById(toColId);
+        if (!src || !dst) return;
+        src.col.cards = src.col.cards.filter((c) => c.id !== cardId);
+        const i = index == null ? dst.cards.length : Math.max(0, Math.min(index, dst.cards.length));
+        dst.cards.splice(i, 0, src.card);
+        save(); render();
+      }
+      function deleteCard(cardId) {
+        const src = findCard(cardId); if (!src) return;
+        src.col.cards = src.col.cards.filter((c) => c.id !== cardId);
+        save(); render();
+      }
+      function addColumn(title) {
+        board.columns.push({ id: uid(), title: title || "New list", cards: [] });
+        save(); render();
+      }
+      function deleteColumn(colId) {
+        board.columns = board.columns.filter((c) => c.id !== colId);
+        save(); render();
+      }
+      function moveColumn(colId, toIndex) {
+        const from = board.columns.findIndex((c) => c.id === colId);
+        if (from < 0) return;
+        const [c] = board.columns.splice(from, 1);
+        board.columns.splice(Math.max(0, Math.min(toIndex, board.columns.length)), 0, c);
+        save(); render();
+      }
+
+      // ---------- render ----------
+      function render() {
+        const q = $("search").value.trim().toLowerCase();
+        const boardEl = $("board");
+        boardEl.innerHTML = "";
+        let total = 0;
+        board.columns.forEach((col) => {
+          const cards = col.cards.filter((c) => !q || (c.title + " " + (c.desc || "")).toLowerCase().includes(q));
+          total += col.cards.length;
+          const colEl = document.createElement("div");
+          colEl.className = "col glass rounded-2xl flex flex-col max-h-full";
+          colEl.dataset.col = col.id;
+          colEl.innerHTML = `
+            <div class="flex items-center gap-2 p-3 pb-2" draggable="true" data-colhead="${col.id}">
+              <i class="fa-solid fa-grip-vertical text-white/25 text-xs cursor-grab"></i>
+              <input class="font-bold bg-transparent outline-none flex-1 min-w-0 focus:bg-white/5 rounded px-1 py-0.5" value="${escHtml(col.title)}" data-coltitle="${col.id}" />
+              <span class="text-[11px] font-mono text-white/40 bg-white/5 px-1.5 py-0.5 rounded">${col.cards.length}</span>
+              <button data-delcol="${col.id}" class="w-6 h-6 grid place-items-center rounded hover:bg-rose-500/20 text-white/40 hover:text-rose-300 transition"><i class="fa-solid fa-xmark text-xs"></i></button>
+            </div>
+            <div class="col-body flex-1 min-h-[8px] overflow-y-auto px-3 space-y-2 pb-1" data-body="${col.id}"></div>
+            <div class="p-3 pt-2">
+              <input class="field !bg-white/[0.03] !py-2 text-sm" placeholder="+ Add a card" data-add="${col.id}" />
+            </div>`;
+          boardEl.appendChild(colEl);
+
+          const body = colEl.querySelector("[data-body]");
+          cards.forEach((card) => body.appendChild(renderCard(card, col.id)));
+
+          // add card
+          const addInput = colEl.querySelector("[data-add]");
+          addInput.addEventListener("keydown", (e) => { if (e.key === "Enter" && addInput.value.trim()) { addCard(col.id, addInput.value); } });
+          // rename column
+          colEl.querySelector("[data-coltitle]").addEventListener("change", (e) => { col.title = e.target.value.trim() || col.title; save(); render(); });
+          // delete column
+          colEl.querySelector("[data-delcol]").addEventListener("click", () => {
+            if (col.cards.length && !confirm(`Delete list "${col.title}" and its ${col.cards.length} card(s)?`)) return;
+            deleteColumn(col.id);
+          });
+
+          // column DnD (via header)
+          const head = colEl.querySelector("[data-colhead]");
+          head.addEventListener("dragstart", (e) => { dragColId = col.id; dragCardId = null; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/col", col.id); });
+          head.addEventListener("dragend", () => { dragColId = null; });
+
+          // card drop target
+          body.addEventListener("dragover", (e) => {
+            if (dragCardId == null) return;
+            e.preventDefault();
+            body.classList.add("drop-hint");
+          });
+          body.addEventListener("dragleave", () => body.classList.remove("drop-hint"));
+          body.addEventListener("drop", (e) => {
+            e.preventDefault(); body.classList.remove("drop-hint");
+            if (dragCardId == null) return;
+            const index = dropIndex(body, e.clientY);
+            moveCard(dragCardId, col.id, index);
+          });
+
+          // column reorder drop
+          colEl.addEventListener("dragover", (e) => { if (dragColId != null && dragColId !== col.id) e.preventDefault(); });
+          colEl.addEventListener("drop", (e) => {
+            if (dragColId == null || dragColId === col.id) return;
+            e.preventDefault();
+            const target = board.columns.findIndex((c) => c.id === col.id);
+            moveColumn(dragColId, target);
+          });
+        });
+
+        // Add list button
+        const addCol = document.createElement("button");
+        addCol.className = "col glass-soft rounded-2xl p-3 text-sm font-semibold text-white/60 hover:text-white hover:bg-white/10 transition flex items-center gap-2 justify-center h-12";
+        addCol.innerHTML = '<i class="fa-solid fa-plus"></i> Add list';
+        addCol.addEventListener("click", () => addColumn("New list"));
+        boardEl.appendChild(addCol);
+
+        $("stats").textContent = `${board.columns.length} lists · ${total} cards`;
+        $("boardTitle").value = board.title;
+        save();
+      }
+
+      function renderCard(card, colId) {
+        const el = document.createElement("div");
+        el.className = "card glass-soft rounded-xl p-2.5 hover:border-brand-400/40 transition animate-pop-in";
+        el.draggable = true;
+        el.dataset.card = card.id;
+        const labels = (card.labels || []).map(labelById).filter(Boolean);
+        const overdue = card.due && card.due < new Date().toISOString().slice(0, 10);
+        el.innerHTML = `
+          ${labels.length ? `<div class="flex flex-wrap gap-1 mb-1.5">${labels.map((l) => `<span class="h-1.5 w-8 rounded-full" style="background:${l.color}" title="${escHtml(l.name)}"></span>`).join("")}</div>` : ""}
+          <p class="text-sm font-medium leading-snug">${escHtml(card.title)}</p>
+          <div class="flex items-center gap-2.5 mt-1.5 text-[11px] text-white/40">
+            ${card.desc ? '<i class="fa-solid fa-align-left" title="Has description"></i>' : ""}
+            ${card.due ? `<span class="flex items-center gap-1 ${overdue ? "text-rose-300" : ""}"><i class="fa-regular fa-clock"></i> ${card.due.slice(5)}</span>` : ""}
+          </div>`;
+        el.addEventListener("click", () => openCard(colId, card.id));
+        el.addEventListener("dragstart", (e) => { dragCardId = card.id; dragColId = null; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/card", card.id); setTimeout(() => el.classList.add("dragging"), 0); });
+        el.addEventListener("dragend", () => { el.classList.remove("dragging"); dragCardId = null; document.querySelectorAll(".drop-hint").forEach((b) => b.classList.remove("drop-hint")); });
+        return el;
+      }
+
+      function dropIndex(body, y) {
+        const cards = [...body.querySelectorAll(".card:not(.dragging)")];
+        for (let i = 0; i < cards.length; i++) {
+          const r = cards[i].getBoundingClientRect();
+          if (y < r.top + r.height / 2) return i;
+        }
+        return cards.length;
+      }
+
+      // ---------- card modal ----------
+      function openCard(colId, cardId) {
+        editingCard = { colId, cardId };
+        const card = cardId ? findCard(cardId).card : { title: "", desc: "", labels: [], due: "" };
+        $("cardModalTitle").textContent = cardId ? "Edit card" : "New card";
+        $("cTitle").value = card.title || "";
+        $("cDesc").value = card.desc || "";
+        $("cDue").value = card.due || "";
+        // list select
+        const sel = $("cList");
+        sel.innerHTML = board.columns.map((c) => `<option value="${c.id}">${escHtml(c.title)}</option>`).join("");
+        sel.value = colId;
+        // labels
+        $("cLabels").innerHTML = "";
+        board.labels.forEach((l) => {
+          const on = (card.labels || []).includes(l.id);
+          const chip = document.createElement("button");
+          chip.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5";
+          chip.dataset.label = l.id;
+          toggleChip(chip, l, on);
+          chip.addEventListener("click", () => toggleChip(chip, l, chip.dataset.on !== "1"));
+          $("cLabels").appendChild(chip);
+        });
+        $("cDelete").classList.toggle("hidden", !cardId);
+        $("cardModal").classList.remove("hidden"); $("cardModal").classList.add("flex");
+        setTimeout(() => $("cTitle").focus(), 40);
+      }
+      function toggleChip(chip, l, on) {
+        chip.dataset.on = on ? "1" : "0";
+        chip.style.background = on ? l.color : l.color + "22";
+        chip.style.color = on ? "#fff" : l.color;
+        chip.innerHTML = `${on ? '<i class="fa-solid fa-check text-[10px]"></i>' : ""} ${escHtml(l.name)}`;
+      }
+      function closeCard() { $("cardModal").classList.add("hidden"); $("cardModal").classList.remove("flex"); editingCard = null; }
+      $("cardModalClose").addEventListener("click", closeCard);
+      $("cardModal").addEventListener("click", (e) => { if (e.target === $("cardModal")) closeCard(); });
+
+      $("cSave").addEventListener("click", () => {
+        const title = $("cTitle").value.trim();
+        if (!title) return toast("Card needs a title", "circle-info");
+        const labels = [...$("cLabels").querySelectorAll("[data-label]")].filter((c) => c.dataset.on === "1").map((c) => c.dataset.label);
+        const data = { title, desc: $("cDesc").value, due: $("cDue").value, labels };
+        const targetCol = $("cList").value;
+        if (editingCard.cardId) {
+          const { col, card } = findCard(editingCard.cardId);
+          Object.assign(card, data);
+          if (col.id !== targetCol) moveCard(card.id, targetCol, null);
+          else { save(); render(); }
+        } else {
+          const col = colById(targetCol);
+          col.cards.push({ id: uid(), ...data });
+          save(); render();
+        }
+        closeCard();
+      });
+      $("cDelete").addEventListener("click", () => { if (editingCard?.cardId) { deleteCard(editingCard.cardId); closeCard(); } });
+
+      // ---------- labels modal ----------
+      $("labelsBtn").addEventListener("click", () => { renderLabelList(); $("labelsModal").classList.remove("hidden"); $("labelsModal").classList.add("flex"); });
+      $("labelsModalClose").addEventListener("click", () => { $("labelsModal").classList.add("hidden"); $("labelsModal").classList.remove("flex"); });
+      $("labelsModal").addEventListener("click", (e) => { if (e.target === $("labelsModal")) { $("labelsModal").classList.add("hidden"); $("labelsModal").classList.remove("flex"); } });
+      $("addLabelBtn").addEventListener("click", () => {
+        const name = $("newLabelName").value.trim(); if (!name) return;
+        board.labels.push({ id: uid(), name, color: $("newLabelColor").value });
+        $("newLabelName").value = ""; save(); renderLabelList(); render();
+      });
+      function renderLabelList() {
+        const list = $("labelList");
+        list.innerHTML = board.labels.length ? "" : '<p class="text-white/40 text-sm text-center py-4">No labels yet.</p>';
+        board.labels.forEach((l) => {
+          const row = document.createElement("div");
+          row.className = "flex items-center gap-3 glass-soft rounded-xl p-2.5";
+          row.innerHTML = `
+            <input type="color" value="${l.color}" data-lcolor="${l.id}" class="w-8 h-8 rounded bg-transparent border border-white/10 cursor-pointer p-0.5" />
+            <input class="bg-transparent outline-none flex-1 text-sm font-medium" value="${escHtml(l.name)}" data-lname="${l.id}" />
+            <button data-ldel="${l.id}" class="w-8 h-8 grid place-items-center rounded-lg hover:bg-rose-500/20 text-white/50 hover:text-rose-300 transition"><i class="fa-solid fa-trash-can text-xs"></i></button>`;
+          list.appendChild(row);
+        });
+        list.querySelectorAll("[data-lcolor]").forEach((el) => el.addEventListener("input", () => { labelById(el.dataset.lcolor).color = el.value; save(); render(); }));
+        list.querySelectorAll("[data-lname]").forEach((el) => el.addEventListener("change", () => { labelById(el.dataset.lname).name = el.value.trim() || "Label"; save(); render(); }));
+        list.querySelectorAll("[data-ldel]").forEach((b) => b.addEventListener("click", () => {
+          board.labels = board.labels.filter((l) => l.id !== b.dataset.ldel);
+          board.columns.forEach((c) => c.cards.forEach((cd) => (cd.labels = (cd.labels || []).filter((id) => id !== b.dataset.ldel))));
+          save(); renderLabelList(); render();
+        }));
+      }
+
+      // ---------- board title, search ----------
+      $("boardTitle").addEventListener("change", () => { board.title = $("boardTitle").value.trim() || "My Board"; save(); });
+      $("search").addEventListener("input", render);
+
+      // ---------- export / import ----------
+      $("exportBtn").addEventListener("click", () => {
+        const blob = new Blob([JSON.stringify(board, null, 2)], { type: "application/json" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob); a.download = `${(board.title || "board").replace(/\s+/g, "-").toLowerCase()}.json`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+        toast("Board exported", "circle-check", "text-emerald-300");
+      });
+      $("importBtn").addEventListener("click", () => $("importFile").click());
+      $("importFile").addEventListener("change", async (e) => {
+        const file = e.target.files[0]; e.target.value = ""; if (!file) return;
+        try {
+          const obj = JSON.parse(await file.text());
+          if (!obj.columns || !Array.isArray(obj.columns)) throw new Error("Not a Trellis board");
+          board = obj; if (!board.labels) board.labels = [];
+          save(); render(); toast("Board imported", "circle-check", "text-emerald-300");
+        } catch (err) { toast("Import failed — invalid board file", "triangle-exclamation", "text-amber-300"); }
+      });
+
+      // ---------- init ----------
+      load();
+      render();
+    </script>
+  </body>
+</html>
