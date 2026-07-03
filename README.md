@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.svg" alt="aislop" width="500" />
+</p>
+
 # aislop
 
 A curated collection of AI-built alternatives to everyday tools and applications.
@@ -23,6 +27,7 @@ pulled from a CDN purely for styling. Unless noted, your data never leaves the p
 | [Inkling](Inkling.000.001.000.html) ([Try](https://7bp.github.io/aislop/Inkling.000.001.000.html)) — screenshot annotator | Snagit | Full-res `<canvas>` markup with vector shape objects + undo/redo; pixelate-region redaction; PNG or clipboard export | ~$40–63 one-time |
 | [Chroma](Chroma.000.001.000.html) ([Try](https://7bp.github.io/aislop/Chroma.000.001.000.html)) — color palette studio | Coolors | HSL harmony generation, WCAG relative-luminance contrast, palette encoded in the URL hash for sharing | ~$36–60/yr |
 | [Tempo](Tempo.000.001.000.html) ([Try](https://7bp.github.io/aislop/Tempo.000.001.000.html)) — time tracker | Toggl | Timestamp-based timers with live `setInterval` updates, projects, weekly aggregation, CSV export — all in `localStorage` | ~$108–120/user/yr |
+| [Ember](Ember.000.001.000.html) ([Try](https://7bp.github.io/aislop/Ember.000.001.000.html)) — habit &amp; streak tracker | Streaks | Streak logic over per-day completion sets, GitHub-style heatmap, weekday schedules &amp; a daily progress ring — all in `localStorage` | ~$5 one-time (or Habitica ~$60/yr) |
 
 Swapping the subscription tools above for these clones adds up to **well north of ~$1,000/year** in
 avoided recurring fees for a typical solo user — before counting the one-time-license tools.

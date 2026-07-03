@@ -1,0 +1,67 @@
+<svg width="760" height="220" viewBox="0 0 760 220" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="aislop">
+  <defs>
+    <linearGradient id="slop" x1="40" y1="40" x2="180" y2="185" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff4d6d"/>
+      <stop offset="0.22" stop-color="#ff9f1c"/>
+      <stop offset="0.45" stop-color="#ffd23f"/>
+      <stop offset="0.62" stop-color="#2ec4b6"/>
+      <stop offset="0.8" stop-color="#4361ee"/>
+      <stop offset="1" stop-color="#b5179e"/>
+    </linearGradient>
+    <linearGradient id="word" x1="235" y1="70" x2="720" y2="150" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#818cf8"/>
+      <stop offset="0.5" stop-color="#e879f9"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+    <linearGradient id="rule" x1="238" y1="0" x2="612" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff4d6d"/>
+      <stop offset="0.3" stop-color="#ffd23f"/>
+      <stop offset="0.6" stop-color="#2ec4b6"/>
+      <stop offset="1" stop-color="#4361ee"/>
+    </linearGradient>
+    <radialGradient id="gloss" cx="0.35" cy="0.3" r="0.7">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.85"/>
+      <stop offset="0.35" stop-color="#ffffff" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="9" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- icon tile -->
+  <rect x="26" y="30" width="160" height="160" rx="40" fill="#0c0c14"/>
+  <rect x="26.5" y="30.5" width="159" height="159" rx="39.5" fill="none" stroke="#ffffff" stroke-opacity="0.12"/>
+
+  <!-- glow -->
+  <g opacity="0.55" filter="url(#soft)">
+    <circle cx="106" cy="104" r="46" fill="url(#slop)"/>
+  </g>
+
+  <!-- slop splat -->
+  <g filter="url(#soft)">
+    <path d="M106 58c26 0 47 17 49 41 1 12-4 22-13 30 6 5 9 13 6 20-3 8-12 10-18 5 1 8-4 15-12 15-7 0-12-6-11-14-15-2-28-11-35-24-3 3-9 3-12-1-3-4-2-10 3-12-3-9-2-19 4-27 9-21 30-33 39-33z" fill="url(#slop)"/>
+    <circle cx="66" cy="80" r="15" fill="url(#slop)"/>
+    <circle cx="150" cy="92" r="13" fill="url(#slop)"/>
+    <!-- drips -->
+    <path d="M78 150c-5 15-4 30 3 30s8-15 4-30z" fill="url(#slop)"/>
+    <path d="M126 152c-4 12-3 24 3 24s6-12 3-24z" fill="url(#slop)"/>
+    <circle cx="81" cy="182" r="6" fill="url(#slop)"/>
+  </g>
+
+  <!-- gloss highlight -->
+  <ellipse cx="90" cy="86" rx="34" ry="26" fill="url(#gloss)"/>
+
+  <!-- AI sparkles -->
+  <g fill="#ffffff">
+    <path d="M139 66c1.5 6 3 7.5 9 9-6 1.5-7.5 3-9 9-1.5-6-3-7.5-9-9 6-1.5 7.5-3 9-9z" opacity="0.95"/>
+    <path d="M120 118c1 4 2 5 6 6-4 1-5 2-6 6-1-4-2-5-6-6 4-1 5-2 6-6z" opacity="0.8"/>
+    <circle cx="72" cy="120" r="3" opacity="0.7"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="232" y="128" font-family="'Space Grotesk','Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="104" font-weight="700" letter-spacing="-4" fill="url(#word)">aislop</text>
+  <rect x="238" y="150" width="300" height="6" rx="3" fill="url(#rule)"/>
+  <text x="240" y="182" font-family="'Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif" font-size="19" font-weight="500" letter-spacing="0.5" fill="#9a9ab0">single-file replacements for paid apps</text>
+</svg>

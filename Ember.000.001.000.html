@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ember — Habit &amp; Streak Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: "#fff7ed", 100: "#ffedd5", 200: "#fed7aa", 300: "#fdba74", 400: "#fb923c",
+                500: "#f97316", 600: "#ea580c", 700: "#c2410c", 800: "#9a3412", 900: "#7c2d12",
+              },
+            },
+            fontFamily: {
+              sans: ["Plus Jakarta Sans", "sans-serif"],
+              brand: ["Space Grotesk", "sans-serif"],
+              mono: ["JetBrains Mono", "monospace"],
+            },
+            animation: {
+              "fade-in": "fadeIn 0.3s ease both",
+              "pop-in": "popIn 0.2s cubic-bezier(.2,.9,.3,1.25) both",
+              "flame": "flame 0.5s ease",
+            },
+            keyframes: {
+              fadeIn: { from: { opacity: "0", transform: "translateY(6px)" }, to: { opacity: "1", transform: "translateY(0)" } },
+              popIn: { from: { opacity: "0", transform: "scale(0.97)" }, to: { opacity: "1", transform: "scale(1)" } },
+              flame: { "0%": { transform: "scale(1)" }, "40%": { transform: "scale(1.35) rotate(-6deg)" }, "100%": { transform: "scale(1)" } },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        background:
+          radial-gradient(1100px 560px at 14% -10%, rgba(249, 115, 22, 0.15), transparent 60%),
+          radial-gradient(900px 620px at 110% 8%, rgba(239, 68, 68, 0.1), transparent 55%),
+          #0c0805;
+      }
+      .brand-font { font-family: "Space Grotesk", sans-serif; }
+      ::-webkit-scrollbar { width: 9px; height: 9px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 9999px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+      .glass { background: rgba(24, 17, 12, 0.62); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255, 255, 255, 0.08); }
+      .glass-soft { background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(255, 255, 255, 0.07); }
+      .glow-btn { box-shadow: 0 10px 30px -8px rgba(249, 115, 22, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.22); }
+      .field { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09); border-radius: 0.7rem; padding: 0.6rem 0.8rem; color: #fff; font-size: 0.9rem; transition: 0.15s; outline: none; }
+      .field:focus { border-color: rgba(249,115,22,0.7); box-shadow: 0 0 0 3px rgba(249,115,22,0.16); }
+      .field::placeholder { color: rgba(255,255,255,0.3); }
+      .lbl { font-size: 0.72rem; font-weight: 600; color: rgba(255,255,255,0.45); padding-left: 0.15rem; text-transform: uppercase; letter-spacing: 0.03em; }
+      .grain::before { content: ""; position: fixed; inset: 0; pointer-events: none; opacity: 0.5; z-index: 0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E"); }
+      .modal-back { background: rgba(6,4,2,0.72); backdrop-filter: blur(6px); }
+      .wd-chip { width: 34px; height: 34px; border-radius: 9999px; display: grid; place-items: center; font-size: 0.72rem; font-weight: 700; cursor: pointer; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.55); transition: 0.14s; }
+      .wd-chip.on { background: linear-gradient(180deg,#fb923c,#ea580c); border-color: transparent; color: #fff; }
+      .hm-cell { width: 100%; aspect-ratio: 1; border-radius: 3px; cursor: pointer; transition: 0.12s; }
+      .hm-cell:hover { outline: 2px solid rgba(255,255,255,0.5); }
+    </style>
+  </head>
+  <body class="dark text-white min-h-screen grain overflow-x-hidden">
+    <header class="relative z-10 px-5 sm:px-8 pt-5 pb-3 flex items-center justify-between gap-4 flex-wrap">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-300 to-brand-600 grid place-items-center glow-btn">
+          <i class="fa-solid fa-fire text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="brand-font text-xl font-bold tracking-tight leading-none">Ember</h1>
+          <p class="text-[11px] text-white/45 mt-0.5 font-medium">Habit &amp; Streak Tracker</p>
+        </div>
+      </div>
+      <button id="addBtn" class="flex items-center gap-2 bg-gradient-to-b from-brand-400 to-brand-600 hover:from-brand-300 text-white font-semibold px-4 py-2.5 rounded-xl glow-btn transition active:scale-95 text-sm"><i class="fa-solid fa-plus"></i> New habit</button>
+    </header>
+
+    <main class="relative z-10 px-5 sm:px-8 pb-16 max-w-[760px] mx-auto">
+      <!-- Today summary -->
+      <div class="glass rounded-2xl p-4 flex items-center gap-4 animate-fade-in">
+        <div class="relative w-16 h-16 flex-shrink-0">
+          <svg viewBox="0 0 36 36" class="w-16 h-16 -rotate-90">
+            <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="3.2"/>
+            <circle id="ring" cx="18" cy="18" r="15.5" fill="none" stroke="url(#rg)" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="97.4" stroke-dashoffset="97.4"/>
+            <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fb923c"/><stop offset="1" stop-color="#ef4444"/></linearGradient></defs>
+          </svg>
+          <div class="absolute inset-0 grid place-items-center"><span id="ringPct" class="text-sm font-bold">0%</span></div>
+        </div>
+        <div class="flex-1">
+          <p class="brand-font text-lg font-bold" id="todayLabel">Today</p>
+          <p class="text-sm text-white/50" id="todaySummary">Nothing due today.</p>
+        </div>
+      </div>
+
+      <!-- Habit list -->
+      <div id="list" class="mt-4 space-y-3"></div>
+
+      <div id="emptyState" class="hidden text-center py-16">
+        <div class="w-20 h-20 mx-auto rounded-3xl bg-white/5 border border-white/10 grid place-items-center mb-5"><i class="fa-solid fa-fire text-3xl text-brand-300"></i></div>
+        <p class="text-lg font-semibold">Light your first streak</p>
+        <p class="text-white/40 text-sm mt-1.5">Add a habit and check in every day to keep the flame alive.</p>
+        <button id="addBtn2" class="mt-6 inline-flex items-center gap-2 bg-gradient-to-b from-brand-400 to-brand-600 text-white font-semibold px-5 py-3 rounded-2xl glow-btn transition active:scale-95"><i class="fa-solid fa-plus"></i> New habit</button>
+      </div>
+    </main>
+
+    <!-- Habit modal -->
+    <div id="habitModal" class="hidden fixed inset-0 z-40 modal-back grid place-items-center p-4">
+      <div class="glass rounded-3xl w-full max-w-md p-6 animate-pop-in">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="brand-font text-lg font-bold" id="modalTitle">New habit</h2>
+          <button id="modalClose" class="w-9 h-9 grid place-items-center glass-soft rounded-lg hover:bg-white/10 transition"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="space-y-4">
+          <div class="flex gap-3">
+            <div>
+              <p class="lbl">Icon</p>
+              <input id="hEmoji" class="field mt-1 text-center text-xl w-16" maxlength="2" value="🎯" />
+            </div>
+            <div class="flex-1">
+              <p class="lbl">Name</p>
+              <input id="hName" class="field mt-1" placeholder="e.g. Read 20 minutes" />
+            </div>
+          </div>
+          <div>
+            <p class="lbl mb-1.5">Colour</p>
+            <div id="colorRow" class="flex gap-2"></div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <p class="lbl">Schedule</p>
+              <label class="flex items-center gap-2 text-xs text-white/50 cursor-pointer"><input type="checkbox" id="hEveryDay" class="accent-brand-500" checked /> Every day</label>
+            </div>
+            <div id="weekdayRow" class="flex justify-between gap-1.5"></div>
+          </div>
+          <p id="hError" class="hidden text-rose-300 text-xs px-1"></p>
+        </div>
+        <div class="flex items-center gap-2 mt-6">
+          <button id="hDelete" class="hidden flex items-center gap-2 text-rose-300 hover:bg-rose-500/10 border border-rose-400/30 font-semibold px-4 py-2.5 rounded-xl transition text-sm"><i class="fa-solid fa-trash-can"></i> Delete</button>
+          <button id="hSave" class="ml-auto flex items-center gap-2 bg-gradient-to-b from-brand-400 to-brand-600 text-white font-semibold px-6 py-2.5 rounded-xl glow-btn transition active:scale-95"><i class="fa-solid fa-check"></i> Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-3 glass px-5 py-3 rounded-2xl text-sm font-medium shadow-2xl">
+      <i id="toastIcon" class="fa-solid fa-circle-info text-brand-300"></i>
+      <span id="toastMsg"></span>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const KEY = "ember.habits.v1";
+      const COLORS = ["#f97316", "#ef4444", "#ec4899", "#8b5cf6", "#3b82f6", "#06b6d4", "#22c55e", "#eab308"];
+      const WD = ["S", "M", "T", "W", "T", "F", "S"]; // getDay: 0=Sun..6=Sat
+
+      let habits = [];
+      try { habits = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) {}
+      let editingId = null;
+      let modalColor = COLORS[0];
+      let modalSchedule = [0, 1, 2, 3, 4, 5, 6];
+
+      function save() { localStorage.setItem(KEY, JSON.stringify(habits)); }
+      function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+      function toast(msg, icon = "circle-info", color = "text-brand-300") {
+        const t = $("toast"); $("toastMsg").textContent = msg; $("toastIcon").className = `fa-solid fa-${icon} ${color}`;
+        t.classList.remove("hidden"); t.classList.add("flex");
+        clearTimeout(t._to); t._to = setTimeout(() => { t.classList.add("hidden"); t.classList.remove("flex"); }, 2200);
+      }
+
+      // ---------- dates ----------
+      function keyOf(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
+      function dateOf(k) { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); }
+      function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+      const todayKey = () => keyOf(new Date());
+
+      // ---------- habit logic ----------
+      function isDue(h, d) { return h.schedule.includes(d.getDay()); }
+      function isDone(h, k) { return !!h.done[k]; }
+      function toggle(h, k) { if (h.done[k]) delete h.done[k]; else h.done[k] = true; save(); }
+
+      function currentStreak(h) {
+        let s = 0; let cur = new Date(); const tk = todayKey();
+        for (let i = 0; i < 500; i++) {
+          const k = keyOf(cur);
+          if (isDue(h, cur)) {
+            if (h.done[k]) s++;
+            else if (k === tk) { /* today still pending — don't break */ }
+            else break;
+          }
+          cur = addDays(cur, -1);
+        }
+        return s;
+      }
+      function bestStreak(h) {
+        const keys = Object.keys(h.done);
+        if (!keys.length) return 0;
+        let start = dateOf(keys.sort()[0]);
+        const end = new Date();
+        let run = 0, best = 0, cur = new Date(start);
+        for (let i = 0; i < 3000 && cur <= end; i++) {
+          if (isDue(h, cur)) { run = h.done[keyOf(cur)] ? run + 1 : 0; best = Math.max(best, run); }
+          cur = addDays(cur, 1);
+        }
+        return best;
+      }
+      function rate30(h) {
+        let due = 0, done = 0, cur = new Date();
+        for (let i = 0; i < 30; i++) { if (isDue(h, cur)) { due++; if (h.done[keyOf(cur)]) done++; } cur = addDays(cur, -1); }
+        return due ? Math.round((done / due) * 100) : 0;
+      }
+
+      // ---------- render ----------
+      function shade(hex, done, due) {
+        if (!due) return "rgba(255,255,255,0.04)";
+        if (!done) return "rgba(255,255,255,0.08)";
+        return hex;
+      }
+
+      function render() {
+        $("emptyState").classList.toggle("hidden", habits.length > 0);
+        $("todayLabel").textContent = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+
+        // today ring
+        const tk = todayKey(), now = new Date();
+        const due = habits.filter((h) => isDue(h, now));
+        const done = due.filter((h) => h.done[tk]);
+        const pct = due.length ? Math.round((done.length / due.length) * 100) : 0;
+        $("ring").setAttribute("stroke-dashoffset", (97.4 * (1 - pct / 100)).toFixed(1));
+        $("ringPct").textContent = pct + "%";
+        $("todaySummary").textContent = due.length ? `${done.length} of ${due.length} habit${due.length > 1 ? "s" : ""} done today` : "Nothing scheduled today — rest up.";
+
+        const list = $("list");
+        list.innerHTML = "";
+        habits.forEach((h) => {
+          const streak = currentStreak(h);
+          const doneToday = h.done[tk];
+          const dueToday = isDue(h, now);
+          const card = document.createElement("div");
+          card.className = "glass rounded-2xl p-4 animate-fade-in";
+          card.dataset.habit = h.id;
+
+          // this week (Sun..Sat of current week)
+          const weekStart = addDays(now, -now.getDay());
+          let week = "";
+          for (let i = 0; i < 7; i++) {
+            const d = addDays(weekStart, i); const k = keyOf(d);
+            const dd = isDue(h, d), dn = h.done[k];
+            const isToday = k === tk;
+            week += `<button data-day="${k}" class="flex flex-col items-center gap-1 group/day" title="${k}">
+              <span class="text-[10px] ${isToday ? "text-brand-300 font-bold" : "text-white/35"}">${WD[d.getDay()]}</span>
+              <span class="w-6 h-6 rounded-full grid place-items-center text-[10px] transition ${isToday ? "ring-2 ring-brand-400" : ""}" style="background:${shade(h.color, dn, dd)};color:${dn ? "#fff" : "rgba(255,255,255,0.4)"}">${dn ? '<i class="fa-solid fa-check"></i>' : ""}</span>
+            </button>`;
+          }
+
+          card.innerHTML = `
+            <div class="flex items-center gap-3.5">
+              <div class="w-12 h-12 rounded-xl grid place-items-center text-2xl flex-shrink-0" style="background:${h.color}22;border:1px solid ${h.color}55">${h.emoji || "🎯"}</div>
+              <div class="min-w-0 flex-1">
+                <p class="font-bold truncate">${escHtml(h.name)}</p>
+                <p class="text-xs mt-0.5 flex items-center gap-2">
+                  <span class="font-semibold ${streak > 0 ? "text-brand-300" : "text-white/35"}" data-streak><span class="inline-block ${doneToday ? "animate-flame" : ""}">🔥</span> ${streak} day${streak === 1 ? "" : "s"}</span>
+                  <span class="text-white/25">·</span>
+                  <span class="text-white/40">${h.schedule.length === 7 ? "Daily" : h.schedule.map((d) => WD[d]).join(" ")}</span>
+                </p>
+              </div>
+              <button data-edit class="w-8 h-8 grid place-items-center glass-soft rounded-lg hover:bg-white/10 transition text-white/50" title="Edit"><i class="fa-solid fa-pen text-xs"></i></button>
+              <button data-check class="w-12 h-12 rounded-2xl grid place-items-center text-xl transition active:scale-90 flex-shrink-0"
+                style="${doneToday ? `background:${h.color};color:#fff` : "background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);border:1px solid rgba(255,255,255,0.1)"}"
+                ${dueToday ? "" : 'disabled title="Not scheduled today" style="opacity:0.4;background:rgba(255,255,255,0.04)"'}>
+                <i class="fa-solid ${doneToday ? "fa-check" : dueToday ? "fa-circle-plus" : "fa-moon"}"></i>
+              </button>
+            </div>
+            <div class="flex justify-between gap-1 mt-3.5">${week}</div>
+            <button data-expand class="w-full mt-3 text-[11px] text-white/40 hover:text-white/70 transition flex items-center justify-center gap-1.5"><i class="fa-solid fa-chevron-down text-[9px]"></i> History &amp; stats</button>
+            <div data-panel class="hidden mt-3 pt-3 border-t border-white/8"></div>`;
+
+          list.appendChild(card);
+
+          card.querySelector("[data-check]").addEventListener("click", () => { if (!dueToday) return; toggle(h, tk); render(); });
+          card.querySelector("[data-edit]").addEventListener("click", () => openEdit(h.id));
+          card.querySelectorAll("[data-day]").forEach((b) => b.addEventListener("click", () => {
+            const k = b.dataset.day; const d = dateOf(k);
+            if (!isDue(h, d)) return toast("Not scheduled that day", "circle-info");
+            toggle(h, k); render();
+          }));
+          card.querySelector("[data-expand]").addEventListener("click", () => togglePanel(card, h));
+        });
+      }
+      function escHtml(s) { return (s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+      function togglePanel(card, h) {
+        const panel = card.querySelector("[data-panel]");
+        const open = !panel.classList.contains("hidden");
+        if (open) { panel.classList.add("hidden"); return; }
+        panel.classList.remove("hidden");
+        // heatmap: last 12 weeks (84 days) ending this week
+        const now = new Date();
+        const end = addDays(now, 6 - now.getDay()); // end of this week (Sat)
+        const weeks = 12;
+        let cols = "";
+        for (let w = weeks - 1; w >= 0; w--) {
+          let col = "";
+          for (let dow = 0; dow < 7; dow++) {
+            const d = addDays(end, -(w * 7) + (dow - 6));
+            const k = keyOf(d);
+            const future = d > now;
+            const dd = isDue(h, d), dn = h.done[k];
+            col += `<div class="hm-cell" data-hm="${k}" title="${k}${dn ? " ✓" : ""}" style="background:${future ? "transparent" : shade(h.color, dn, dd)};${future ? "cursor:default" : ""}"></div>`;
+          }
+          cols += `<div class="grid grid-rows-7 gap-1 flex-1">${col}</div>`;
+        }
+        panel.innerHTML = `
+          <div class="flex items-center gap-4 mb-3 text-xs">
+            <div><span class="text-white/40">Best streak</span> <b class="text-brand-300">${bestStreak(h)}</b></div>
+            <div><span class="text-white/40">30-day rate</span> <b>${rate30(h)}%</b></div>
+            <div><span class="text-white/40">Total</span> <b>${Object.keys(h.done).length}</b></div>
+          </div>
+          <div class="flex gap-1">${cols}</div>`;
+        panel.querySelectorAll("[data-hm]").forEach((c) => c.addEventListener("click", () => {
+          const k = c.dataset.hm; const d = dateOf(k);
+          if (d > new Date()) return;
+          if (!isDue(h, d)) return toast("Not scheduled that day", "circle-info");
+          toggle(h, k); render();
+          // reopen panel to reflect
+          const nc = document.querySelector(`[data-habit="${h.id}"]`);
+          if (nc) togglePanel(nc, h);
+        }));
+      }
+
+      // ---------- modal ----------
+      function buildModalPickers() {
+        const cr = $("colorRow");
+        cr.innerHTML = "";
+        COLORS.forEach((c) => {
+          const b = document.createElement("button");
+          b.className = "w-8 h-8 rounded-full transition";
+          b.style.background = c;
+          b.dataset.color = c;
+          b.addEventListener("click", () => { modalColor = c; paintColorSel(); });
+          cr.appendChild(b);
+        });
+        const wr = $("weekdayRow");
+        wr.innerHTML = "";
+        for (let i = 0; i < 7; i++) {
+          const b = document.createElement("button");
+          b.className = "wd-chip";
+          b.textContent = WD[i];
+          b.dataset.wd = i;
+          b.addEventListener("click", () => {
+            const d = +b.dataset.wd;
+            if (modalSchedule.includes(d)) modalSchedule = modalSchedule.filter((x) => x !== d);
+            else modalSchedule.push(d);
+            $("hEveryDay").checked = modalSchedule.length === 7;
+            paintWeekdaySel();
+          });
+          wr.appendChild(b);
+        }
+      }
+      function paintColorSel() { document.querySelectorAll("#colorRow button").forEach((b) => { b.style.outline = b.dataset.color === modalColor ? "2px solid #fff" : "none"; b.style.outlineOffset = "2px"; }); }
+      function paintWeekdaySel() { document.querySelectorAll("#weekdayRow .wd-chip").forEach((b) => b.classList.toggle("on", modalSchedule.includes(+b.dataset.wd))); }
+      $("hEveryDay").addEventListener("change", (e) => { modalSchedule = e.target.checked ? [0, 1, 2, 3, 4, 5, 6] : []; paintWeekdaySel(); });
+
+      function openModal() { $("habitModal").classList.remove("hidden"); $("habitModal").classList.add("flex"); }
+      function closeModal() { $("habitModal").classList.add("hidden"); $("habitModal").classList.remove("flex"); }
+      $("modalClose").addEventListener("click", closeModal);
+      $("habitModal").addEventListener("click", (e) => { if (e.target === $("habitModal")) closeModal(); });
+
+      function openNew() {
+        editingId = null; modalColor = COLORS[Math.floor(Math.random() * COLORS.length)]; modalSchedule = [0, 1, 2, 3, 4, 5, 6];
+        $("modalTitle").textContent = "New habit"; $("hName").value = ""; $("hEmoji").value = "🎯"; $("hEveryDay").checked = true;
+        $("hDelete").classList.add("hidden"); $("hError").classList.add("hidden");
+        paintColorSel(); paintWeekdaySel(); openModal();
+        setTimeout(() => $("hName").focus(), 40);
+      }
+      function openEdit(id) {
+        const h = habits.find((x) => x.id === id); if (!h) return;
+        editingId = id; modalColor = h.color; modalSchedule = [...h.schedule];
+        $("modalTitle").textContent = "Edit habit"; $("hName").value = h.name; $("hEmoji").value = h.emoji || "🎯";
+        $("hEveryDay").checked = h.schedule.length === 7;
+        $("hDelete").classList.remove("hidden"); $("hError").classList.add("hidden");
+        paintColorSel(); paintWeekdaySel(); openModal();
+      }
+      $("addBtn").addEventListener("click", openNew);
+      $("addBtn2").addEventListener("click", openNew);
+
+      $("hSave").addEventListener("click", () => {
+        const name = $("hName").value.trim();
+        if (!name) { $("hError").textContent = "Give your habit a name."; $("hError").classList.remove("hidden"); return; }
+        if (!modalSchedule.length) { $("hError").textContent = "Pick at least one day."; $("hError").classList.remove("hidden"); return; }
+        const emoji = $("hEmoji").value.trim() || "🎯";
+        if (editingId) {
+          const h = habits.find((x) => x.id === editingId);
+          Object.assign(h, { name, emoji, color: modalColor, schedule: [...modalSchedule].sort() });
+        } else {
+          habits.push({ id: uid(), name, emoji, color: modalColor, schedule: [...modalSchedule].sort(), created: todayKey(), done: {} });
+        }
+        save(); closeModal(); render();
+        toast(editingId ? "Habit updated" : "Habit added", "circle-check", "text-emerald-300");
+      });
+      $("hDelete").addEventListener("click", () => {
+        if (!editingId) return;
+        if (!confirm("Delete this habit and its history?")) return;
+        habits = habits.filter((x) => x.id !== editingId);
+        save(); closeModal(); render();
+      });
+
+      // ---------- init ----------
+      buildModalPickers();
+      render();
+    </script>
+  </body>
+</html>
