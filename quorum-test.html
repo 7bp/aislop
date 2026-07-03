@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quorum — Scrum Planning Poker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <!-- PeerJS: free public WebRTC broker for peer-to-peer multiplayer (no account, no server of ours) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet" />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: { extend: {
+          colors: { brand: { 50:"#f5f3ff",100:"#ede9fe",200:"#ddd6fe",300:"#c4b5fd",400:"#a78bfa",500:"#8b5cf6",600:"#7c3aed",700:"#6d28d9",800:"#5b21b6",900:"#4c1d95" } },
+          fontFamily: { sans:["Plus Jakarta Sans","sans-serif"], brand:["Space Grotesk","sans-serif"], mono:["JetBrains Mono","monospace"] },
+          animation: { "fade-in":"fadeIn 0.3s ease both", "pop-in":"popIn 0.22s cubic-bezier(.2,.9,.3,1.25) both", "flip":"flip 0.4s ease both" },
+          keyframes: {
+            fadeIn:{from:{opacity:"0",transform:"translateY(6px)"},to:{opacity:"1",transform:"translateY(0)"}},
+            popIn:{from:{opacity:"0",transform:"scale(0.9)"},to:{opacity:"1",transform:"scale(1)"}},
+            flip:{from:{transform:"rotateY(90deg)",opacity:"0"},to:{transform:"rotateY(0)",opacity:"1"}},
+          },
+        } },
+      };
+    </script>
+    <style>
+      body { font-family:"Plus Jakarta Sans",sans-serif; min-height:100vh;
+        background: radial-gradient(1100px 560px at 14% -10%, rgba(139,92,246,0.16), transparent 60%), radial-gradient(900px 620px at 110% 8%, rgba(236,72,153,0.1), transparent 55%), #0a0710; }
+      .brand-font { font-family:"Space Grotesk",sans-serif; }
+      ::-webkit-scrollbar{width:9px;height:9px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:9999px}
+      .glass{background:rgba(20,16,28,.62);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.08)}
+      .glass-soft{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+      .glow-btn{box-shadow:0 10px 30px -8px rgba(139,92,246,.55),inset 0 1px 0 rgba(255,255,255,.22)}
+      .field{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:.7rem;padding:.6rem .8rem;color:#fff;font-size:.9rem;transition:.15s;outline:none}
+      .field:focus{border-color:rgba(139,92,246,.7);box-shadow:0 0 0 3px rgba(139,92,246,.16)}
+      .field::placeholder{color:rgba(255,255,255,.3)}
+      .lbl{font-size:.72rem;font-weight:600;color:rgba(255,255,255,.45);padding-left:.15rem;text-transform:uppercase;letter-spacing:.03em}
+      .pcard{ width:60px;height:88px;border-radius:12px;display:grid;place-items:center;font-family:"JetBrains Mono",monospace;font-weight:700;font-size:1.4rem;transition:.18s;cursor:pointer;border:1.5px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04) }
+      .pcard:hover{transform:translateY(-6px);border-color:rgba(139,92,246,.6)}
+      .pcard.sel{background:linear-gradient(180deg,#a78bfa,#7c3aed);border-color:transparent;color:#fff;transform:translateY(-10px);box-shadow:0 12px 30px -8px rgba(139,92,246,.7)}
+      .seat-card{ width:52px;height:74px;border-radius:10px;display:grid;place-items:center;font-family:"JetBrains Mono",monospace;font-weight:700;font-size:1.15rem }
+      .grain::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E")}
+    </style>
+  </head>
+  <body class="dark text-white grain">
+    <!-- ===== LOBBY ===== -->
+    <div id="lobby" class="relative z-10 min-h-screen grid place-items-center px-5 py-10">
+      <div class="w-full max-w-md">
+        <div class="text-center mb-7">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 grid place-items-center glow-btn mb-4"><i class="fa-solid fa-diamond text-white text-2xl"></i></div>
+          <h1 class="brand-font text-3xl font-bold tracking-tight">Quorum</h1>
+          <p class="text-white/45 text-sm mt-1">Scrum Planning Poker · real-time, peer-to-peer</p>
+        </div>
+
+        <div class="glass rounded-3xl p-6 space-y-4 animate-fade-in">
+          <div class="flex gap-3">
+            <div>
+              <p class="lbl">Colour</p>
+              <input id="lColor" type="color" value="#8b5cf6" class="w-[52px] h-[52px] mt-1 rounded-xl bg-transparent border border-white/10 cursor-pointer p-1" />
+            </div>
+            <div class="flex-1">
+              <p class="lbl">Your name</p>
+              <input id="lName" class="field mt-1 !py-3" placeholder="e.g. Alex" maxlength="24" />
+            </div>
+          </div>
+          <label class="flex items-center gap-2.5 text-sm text-white/60 cursor-pointer px-1">
+            <input type="checkbox" id="lSpectator" class="accent-brand-500 w-4 h-4" /> Join as spectator (watch, don't vote)
+          </label>
+
+          <div class="pt-2 border-t border-white/10">
+            <div id="joinBlock" class="hidden mb-3">
+              <p class="lbl">Room code</p>
+              <input id="lCode" class="field mt-1 !py-3 uppercase tracking-[0.3em] font-mono text-center text-lg" placeholder="ABCD" maxlength="6" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <button id="createBtn" class="flex items-center justify-center gap-2 bg-gradient-to-b from-brand-400 to-brand-600 hover:from-brand-300 text-white font-semibold px-4 py-3 rounded-xl glow-btn transition active:scale-95"><i class="fa-solid fa-plus"></i> Create room</button>
+              <button id="joinBtn" class="flex items-center justify-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-3 rounded-xl transition active:scale-95"><i class="fa-solid fa-right-to-bracket"></i> Join room</button>
+            </div>
+            <p id="lobbyErr" class="hidden text-rose-300 text-xs mt-3 px-1 flex items-center gap-1.5"><i class="fa-solid fa-circle-exclamation"></i><span></span></p>
+          </div>
+        </div>
+        <p class="text-center text-[11px] text-white/25 mt-5 leading-relaxed px-4">
+          Multiplayer runs directly between browsers over WebRTC using the free PeerJS broker —
+          no account and nothing stored on a server. Share the room link with your team to vote together.
+        </p>
+      </div>
+    </div>
+
+
+    <!-- ===== ROOM ===== -->
+    <div id="room" class="hidden relative z-10 min-h-screen flex flex-col">
+      <header class="glass px-5 sm:px-7 py-3 flex items-center gap-3 flex-wrap">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 grid place-items-center glow-btn"><i class="fa-solid fa-diamond text-white text-sm"></i></div>
+          <div class="leading-none">
+            <h1 class="brand-font text-base font-bold tracking-tight">Quorum</h1>
+            <p class="text-[10px] text-white/40 mt-0.5">Planning Poker</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 glass-soft rounded-xl px-3 py-1.5">
+          <span class="text-[10px] uppercase tracking-wider text-white/40 font-bold">Room</span>
+          <span id="roomCode" class="font-mono font-bold tracking-[0.2em] text-brand-300">----</span>
+          <button id="copyLink" class="text-white/40 hover:text-white transition ml-1" title="Copy invite link"><i class="fa-solid fa-link text-xs"></i></button>
+        </div>
+        <div class="flex items-center gap-1.5 text-xs" id="connStatus">
+          <span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="text-white/50">connecting…</span>
+        </div>
+        <div class="ml-auto flex items-center gap-2">
+          <button id="spectateToggle" class="glass-soft hover:bg-white/10 font-semibold px-3.5 py-2 rounded-lg transition text-sm" title="Toggle spectator"><i class="fa-solid fa-eye"></i></button>
+          <button id="leaveBtn" class="glass-soft hover:bg-rose-500/20 hover:text-rose-200 font-semibold px-3.5 py-2 rounded-lg transition text-sm"><i class="fa-solid fa-arrow-right-from-bracket"></i> <span class="hidden sm:inline">Leave</span></button>
+        </div>
+      </header>
+
+      <main class="flex-1 px-5 sm:px-8 py-5 max-w-[1100px] w-full mx-auto">
+        <!-- Story -->
+        <div class="glass rounded-2xl p-4 flex items-center gap-3 flex-wrap animate-fade-in">
+          <i class="fa-solid fa-ticket text-brand-300"></i>
+          <input id="storyInput" class="flex-1 min-w-[180px] bg-transparent outline-none font-semibold text-lg focus:bg-white/5 rounded px-2 py-1" placeholder="What are we estimating? (facilitator sets the story)" />
+          <span id="roundBadge" class="text-xs font-mono text-white/40"></span>
+        </div>
+
+        <!-- Table -->
+        <div class="glass rounded-3xl p-6 mt-4 min-h-[220px] relative">
+          <div id="seats" class="flex flex-wrap gap-4 justify-center"></div>
+          <div id="spectatorRow" class="hidden mt-5 pt-4 border-t border-white/8 flex flex-wrap gap-2 justify-center items-center"></div>
+
+          <!-- reveal / reset controls -->
+          <div class="flex items-center justify-center gap-3 mt-6">
+            <button id="revealBtn" class="hidden items-center gap-2 bg-gradient-to-b from-brand-400 to-brand-600 hover:from-brand-300 text-white font-semibold px-6 py-3 rounded-2xl glow-btn transition active:scale-95"><i class="fa-solid fa-eye"></i> Reveal cards</button>
+            <button id="resetBtn" class="hidden items-center gap-2 glass-soft hover:bg-white/10 font-semibold px-5 py-3 rounded-2xl transition active:scale-95"><i class="fa-solid fa-rotate-right"></i> New round</button>
+            <p id="waitMsg" class="text-sm text-white/40"></p>
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div id="results" class="hidden glass rounded-2xl p-5 mt-4 animate-fade-in">
+          <div class="flex items-center gap-6 flex-wrap">
+            <div class="text-center"><p class="text-3xl font-bold brand-font text-brand-300" id="rAvg">–</p><p class="text-[11px] text-white/40 mt-0.5">Average</p></div>
+            <div class="text-center"><p class="text-3xl font-bold brand-font" id="rMedian">–</p><p class="text-[11px] text-white/40 mt-0.5">Median</p></div>
+            <div class="text-center"><p class="text-3xl font-bold brand-font" id="rRange">–</p><p class="text-[11px] text-white/40 mt-0.5">Low → High</p></div>
+            <div id="consensusBadge" class="hidden ml-auto flex items-center gap-2 bg-emerald-400/15 text-emerald-300 font-bold px-4 py-2 rounded-xl"><i class="fa-solid fa-check-double"></i> Consensus!</div>
+          </div>
+          <div id="distro" class="mt-4 space-y-1.5"></div>
+        </div>
+
+        
+        <!-- Your hand -->
+        <div class="mt-6">
+          <p class="text-center text-xs text-white/40 mb-3" id="handLabel">Pick your estimate</p>
+          <div id="hand" class="flex flex-wrap gap-2.5 justify-center"></div>
+        </div>
+
+        <!-- Facilitator controls -->
+        <div id="hostControls" class="hidden glass rounded-2xl p-3 mt-6 flex items-center gap-3 flex-wrap justify-center text-sm">
+          <span class="text-[11px] uppercase tracking-wider text-white/40 font-bold flex items-center gap-1.5"><i class="fa-solid fa-crown text-amber-300"></i> Facilitator</span>
+          <div class="relative">
+            <select id="deckSelect" class="field !py-2 appearance-none pr-8 text-sm"></select>
+            <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/40 pointer-events-none"></i>
+          </div>
+          <label class="flex items-center gap-2 text-white/60 cursor-pointer"><input type="checkbox" id="autoReveal" class="accent-brand-500" /> Auto-reveal when all voted</label>
+        </div>
+      </main>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-3 glass px-5 py-3 rounded-2xl text-sm font-medium shadow-2xl">
+      <i id="toastIcon" class="fa-solid fa-circle-info text-brand-300"></i><span id="toastMsg"></span>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const params = new URLSearchParams(location.search);
+
+      // ---- optional self-host override (also enables local testing) ----
+      function peerOptions() {
+        const o = { debug: 1 };
+        if (params.get("ph")) { o.host = params.get("ph"); o.port = +(params.get("pp") || 9000); o.path = params.get("ppath") || "/"; o.secure = params.get("psec") === "1"; o.key = params.get("pkey") || "peerjs"; }
+        return o;
+      }
+      const ID_PREFIX = "aislopquorum-";
+
+      const DECKS = {
+        fib: { name: "Fibonacci", cards: ["0","1","2","3","5","8","13","21","34","55","?","☕"] },
+        modfib: { name: "Modified Fibonacci", cards: ["0","½","1","2","3","5","8","13","20","40","100","?","☕"] },
+        tshirt: { name: "T-shirt sizes", cards: ["XS","S","M","L","XL","XXL","?","☕"] },
+        pow2: { name: "Powers of 2", cards: ["0","1","2","4","8","16","32","64","?","☕"] },
+        seq: { name: "Sequential", cards: ["0","1","2","3","4","5","6","7","8","9","10","?","☕"] },
+      };
+      function numVal(v) { if (v === "½") return 0.5; const n = parseFloat(v); return isNaN(n) ? null : n; }
+
+      function toast(msg, icon = "circle-info", color = "text-brand-300") {
+        const t = $("toast"); $("toastMsg").textContent = msg; $("toastIcon").className = `fa-solid fa-${icon} ${color}`;
+        t.classList.remove("hidden"); t.classList.add("flex");
+        clearTimeout(t._to); t._to = setTimeout(() => { t.classList.add("hidden"); t.classList.remove("flex"); }, 2600);
+      }
+
+      // ---- identity ----
+      let me = { id: "me-" + Math.random().toString(36).slice(2, 8), name: "", color: "#8b5cf6", spectator: false };
+      try { const s = JSON.parse(localStorage.getItem("quorum.me") || "{}"); if (s.name) { me.name = s.name; me.color = s.color || me.color; } } catch (e) {}
+      $("lName").value = me.name; $("lColor").value = me.color;
+
+      // ---- room state ----
+      let isHost = false;
+      let peer = null;
+      let hostConn = null; // client → host
+      const conns = {}; // host: peerId → conn
+      let room = { code: "", story: "", deckId: "fib", revealed: false, autoReveal: false, round: 1, players: {} };
+      // players[id] = { id, name, color, spectator, online, vote }
+
+      const genCode = () => { const A = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; let s = ""; for (let i = 0; i < 4; i++) s += A[Math.floor(Math.random() * A.length)]; return s; };
+
+      // ---------- host: state distribution ----------
+      function activeVoters() { return Object.values(room.players).filter((p) => !p.spectator && p.online); }
+      function buildStateFor(rid) {
+        return {
+          code: room.code, story: room.story, deckId: room.deckId, revealed: room.revealed,
+          autoReveal: room.autoReveal, round: room.round, hostId: me.id,
+          players: Object.values(room.players).map((p) => ({
+            id: p.id, name: p.name, color: p.color, spectator: !!p.spectator, online: !!p.online,
+            isHost: p.id === me.id, voted: p.vote != null,
+            vote: room.revealed ? p.vote : p.id === rid ? p.vote : null,
+          })),
+        };
+      }
+      function broadcast() {
+        Object.values(conns).forEach((c) => { if (c.open) try { c.send({ type: "state", state: buildStateFor(c.peer) }); } catch (e) {} });
+        applyState(buildStateFor(me.id)); // host renders its own view
+      }
+      function maybeAutoReveal() {
+        if (!room.autoReveal || room.revealed) return;
+        const v = activeVoters(); if (v.length && v.every((p) => p.vote != null)) { room.revealed = true; }
+      }
+
+      // host applies an action from a given player id
+      function hostApply(fromId, a) {
+        const p = room.players[fromId];
+        switch (a.type) {
+          case "hello":
+            room.players[fromId] = { id: fromId, name: (a.name || "Player").slice(0, 24), color: a.color || "#8b5cf6", spectator: !!a.spectator, online: true, vote: null };
+            break;
+          case "vote": if (p && !p.spectator && !room.revealed) { p.vote = a.value; maybeAutoReveal(); } break;
+          case "unvote": if (p && !room.revealed) p.vote = null; break;
+          case "setName": if (p) p.name = (a.name || p.name).slice(0, 24); break;
+          case "setColor": if (p) p.color = a.color || p.color; break;
+          case "setSpectator": if (p) { p.spectator = !!a.value; if (p.spectator) p.vote = null; } break;
+          // host-only
+          case "reveal": if (fromId === me.id) room.revealed = true; break;
+          case "reset": if (fromId === me.id) { room.revealed = false; room.round++; Object.values(room.players).forEach((x) => (x.vote = null)); } break;
+          case "story": if (fromId === me.id) room.story = (a.value || "").slice(0, 140); break;
+          case "deck": if (fromId === me.id && DECKS[a.value]) { room.deckId = a.value; room.revealed = false; Object.values(room.players).forEach((x) => (x.vote = null)); } break;
+          case "autoReveal": if (fromId === me.id) { room.autoReveal = !!a.value; maybeAutoReveal(); } break;
+          case "kick": if (fromId === me.id && a.value && conns[a.value]) { try { conns[a.value].send({ type: "kicked" }); } catch (e) {} setTimeout(() => conns[a.value] && conns[a.value].close(), 60); delete room.players[a.value]; } break;
+        }
+        broadcast();
+      }
+
+      // ---------- connection setup ----------
+      function startHost(code) {
+        isHost = true; room.code = code;
+        room.players[me.id] = { id: me.id, name: me.name, color: me.color, spectator: me.spectator, online: true, vote: null };
+        peer = new Peer(ID_PREFIX + code, peerOptions());
+        peer.on("open", () => { setConn(true); enterRoom(); broadcast(); });
+        peer.on("connection", (conn) => {
+          conns[conn.peer] = conn;
+          conn.on("data", (d) => hostApply(conn.peer, d));
+          conn.on("close", () => { if (room.players[conn.peer]) room.players[conn.peer].online = false; delete conns[conn.peer]; broadcast(); });
+          conn.on("error", () => {});
+        });
+        peer.on("error", (e) => {
+          if (e.type === "unavailable-id") { peer.destroy(); startHost(genCode()); } // collision → new code
+          else { setConn(false); toast("Connection error: " + e.type, "triangle-exclamation", "text-amber-300"); }
+        });
+        peer.on("disconnected", () => { setConn(false); try { peer.reconnect(); } catch (e) {} });
+      }
+      function startClient(code) {
+        isHost = false; room.code = code;
+        peer = new Peer(peerOptions());
+        peer.on("open", () => {
+          hostConn = peer.connect(ID_PREFIX + code, { reliable: true });
+          hostConn.on("open", () => { setConn(true); enterRoom(); hostConn.send({ type: "hello", name: me.name, color: me.color, spectator: me.spectator }); });
+          hostConn.on("data", (d) => { if (d.type === "state") applyState(d.state); else if (d.type === "kicked") { toast("You were removed from the room", "user-slash", "text-amber-300"); setTimeout(leave, 800); } });
+          hostConn.on("close", () => { setConn(false); $("waitMsg").textContent = "Host disconnected — the room is closed."; });
+          hostConn.on("error", () => setConn(false));
+        });
+        peer.on("error", (e) => {
+          if (e.type === "peer-unavailable") lobbyErr("No room with that code (or the host left).");
+          else { lobbyErr("Connection error: " + e.type); }
+          setConn(false);
+        });
+      }
+      function sendToHost(a) { if (isHost) hostApply(me.id, a); else if (hostConn && hostConn.open) hostConn.send(a); }
+
+      function setConn(ok) {
+        const s = $("connStatus");
+        s.innerHTML = ok
+          ? '<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span class="text-white/50">connected</span>'
+          : '<span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="text-white/50">connecting…</span>';
+      }
+
+      // ---------- render ----------
+      let view = null; // latest state
+      function applyState(state) { view = state; render(); }
+
+      function render() {
+        if (!view) return;
+        $("roomCode").textContent = view.code;
+        $("roundBadge").textContent = "Round " + view.round;
+        if (document.activeElement !== $("storyInput")) $("storyInput").value = view.story || "";
+        $("storyInput").readOnly = !amHost();
+
+        // deck / hand
+        const deck = DECKS[view.deckId] || DECKS.fib;
+        const myP = view.players.find((p) => p.id === me.id);
+        const mySpec = myP ? myP.spectator : me.spectator;
+        const hand = $("hand");
+        hand.innerHTML = "";
+        if (mySpec) { $("handLabel").textContent = "You're spectating — no vote"; }
+        else if (view.revealed) { $("handLabel").textContent = "Cards are on the table"; }
+        else { $("handLabel").textContent = "Pick your estimate"; }
+        deck.cards.forEach((c) => {
+          const b = document.createElement("button");
+          b.className = "pcard" + (myP && myP.vote === c ? " sel" : "");
+          b.textContent = c; b.disabled = mySpec || view.revealed;
+          if (mySpec || view.revealed) b.style.opacity = "0.5", b.style.cursor = "default";
+          b.addEventListener("click", () => { if (myP && myP.vote === c) sendToHost({ type: "unvote" }); else sendToHost({ type: "vote", value: c }); });
+          hand.appendChild(b);
+        });
+
+        // seats (voters)
+        const seats = $("seats"); seats.innerHTML = "";
+        const voters = view.players.filter((p) => !p.spectator);
+        voters.forEach((p) => {
+          const seat = document.createElement("div");
+          seat.className = "flex flex-col items-center gap-2 animate-pop-in";
+          let card;
+          if (view.revealed) {
+            const val = p.vote;
+            card = `<div class="seat-card ${p.voted ? "" : "opacity-40"}" style="background:${p.voted ? "#fff" : "rgba(255,255,255,0.05)"};color:#1a1a1a;animation:flip .4s ease both">${val != null ? esc(val) : "—"}</div>`;
+          } else {
+            card = `<div class="seat-card" style="background:${p.voted ? "linear-gradient(180deg,#a78bfa,#7c3aed)" : "rgba(255,255,255,0.05)"};border:1.5px solid rgba(255,255,255,${p.voted ? 0 : 0.12});color:#fff">${p.voted ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-regular fa-clock text-white/30"></i>'}</div>`;
+          }
+          seat.innerHTML = `${card}
+            <div class="flex items-center gap-1.5 max-w-[92px]">
+              ${p.isHost ? '<i class="fa-solid fa-crown text-amber-300 text-[10px]"></i>' : ""}
+              <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:${p.color};${p.online ? "" : "opacity:.3"}"></span>
+              <span class="text-xs font-medium truncate ${p.online ? "" : "text-white/30 line-through"}">${esc(p.name)}${p.id === me.id ? " (you)" : ""}</span>
+              ${amHost() && p.id !== me.id ? `<button data-kick="${p.id}" class="text-white/25 hover:text-rose-300 transition text-[10px]" title="Remove"><i class="fa-solid fa-xmark"></i></button>` : ""}
+            </div>`;
+          seats.appendChild(seat);
+        });
+        seats.querySelectorAll("[data-kick]").forEach((b) => b.addEventListener("click", () => sendToHost({ type: "kick", value: b.dataset.kick })));
+
+        // spectators
+        const specs = view.players.filter((p) => p.spectator);
+        const srow = $("spectatorRow");
+        srow.classList.toggle("hidden", specs.length === 0);
+        srow.innerHTML = specs.length ? '<span class="text-[11px] text-white/35 mr-1"><i class="fa-solid fa-eye"></i> Spectating:</span>' + specs.map((p) => `<span class="text-xs glass-soft rounded-full px-2.5 py-1">${esc(p.name)}${p.id === me.id ? " (you)" : ""}</span>`).join("") : "";
+
+        // controls
+        const host = amHost();
+        $("hostControls").classList.toggle("hidden", !host);
+        $("revealBtn").classList.toggle("hidden", !host || view.revealed);
+        $("revealBtn").classList.toggle("flex", host && !view.revealed);
+        $("resetBtn").classList.toggle("hidden", !host || !view.revealed);
+        $("resetBtn").classList.toggle("flex", host && view.revealed);
+        const votedCount = voters.filter((p) => p.voted).length;
+        $("revealBtn").disabled = votedCount === 0;
+        $("waitMsg").textContent = view.revealed ? "" : `${votedCount}/${voters.length} voted` + (host ? "" : votedCount ? " · waiting for facilitator…" : "");
+        if (host) { $("deckSelect").value = view.deckId; $("autoReveal").checked = view.autoReveal; }
+
+        // spectate toggle icon
+        $("spectateToggle").innerHTML = mySpec ? '<i class="fa-solid fa-eye-slash"></i>' : '<i class="fa-solid fa-eye"></i>';
+        $("spectateToggle").title = mySpec ? "Become a voter" : "Become a spectator";
+
+        // results
+        renderResults(view, deck);
+      }
+      function esc(s){return (s+"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+      function amHost() { return view && view.hostId === me.id; }
+
+      function renderResults(view, deck) {
+        const box = $("results");
+        if (!view.revealed) { box.classList.add("hidden"); return; }
+        box.classList.remove("hidden");
+        const voters = view.players.filter((p) => !p.spectator && p.vote != null);
+        const nums = voters.map((p) => numVal(p.vote)).filter((n) => n != null);
+        const avg = nums.length ? (nums.reduce((a, b) => a + b, 0) / nums.length) : null;
+        const sorted = [...nums].sort((a, b) => a - b);
+        const median = sorted.length ? (sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2) : null;
+        $("rAvg").textContent = avg == null ? "–" : (Math.round(avg * 10) / 10);
+        $("rMedian").textContent = median == null ? "–" : median;
+        $("rRange").textContent = sorted.length ? `${sorted[0]} → ${sorted[sorted.length - 1]}` : "–";
+        const distinct = new Set(voters.map((p) => p.vote));
+        $("consensusBadge").classList.toggle("hidden", !(voters.length > 1 && distinct.size === 1));
+
+        // distribution
+        const counts = {};
+        voters.forEach((p) => (counts[p.vote] = (counts[p.vote] || 0) + 1));
+        const max = Math.max(1, ...Object.values(counts));
+        const order = deck.cards.filter((c) => counts[c]);
+        $("distro").innerHTML = order.map((c) => `
+          <div class="flex items-center gap-3">
+            <div class="seat-card !w-9 !h-12 !text-sm" style="background:#fff;color:#1a1a1a">${esc(c)}</div>
+            <div class="flex-1 h-6 rounded-lg bg-white/5 overflow-hidden"><div class="h-full bg-gradient-to-r from-brand-400 to-brand-600 rounded-lg transition-all" style="width:${(counts[c] / max) * 100}%"></div></div>
+            <span class="text-xs font-mono text-white/50 w-16 text-right">${counts[c]} vote${counts[c] > 1 ? "s" : ""}</span>
+          </div>`).join("");
+      }
+
+      // ---------- UI wiring ----------
+      function readIdentity() {
+        me.name = ($("lName").value.trim() || "Player").slice(0, 24);
+        me.color = $("lColor").value;
+        me.spectator = $("lSpectator").checked;
+        localStorage.setItem("quorum.me", JSON.stringify({ name: me.name, color: me.color }));
+      }
+      function lobbyErr(m) { const e = $("lobbyErr"); e.querySelector("span").textContent = m; e.classList.remove("hidden"); e.classList.add("flex"); }
+
+      $("joinBtn").addEventListener("click", () => {
+        if ($("joinBlock").classList.contains("hidden")) { $("joinBlock").classList.remove("hidden"); $("lCode").focus(); return; }
+        const code = $("lCode").value.trim().toUpperCase();
+        if (code.length < 3) return lobbyErr("Enter the room code your team shared.");
+        readIdentity(); startClient(code);
+      });
+      $("createBtn").addEventListener("click", () => { readIdentity(); startHost(genCode()); });
+      $("lCode").addEventListener("keydown", (e) => { if (e.key === "Enter") $("joinBtn").click(); });
+
+      function enterRoom() {
+        $("lobby").classList.add("hidden"); $("room").classList.remove("hidden");
+        // build deck select
+        const ds = $("deckSelect"); ds.innerHTML = Object.entries(DECKS).map(([k, d]) => `<option value="${k}">${d.name}</option>`).join("");
+        history.replaceState(null, "", "?room=" + room.code);
+      }
+      function leave() { try { peer && peer.destroy(); } catch (e) {} location.href = location.pathname; }
+      $("leaveBtn").addEventListener("click", leave);
+      $("copyLink").addEventListener("click", () => { const url = location.origin + location.pathname + "?room=" + room.code; navigator.clipboard.writeText(url).then(() => toast("Invite link copied", "clipboard-check", "text-emerald-300"), () => toast(url, "link")); });
+
+      $("revealBtn").addEventListener("click", () => sendToHost({ type: "reveal" }));
+      $("resetBtn").addEventListener("click", () => sendToHost({ type: "reset" }));
+      $("storyInput").addEventListener("input", () => { if (amHost()) sendToHost({ type: "story", value: $("storyInput").value }); });
+      $("deckSelect").addEventListener("change", () => sendToHost({ type: "deck", value: $("deckSelect").value }));
+      $("autoReveal").addEventListener("change", () => sendToHost({ type: "autoReveal", value: $("autoReveal").checked }));
+      $("spectateToggle").addEventListener("click", () => { const myP = view.players.find((p) => p.id === me.id); sendToHost({ type: "setSpectator", value: !(myP && myP.spectator) }); });
+
+      // prefill room code from ?room=
+      if (params.get("room")) { $("joinBlock").classList.remove("hidden"); $("lCode").value = params.get("room").toUpperCase(); setTimeout(() => $("lName").focus(), 60); }
+      if (!window.Peer) lobbyErr("Couldn't load the PeerJS library (check your connection).");
+    </script>
+  </body>
+</html>
