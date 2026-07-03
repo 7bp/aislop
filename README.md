@@ -10,3 +10,4 @@ A curated collection of AI-built alternatives to everyday tools and applications
 - ~~Character.ai~~ [Conclave](Conclave.000.001.000.html) ([Try](https://7bp.github.io/aislop/Conclave.000.001.000.html)) - Multilayered AI Group Chat (BYOK)
 - ~~Loom~~ [Reelight](Reelight.000.001.000.html) ([Try](https://7bp.github.io/aislop/Reelight.000.001.000.html)) - Screen &amp; camera recording studio, 100% on-device
 - ~~Smallpdf~~ [Quire](Quire.000.001.000.html) ([Try](https://7bp.github.io/aislop/Quire.000.001.000.html)) - Private PDF studio: merge, reorder, rotate &amp; delete pages, nothing uploaded
+- ~~TinyPNG~~ [Plume](Plume.000.001.000.html) ([Try](https://7bp.github.io/aislop/Plume.000.001.000.html)) - Batch image compressor &amp; converter (WebP/JPEG/PNG), fully on-device
