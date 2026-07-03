@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Quire — Private PDF Studio</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- PDF engines -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: "#eef4ff",
+                100: "#dbe6ff",
+                200: "#bfd3ff",
+                300: "#93b4ff",
+                400: "#6089ff",
+                500: "#3b62ff",
+                600: "#2442f5",
+                700: "#1d32d8",
+                800: "#1e2caf",
+                900: "#1f2d8a",
+              },
+            },
+            fontFamily: {
+              sans: ["Plus Jakarta Sans", "sans-serif"],
+              brand: ["Space Grotesk", "sans-serif"],
+            },
+            animation: {
+              "fade-in": "fadeIn 0.35s ease both",
+              "pop-in": "popIn 0.28s cubic-bezier(.2,.9,.3,1.25) both",
+            },
+            keyframes: {
+              fadeIn: { from: { opacity: "0", transform: "translateY(6px)" }, to: { opacity: "1", transform: "translateY(0)" } },
+              popIn: { from: { opacity: "0", transform: "scale(0.9)" }, to: { opacity: "1", transform: "scale(1)" } },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Plus Jakarta Sans", sans-serif;
+        background:
+          radial-gradient(1100px 560px at 12% -10%, rgba(59, 98, 255, 0.14), transparent 60%),
+          radial-gradient(900px 620px at 108% 8%, rgba(0, 190, 160, 0.1), transparent 55%),
+          #0a0b12;
+      }
+      .brand-font { font-family: "Space Grotesk", sans-serif; }
+      ::-webkit-scrollbar { width: 9px; height: 9px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.14); border-radius: 9999px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+      .glass {
+        background: rgba(18, 20, 30, 0.6);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .glass-soft { background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(255, 255, 255, 0.07); }
+      .glow-btn {
+        box-shadow: 0 10px 30px -8px rgba(59, 98, 255, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      }
+      /* page card */
+      .page-card {
+        transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+      }
+      .page-card.dragging { opacity: 0.4; }
+      .page-card.drop-target { transform: translateX(6px); }
+      .page-card.selected {
+        border-color: rgba(59, 98, 255, 0.9) !important;
+        box-shadow: 0 0 0 2px rgba(59, 98, 255, 0.5), 0 12px 30px -12px rgba(59, 98, 255, 0.8);
+      }
+      .thumb-canvas { transition: transform 0.25s cubic-bezier(.2,.9,.3,1.3); }
+      .drop-glow { border-color: rgba(59, 98, 255, 0.8) !important; background: rgba(59, 98, 255, 0.08) !important; }
+      .grain::before {
+        content: ""; position: fixed; inset: 0; pointer-events: none; opacity: 0.5; z-index: 0;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+      }
+    </style>
+  </head>
+  <body class="dark text-white min-h-screen grain overflow-x-hidden">
+    <!-- Header -->
+    <header class="relative z-10 px-5 sm:px-8 pt-6 pb-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 grid place-items-center glow-btn">
+          <i class="fa-solid fa-layer-group text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="brand-font text-xl font-bold tracking-tight leading-none">Quire</h1>
+          <p class="text-[11px] text-white/45 mt-0.5 font-medium">Private PDF Studio</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="https://github.com/7bp/aislop" target="_blank" rel="noopener"
+          class="hidden sm:flex items-center gap-2 text-xs text-white/50 hover:text-white transition px-3 py-2 rounded-xl glass-soft">
+          <i class="fa-brands fa-github"></i> aislop
+        </a>
+        <span class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-300 bg-emerald-400/10 border border-emerald-400/20 px-3 py-2 rounded-xl">
+          <i class="fa-solid fa-lock"></i> 100% local · no upload
+        </span>
+      </div>
+    </header>
+
+    <main class="relative z-10 px-5 sm:px-8 pb-40 max-w-[1400px] mx-auto">
+      <!-- Toolbar -->
+      <div class="glass rounded-2xl p-2.5 sticky top-3 z-30 flex items-center gap-2 flex-wrap animate-fade-in">
+        <button id="btnAdd" class="flex items-center gap-2 bg-gradient-to-b from-brand-500 to-brand-600 hover:from-brand-400 text-white font-semibold px-4 py-2.5 rounded-xl glow-btn transition active:scale-95 text-sm">
+          <i class="fa-solid fa-plus"></i> Add files
+        </button>
+        <div class="h-6 w-px bg-white/10 mx-1"></div>
+        <button data-act="rotL" class="tool-btn" title="Rotate left"><i class="fa-solid fa-rotate-left"></i></button>
+        <button data-act="rotR" class="tool-btn" title="Rotate right"><i class="fa-solid fa-rotate-right"></i></button>
+        <button data-act="del" class="tool-btn hover:!text-rose-300 hover:!border-rose-400/40" title="Delete selected"><i class="fa-solid fa-trash-can"></i></button>
+        <div class="h-6 w-px bg-white/10 mx-1"></div>
+        <button data-act="selAll" class="tool-btn-wide">Select all</button>
+        <button data-act="selNone" class="tool-btn-wide">Clear selection</button>
+        <button data-act="clear" class="tool-btn-wide hover:!text-rose-300">Remove all</button>
+
+        <div class="ml-auto flex items-center gap-3">
+          <span id="statLabel" class="text-xs text-white/40 font-medium tabular-nums"></span>
+          <button id="btnExport" class="flex items-center gap-2 bg-white text-black hover:bg-white/90 font-semibold px-5 py-2.5 rounded-xl transition active:scale-95 text-sm disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+            <i class="fa-solid fa-file-arrow-down"></i> Export PDF
+          </button>
+        </div>
+      </div>
+
+      <input id="fileInput" type="file" accept="application/pdf,image/png,image/jpeg" multiple class="hidden" />
+
+      <!-- Empty state / drop zone -->
+      <div id="dropZone" class="mt-5 glass rounded-3xl border-2 border-dashed border-white/12 p-10 sm:p-16 text-center transition animate-fade-in cursor-pointer">
+        <div class="w-20 h-20 mx-auto rounded-3xl bg-white/5 border border-white/10 grid place-items-center mb-5">
+          <i class="fa-solid fa-cloud-arrow-up text-3xl text-brand-300"></i>
+        </div>
+        <p class="text-lg font-semibold">Drop PDFs or images here</p>
+        <p class="text-white/40 text-sm mt-1.5 max-w-md mx-auto">
+          Merge, reorder, rotate and delete pages — then export a fresh PDF. Add several
+          files to combine them. Everything runs in your browser; nothing is uploaded.
+        </p>
+        <button id="btnAdd2" class="mt-6 inline-flex items-center gap-2 bg-gradient-to-b from-brand-500 to-brand-600 text-white font-semibold px-5 py-3 rounded-2xl glow-btn transition active:scale-95">
+          <i class="fa-solid fa-folder-open"></i> Choose files
+        </button>
+      </div>
+
+      <!-- Loading -->
+      <div id="loader" class="hidden mt-5 glass rounded-2xl p-4 flex items-center gap-3 animate-fade-in">
+        <i class="fa-solid fa-circle-notch fa-spin text-brand-400"></i>
+        <span id="loaderMsg" class="text-sm text-white/70">Rendering pages…</span>
+      </div>
+
+      <!-- Page grid -->
+      <div id="grid" class="mt-5 grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"></div>
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-3 glass px-5 py-3 rounded-2xl text-sm font-medium shadow-2xl">
+      <i id="toastIcon" class="fa-solid fa-circle-info text-brand-400"></i>
+      <span id="toastMsg"></span>
+    </div>
+
+    <style>
+      .tool-btn {
+        width: 42px; height: 42px; border-radius: 0.75rem;
+        background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(255, 255, 255, 0.07);
+        color: rgba(255, 255, 255, 0.75); transition: 0.15s;
+      }
+      .tool-btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+      .tool-btn:active { transform: scale(0.93); }
+      .tool-btn-wide {
+        padding: 0 0.9rem; height: 42px; border-radius: 0.75rem; font-size: 0.8rem; font-weight: 600;
+        background: rgba(255, 255, 255, 0.035); border: 1px solid rgba(255, 255, 255, 0.07);
+        color: rgba(255, 255, 255, 0.75); transition: 0.15s;
+      }
+      .tool-btn-wide:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+    </style>
+
+    <script>
+      const { PDFDocument, degrees } = PDFLib;
+      // pdf.js worker
+      if (window.pdfjsLib) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      }
+
+      const $ = (id) => document.getElementById(id);
+      // Each source doc: { id, bytes: Uint8Array, pdfjsDoc } (for pdf) or image
+      const sources = new Map();
+      let sourceSeq = 0,
+        pageSeq = 0;
+      // pages: ordered array of { id, type:'pdf'|'image', srcId, pageIndex, rotation, w, h }
+      let pages = [];
+
+      function toast(msg, icon = "circle-info", color = "text-brand-300") {
+        const t = $("toast");
+        $("toastMsg").textContent = msg;
+        $("toastIcon").className = `fa-solid fa-${icon} ${color}`;
+        t.classList.remove("hidden");
+        t.classList.add("flex");
+        clearTimeout(t._to);
+        t._to = setTimeout(() => {
+          t.classList.add("hidden");
+          t.classList.remove("flex");
+        }, 3200);
+      }
+
+      function readFile(file) {
+        return new Promise((res, rej) => {
+          const r = new FileReader();
+          r.onload = () => res(new Uint8Array(r.result));
+          r.onerror = rej;
+          r.readAsArrayBuffer(file);
+        });
+      }
+
+      // ---------- Import ----------
+      async function handleFiles(fileList) {
+        const files = [...fileList];
+        if (!files.length) return;
+        $("loader").classList.remove("hidden");
+        $("loader").classList.add("flex");
+
+        let added = 0;
+        for (const file of files) {
+          try {
+            const bytes = await readFile(file);
+            if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) {
+              $("loaderMsg").textContent = `Rendering ${file.name}…`;
+              added += await addPdf(bytes, file.name);
+            } else if (/^image\//.test(file.type) || /\.(png|jpe?g)$/i.test(file.name)) {
+              added += await addImage(bytes, file.type || "image/png", file.name);
+            } else {
+              toast(`Skipped ${file.name} — unsupported type`, "triangle-exclamation", "text-amber-300");
+            }
+          } catch (e) {
+            console.error(e);
+            toast(`Could not read ${file.name}`, "triangle-exclamation", "text-amber-300");
+          }
+        }
+
+        $("loader").classList.add("hidden");
+        $("loader").classList.remove("flex");
+        render();
+        if (added) toast(`Added ${added} page${added > 1 ? "s" : ""}`, "circle-check", "text-emerald-300");
+      }
+
+      async function addPdf(bytes, name) {
+        const srcId = "s" + sourceSeq++;
+        // pdf.js needs its own copy of the buffer (it transfers/detaches it)
+        const pdfjsDoc = await pdfjsLib.getDocument({ data: bytes.slice(0) }).promise;
+        sources.set(srcId, { id: srcId, type: "pdf", bytes, name });
+        const n = pdfjsDoc.numPages;
+        for (let i = 0; i < n; i++) {
+          const page = await pdfjsDoc.getPage(i + 1);
+          const vp = page.getViewport({ scale: 1 });
+          pages.push({
+            id: "p" + pageSeq++,
+            type: "pdf",
+            srcId,
+            pageIndex: i,
+            rotation: 0,
+            w: vp.width,
+            h: vp.height,
+            _pdfjsPage: page,
+          });
+        }
+        return n;
+      }
+
+      async function addImage(bytes, mime, name) {
+        const srcId = "s" + sourceSeq++;
+        sources.set(srcId, { id: srcId, type: "image", bytes, mime, name });
+        // measure
+        const dim = await imageDims(bytes, mime);
+        pages.push({
+          id: "p" + pageSeq++,
+          type: "image",
+          srcId,
+          pageIndex: 0,
+          rotation: 0,
+          w: dim.w,
+          h: dim.h,
+          _imgUrl: URL.createObjectURL(new Blob([bytes], { type: mime })),
+        });
+        return 1;
+      }
+
+      function imageDims(bytes, mime) {
+        return new Promise((res) => {
+          const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+          const img = new Image();
+          img.onload = () => {
+            res({ w: img.naturalWidth, h: img.naturalHeight });
+            URL.revokeObjectURL(url);
+          };
+          img.onerror = () => res({ w: 600, h: 800 });
+          img.src = url;
+        });
+      }
+
+      // ---------- Thumbnails ----------
+      async function renderThumb(page, canvas) {
+        const targetW = 320;
+        if (page.type === "pdf") {
+          const vp0 = page._pdfjsPage.getViewport({ scale: 1 });
+          const scale = targetW / vp0.width;
+          const vp = page._pdfjsPage.getViewport({ scale });
+          canvas.width = vp.width;
+          canvas.height = vp.height;
+          const cctx = canvas.getContext("2d");
+          await page._pdfjsPage.render({ canvasContext: cctx, viewport: vp }).promise;
+        } else {
+          const img = new Image();
+          await new Promise((r) => {
+            img.onload = r;
+            img.onerror = r;
+            img.src = page._imgUrl;
+          });
+          const scale = targetW / (img.naturalWidth || targetW);
+          canvas.width = targetW;
+          canvas.height = (img.naturalHeight || targetW) * scale;
+          canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      // ---------- Render grid ----------
+      const selected = new Set();
+
+      function render() {
+        const grid = $("grid");
+        const has = pages.length > 0;
+        $("dropZone").classList.toggle("hidden", has);
+        $("btnExport").disabled = !has;
+        updateStat();
+
+        grid.innerHTML = "";
+        pages.forEach((page, idx) => {
+          const card = document.createElement("div");
+          card.className =
+            "page-card group relative glass-soft rounded-xl overflow-hidden border cursor-pointer animate-pop-in" +
+            (selected.has(page.id) ? " selected" : "");
+          card.dataset.id = page.id;
+          card.draggable = true;
+
+          card.innerHTML = `
+            <div class="aspect-[3/4] bg-white/[0.03] grid place-items-center overflow-hidden p-2">
+              <canvas class="thumb-canvas max-w-full max-h-full rounded shadow-lg bg-white" style="transform: rotate(${page.rotation}deg)"></canvas>
+            </div>
+            <div class="absolute top-1.5 left-1.5 flex items-center gap-1">
+              <span class="text-[10px] font-bold bg-black/60 backdrop-blur px-1.5 py-0.5 rounded-md tabular-nums">${idx + 1}</span>
+              ${page.type === "image" ? '<span class="text-[9px] font-bold bg-brand-500/70 px-1.5 py-0.5 rounded-md">IMG</span>' : ""}
+            </div>
+            <div class="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition flex gap-1">
+              <button data-mini="rotR" class="w-7 h-7 grid place-items-center bg-black/60 hover:bg-black/80 backdrop-blur rounded-md text-xs" title="Rotate">
+                <i class="fa-solid fa-rotate-right"></i>
+              </button>
+              <button data-mini="del" class="w-7 h-7 grid place-items-center bg-black/60 hover:bg-rose-500/80 backdrop-blur rounded-md text-xs" title="Delete">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <div class="absolute bottom-1.5 left-1.5 w-5 h-5 rounded-md border-2 ${selected.has(page.id) ? "bg-brand-500 border-brand-400" : "border-white/40 bg-black/40"} grid place-items-center transition">
+              ${selected.has(page.id) ? '<i class="fa-solid fa-check text-[10px]"></i>' : ""}
+            </div>`;
+
+          // thumbnail
+          const canvas = card.querySelector("canvas");
+          renderThumb(page, canvas);
+
+          // selection toggle (click on card body)
+          card.addEventListener("click", (e) => {
+            if (e.target.closest("[data-mini]")) return;
+            toggleSelect(page.id);
+          });
+          card.querySelector('[data-mini="rotR"]').addEventListener("click", (e) => {
+            e.stopPropagation();
+            rotatePage(page.id, 90);
+          });
+          card.querySelector('[data-mini="del"]').addEventListener("click", (e) => {
+            e.stopPropagation();
+            deletePages([page.id]);
+          });
+
+          // drag reorder
+          card.addEventListener("dragstart", (e) => {
+            card.classList.add("dragging");
+            e.dataTransfer.effectAllowed = "move";
+            e.dataTransfer.setData("text/plain", page.id);
+          });
+          card.addEventListener("dragend", () => {
+            card.classList.remove("dragging");
+            document.querySelectorAll(".drop-target").forEach((c) => c.classList.remove("drop-target"));
+          });
+          card.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            card.classList.add("drop-target");
+          });
+          card.addEventListener("dragleave", () => card.classList.remove("drop-target"));
+          card.addEventListener("drop", (e) => {
+            e.preventDefault();
+            card.classList.remove("drop-target");
+            const dragId = e.dataTransfer.getData("text/plain");
+            reorder(dragId, page.id);
+          });
+
+          grid.appendChild(card);
+        });
+      }
+
+      function updateStat() {
+        const n = pages.length;
+        const sel = selected.size;
+        $("statLabel").textContent = n ? `${n} page${n > 1 ? "s" : ""}${sel ? ` · ${sel} selected` : ""}` : "";
+      }
+
+      // ---------- Ops ----------
+      function toggleSelect(id) {
+        selected.has(id) ? selected.delete(id) : selected.add(id);
+        render();
+      }
+      function rotatePage(id, delta) {
+        const p = pages.find((x) => x.id === id);
+        if (p) p.rotation = (((p.rotation + delta) % 360) + 360) % 360;
+        render();
+      }
+      function deletePages(ids) {
+        pages = pages.filter((p) => {
+          if (ids.includes(p.id)) {
+            if (p._imgUrl) URL.revokeObjectURL(p._imgUrl);
+            selected.delete(p.id);
+            return false;
+          }
+          return true;
+        });
+        render();
+      }
+      function reorder(dragId, targetId) {
+        if (dragId === targetId) return;
+        const from = pages.findIndex((p) => p.id === dragId);
+        const to = pages.findIndex((p) => p.id === targetId);
+        if (from < 0 || to < 0) return;
+        const [moved] = pages.splice(from, 1);
+        pages.splice(to, 0, moved);
+        render();
+      }
+
+      function targetIds() {
+        return selected.size ? [...selected] : pages.map((p) => p.id);
+      }
+
+      document.querySelectorAll("[data-act]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const act = btn.dataset.act;
+          if (act === "selAll") {
+            pages.forEach((p) => selected.add(p.id));
+            render();
+          } else if (act === "selNone") {
+            selected.clear();
+            render();
+          } else if (act === "clear") {
+            if (pages.length && confirm("Remove all pages?")) {
+              pages.forEach((p) => p._imgUrl && URL.revokeObjectURL(p._imgUrl));
+              pages = [];
+              selected.clear();
+              sources.clear();
+              render();
+            }
+          } else if (act === "del") {
+            const ids = selected.size ? [...selected] : [];
+            if (!ids.length) return toast("Select pages to delete first", "circle-info");
+            deletePages(ids);
+          } else if (act === "rotL") {
+            targetIds().forEach((id) => rotatePageNoRender(id, -90));
+            render();
+          } else if (act === "rotR") {
+            targetIds().forEach((id) => rotatePageNoRender(id, 90));
+            render();
+          }
+        });
+      });
+      function rotatePageNoRender(id, delta) {
+        const p = pages.find((x) => x.id === id);
+        if (p) p.rotation = (((p.rotation + delta) % 360) + 360) % 360;
+      }
+
+      // ---------- Export ----------
+      async function exportPdf() {
+        if (!pages.length) return;
+        const btn = $("btnExport");
+        const orig = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Building…';
+
+        try {
+          const out = await PDFDocument.create();
+          // cache loaded pdf-lib source docs
+          const loaded = new Map();
+          async function getSrcDoc(srcId) {
+            if (loaded.has(srcId)) return loaded.get(srcId);
+            const src = sources.get(srcId);
+            const doc = await PDFDocument.load(src.bytes, { ignoreEncryption: true });
+            loaded.set(srcId, doc);
+            return doc;
+          }
+
+          for (const page of pages) {
+            if (page.type === "pdf") {
+              const srcDoc = await getSrcDoc(page.srcId);
+              const [copied] = await out.copyPages(srcDoc, [page.pageIndex]);
+              // combine the page's intrinsic rotation with the user's rotation
+              const base = copied.getRotation().angle || 0;
+              copied.setRotation(degrees((base + page.rotation) % 360));
+              out.addPage(copied);
+            } else {
+              const src = sources.get(page.srcId);
+              const isPng = /png$/i.test(src.mime);
+              const img = isPng ? await out.embedPng(src.bytes) : await out.embedJpg(src.bytes);
+              let w = img.width,
+                h = img.height;
+              const rot = page.rotation % 360;
+              const swap = rot === 90 || rot === 270;
+              const newPage = out.addPage(swap ? [h, w] : [w, h]);
+              if (rot === 0) newPage.drawImage(img, { x: 0, y: 0, width: w, height: h });
+              else if (rot === 90) newPage.drawImage(img, { x: h, y: 0, width: w, height: h, rotate: degrees(90) });
+              else if (rot === 180) newPage.drawImage(img, { x: w, y: h, width: w, height: h, rotate: degrees(180) });
+              else newPage.drawImage(img, { x: 0, y: w, width: w, height: h, rotate: degrees(270) });
+            }
+          }
+
+          out.setProducer("Quire — Private PDF Studio");
+          out.setCreator("Quire");
+          const bytes = await out.save();
+          const blob = new Blob([bytes], { type: "application/pdf" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+          a.href = url;
+          a.download = `quire-${ts}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 4000);
+          const kb = blob.size / 1024;
+          toast(
+            `Exported ${pages.length} page${pages.length > 1 ? "s" : ""} · ${kb > 1024 ? (kb / 1024).toFixed(1) + " MB" : Math.round(kb) + " KB"}`,
+            "circle-check",
+            "text-emerald-300"
+          );
+        } catch (e) {
+          console.error(e);
+          toast("Export failed — the file may be encrypted or corrupt", "triangle-exclamation", "text-amber-300");
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = orig;
+        }
+      }
+      $("btnExport").addEventListener("click", exportPdf);
+
+      // ---------- File input & drag/drop ----------
+      $("fileInput").addEventListener("change", (e) => {
+        handleFiles(e.target.files);
+        e.target.value = "";
+      });
+      const openPicker = () => $("fileInput").click();
+      $("btnAdd").addEventListener("click", openPicker);
+      $("btnAdd2").addEventListener("click", (e) => {
+        e.stopPropagation();
+        openPicker();
+      });
+      $("dropZone").addEventListener("click", openPicker);
+
+      let dragDepth = 0;
+      window.addEventListener("dragenter", (e) => {
+        e.preventDefault();
+        dragDepth++;
+        if ([...(e.dataTransfer?.types || [])].includes("Files"))
+          $("dropZone").classList.add("drop-glow");
+      });
+      window.addEventListener("dragover", (e) => e.preventDefault());
+      window.addEventListener("dragleave", (e) => {
+        dragDepth--;
+        if (dragDepth <= 0) $("dropZone").classList.remove("drop-glow");
+      });
+      window.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dragDepth = 0;
+        $("dropZone").classList.remove("drop-glow");
+        if (e.dataTransfer?.files?.length) handleFiles(e.dataTransfer.files);
+      });
+
+      // keyboard: delete selected, ctrl+a select all
+      document.addEventListener("keydown", (e) => {
+        if (["INPUT", "TEXTAREA"].includes(e.target.tagName)) return;
+        if ((e.key === "Delete" || e.key === "Backspace") && selected.size) {
+          e.preventDefault();
+          deletePages([...selected]);
+        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a" && pages.length) {
+          e.preventDefault();
+          pages.forEach((p) => selected.add(p.id));
+          render();
+        }
+      });
+
+      render();
+    </script>
+  </body>
+</html>
