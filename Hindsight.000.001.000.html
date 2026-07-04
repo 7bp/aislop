@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hindsight — Team Retrospective Board</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <!-- PeerJS: free public WebRTC broker — peer-to-peer multiplayer, no account, no server of ours -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: { extend: {
+          colors: { brand: { 50:"#f0fdfa",100:"#ccfbf1",200:"#99f6e4",300:"#5eead4",400:"#2dd4bf",500:"#14b8a6",600:"#0d9488",700:"#0f766e",800:"#115e59",900:"#134e4a" } },
+          fontFamily: { sans:["Plus Jakarta Sans","sans-serif"], brand:["Space Grotesk","sans-serif"] },
+          animation: { "fade-in":"fadeIn 0.3s ease both", "pop-in":"popIn 0.2s cubic-bezier(.2,.9,.3,1.25) both" },
+          keyframes: { fadeIn:{from:{opacity:"0",transform:"translateY(6px)"},to:{opacity:"1",transform:"translateY(0)"}}, popIn:{from:{opacity:"0",transform:"scale(0.96)"},to:{opacity:"1",transform:"scale(1)"}} },
+        } },
+      };
+    </script>
+    <style>
+      body{font-family:"Plus Jakarta Sans",sans-serif;min-height:100vh;background:radial-gradient(1100px 560px at 14% -10%, rgba(20,184,166,.16), transparent 60%),radial-gradient(900px 620px at 110% 8%, rgba(59,130,246,.1), transparent 55%),#06100e}
+      .brand-font{font-family:"Space Grotesk",sans-serif}
+      ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:9999px}
+      .glass{background:rgba(14,22,20,.62);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.08)}
+      .glass-soft{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+      .glow-btn{box-shadow:0 10px 30px -8px rgba(20,184,166,.55),inset 0 1px 0 rgba(255,255,255,.22)}
+      .field{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:.7rem;padding:.6rem .8rem;color:#fff;font-size:.9rem;transition:.15s;outline:none}
+      .field:focus{border-color:rgba(20,184,166,.7);box-shadow:0 0 0 3px rgba(20,184,166,.16)}
+      .field::placeholder{color:rgba(255,255,255,.3)}
+      .lbl{font-size:.72rem;font-weight:600;color:rgba(255,255,255,.45);padding-left:.15rem;text-transform:uppercase;letter-spacing:.03em}
+      .masked{filter:blur(6px);user-select:none}
+      .grain::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E")}
+    </style>
+  </head>
+  <body class="dark text-white grain">
+    <!-- LOBBY -->
+    <div id="lobby" class="relative z-10 min-h-screen grid place-items-center px-5 py-10">
+      <div class="w-full max-w-md">
+        <div class="text-center mb-7">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 grid place-items-center glow-btn mb-4"><i class="fa-solid fa-clock-rotate-left text-white text-2xl"></i></div>
+          <h1 class="brand-font text-3xl font-bold tracking-tight">Hindsight</h1>
+          <p class="text-white/45 text-sm mt-1">Team Retrospective Board · real-time, peer-to-peer</p>
+        </div>
+        <div class="glass rounded-3xl p-6 space-y-4 animate-fade-in">
+          <div class="flex gap-3">
+            <div><p class="lbl">Colour</p><input id="lColor" type="color" value="#14b8a6" class="w-[52px] h-[52px] mt-1 rounded-xl bg-transparent border border-white/10 cursor-pointer p-1" /></div>
+            <div class="flex-1"><p class="lbl">Your name</p><input id="lName" class="field mt-1 !py-3" placeholder="e.g. Alex" maxlength="24" /></div>
+          </div>
+          <div class="pt-2 border-t border-white/10">
+            <div id="joinBlock" class="hidden mb-3"><p class="lbl">Room code</p><input id="lCode" class="field mt-1 !py-3 uppercase tracking-[0.3em] font-mono text-center text-lg" placeholder="ABCD" maxlength="6" /></div>
+            <div class="grid grid-cols-2 gap-3">
+              <button id="createBtn" class="flex items-center justify-center gap-2 bg-gradient-to-b from-brand-400 to-brand-600 hover:from-brand-300 text-white font-semibold px-4 py-3 rounded-xl glow-btn transition active:scale-95"><i class="fa-solid fa-plus"></i> Create board</button>
+              <button id="joinBtn" class="flex items-center justify-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-3 rounded-xl transition active:scale-95"><i class="fa-solid fa-right-to-bracket"></i> Join board</button>
+            </div>
+            <p id="lobbyErr" class="hidden text-rose-300 text-xs mt-3 px-1 flex items-center gap-1.5"><i class="fa-solid fa-circle-exclamation"></i><span></span></p>
+          </div>
+        </div>
+        <p class="text-center text-[11px] text-white/25 mt-5 leading-relaxed px-4">Runs directly between browsers over WebRTC via the free PeerJS broker — no account, nothing stored on a server. Share the link and retro together.</p>
+      </div>
+    </div>
+
+    <!-- ROOM -->
+    <div id="room" class="hidden relative z-10 min-h-screen flex flex-col">
+      <header class="glass px-5 sm:px-7 py-3 flex items-center gap-3 flex-wrap">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 grid place-items-center glow-btn"><i class="fa-solid fa-clock-rotate-left text-white text-sm"></i></div>
+          <div class="leading-none"><h1 class="brand-font text-base font-bold tracking-tight">Hindsight</h1><p class="text-[10px] text-white/40 mt-0.5">Retro Board</p></div>
+        </div>
+        <div class="flex items-center gap-2 glass-soft rounded-xl px-3 py-1.5">
+          <span class="text-[10px] uppercase tracking-wider text-white/40 font-bold">Room</span>
+          <span id="roomCode" class="font-mono font-bold tracking-[0.2em] text-brand-300">----</span>
+          <button id="copyLink" class="text-white/40 hover:text-white transition ml-1" title="Copy invite link"><i class="fa-solid fa-link text-xs"></i></button>
+        </div>
+        <div class="flex items-center gap-1.5 text-xs" id="connStatus"><span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="text-white/50">connecting…</span></div>
+        <div id="presence" class="flex items-center -space-x-1.5 ml-1"></div>
+        <div class="ml-auto flex items-center gap-2">
+          <div id="timerBox" class="hidden items-center gap-2 glass-soft rounded-xl px-3 py-1.5 font-mono text-sm"><i class="fa-regular fa-clock text-brand-300"></i><span id="timerText">0:00</span></div>
+          <button id="exportBtn" class="glass-soft hover:bg-white/10 font-semibold px-3.5 py-2 rounded-lg transition text-sm" title="Export Markdown"><i class="fa-solid fa-file-arrow-down"></i></button>
+          <button id="leaveBtn" class="glass-soft hover:bg-rose-500/20 hover:text-rose-200 font-semibold px-3.5 py-2 rounded-lg transition text-sm"><i class="fa-solid fa-arrow-right-from-bracket"></i> <span class="hidden sm:inline">Leave</span></button>
+        </div>
+      </header>
+
+      <!-- host toolbar -->
+      <div id="hostBar" class="hidden glass-soft px-5 sm:px-7 py-2 flex items-center gap-3 flex-wrap text-sm">
+        <span class="text-[11px] uppercase tracking-wider text-white/40 font-bold flex items-center gap-1.5"><i class="fa-solid fa-crown text-amber-300"></i> Facilitator</span>
+        <div class="relative"><select id="tmplSelect" class="field !py-1.5 appearance-none pr-8 text-sm"></select><i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/40 pointer-events-none"></i></div>
+        <label class="flex items-center gap-2 text-white/60 cursor-pointer"><input type="checkbox" id="maskChk" class="accent-brand-500" /> Hide others' cards until reveal</label>
+        <label class="flex items-center gap-2 text-white/60 cursor-pointer"><input type="checkbox" id="sortChk" class="accent-brand-500" /> Sort by votes</label>
+        <div class="flex items-center gap-1.5">
+          <button data-timer="300" class="glass-soft hover:bg-white/10 px-2.5 py-1.5 rounded-lg text-xs font-semibold">5:00</button>
+          <button data-timer="600" class="glass-soft hover:bg-white/10 px-2.5 py-1.5 rounded-lg text-xs font-semibold">10:00</button>
+          <button data-timer="0" class="glass-soft hover:bg-white/10 px-2.5 py-1.5 rounded-lg text-xs font-semibold">Stop</button>
+        </div>
+      </div>
+
+      <main id="boardWrap" class="flex-1 min-h-0 overflow-x-auto p-5">
+        <div id="board" class="flex gap-4 items-start min-h-full"></div>
+      </main>
+    </div>
+
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-3 glass px-5 py-3 rounded-2xl text-sm font-medium shadow-2xl"><i id="toastIcon" class="fa-solid fa-circle-info text-brand-300"></i><span id="toastMsg"></span></div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const params = new URLSearchParams(location.search);
+      function peerOptions() { const o = { debug: 1 }; if (params.get("ph")) { o.host = params.get("ph"); o.port = +(params.get("pp") || 9000); o.path = params.get("ppath") || "/"; o.secure = params.get("psec") === "1"; o.key = params.get("pkey") || "peerjs"; } return o; }
+      const ID_PREFIX = "aislophindsight-";
+
+      const TEMPLATES = {
+        default: { name: "Went well / To improve / Actions", cols: ["What went well 😊", "What could improve 😕", "Action items ✅"] },
+        ssc: { name: "Start / Stop / Continue", cols: ["Start 🟢", "Stop 🔴", "Continue 🔵"] },
+        msg: { name: "Mad / Sad / Glad", cols: ["Mad 😡", "Sad 😢", "Glad 😊"] },
+        fourl: { name: "4 Ls", cols: ["Liked 👍", "Learned 🧠", "Lacked 🧩", "Longed for 🌟"] },
+      };
+
+      function toast(msg, icon = "circle-info", color = "text-brand-300") { const t = $("toast"); $("toastMsg").textContent = msg; $("toastIcon").className = `fa-solid fa-${icon} ${color}`; t.classList.remove("hidden"); t.classList.add("flex"); clearTimeout(t._to); t._to = setTimeout(() => { t.classList.add("hidden"); t.classList.remove("flex"); }, 2600); }
+      function esc(s){return (s+"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
+      let me = { id: "me-" + Math.random().toString(36).slice(2, 8), name: "", color: "#14b8a6" };
+      try { const s = JSON.parse(localStorage.getItem("hindsight.me") || "{}"); if (s.name) { me.name = s.name; me.color = s.color || me.color; } } catch (e) {}
+      $("lName").value = me.name; $("lColor").value = me.color;
+
+      let isHost = false, peer = null, hostConn = null; const conns = {};
+      let room = { code: "", template: "default", masked: false, sortByVotes: false, timerEnds: 0, players: {}, cards: [] };
+      // cards: { id, col, text, authorId }, votes stored separately per card object: card.votes {voterId:true}
+      const genCode = () => { const A = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; let s = ""; for (let i = 0; i < 4; i++) s += A[Math.floor(Math.random() * A.length)]; return s; };
+
+      // ---------- host authoritative ----------
+      function buildStateFor(rid) {
+        return {
+          code: room.code, template: room.template, masked: room.masked, sortByVotes: room.sortByVotes,
+          timerEnds: room.timerEnds, hostId: me.id,
+          players: Object.values(room.players).map((p) => ({ id: p.id, name: p.name, color: p.color, online: !!p.online, isHost: p.id === me.id })),
+          cards: room.cards.map((c) => {
+            const hidden = room.masked && c.authorId !== rid;
+            return { id: c.id, col: c.col, authorId: c.authorId, mine: c.authorId === rid, hidden, text: hidden ? null : c.text, votes: Object.keys(c.votes || {}).length, votedByMe: !!(c.votes && c.votes[rid]) };
+          }),
+        };
+      }
+      function broadcast() { Object.values(conns).forEach((c) => { if (c.open) try { c.send({ type: "state", state: buildStateFor(c.peer) }); } catch (e) {} }); applyState(buildStateFor(me.id)); }
+      function findCard(id) { return room.cards.find((c) => c.id === id); }
+
+      function hostApply(fromId, a) {
+        const p = room.players[fromId];
+        switch (a.type) {
+          case "hello": room.players[fromId] = { id: fromId, name: (a.name || "Player").slice(0, 24), color: a.color || "#14b8a6", online: true }; break;
+          case "addCard": { const text = (a.text || "").trim().slice(0, 280); if (text) room.cards.push({ id: "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), col: Math.max(0, Math.min(a.col | 0, TEMPLATES[room.template].cols.length - 1)), text, authorId: fromId, votes: {} }); break; }
+          case "editCard": { const c = findCard(a.id); if (c && (c.authorId === fromId || fromId === me.id)) c.text = (a.text || "").trim().slice(0, 280) || c.text; break; }
+          case "delCard": { const c = findCard(a.id); if (c && (c.authorId === fromId || fromId === me.id)) room.cards = room.cards.filter((x) => x.id !== a.id); break; }
+          case "vote": { const c = findCard(a.id); if (c) { c.votes = c.votes || {}; if (c.votes[fromId]) delete c.votes[fromId]; else c.votes[fromId] = true; } break; }
+          // host-only
+          case "template": if (fromId === me.id && TEMPLATES[a.value]) { room.template = a.value; room.cards = []; } break;
+          case "masked": if (fromId === me.id) room.masked = !!a.value; break;
+          case "sort": if (fromId === me.id) room.sortByVotes = !!a.value; break;
+          case "timer": if (fromId === me.id) room.timerEnds = a.value > 0 ? Date.now() + a.value * 1000 : 0; break;
+          case "clear": if (fromId === me.id) room.cards = []; break;
+        }
+        broadcast();
+      }
+
+      function startHost(code) {
+        isHost = true; room.code = code;
+        room.players[me.id] = { id: me.id, name: me.name, color: me.color, online: true };
+        peer = new Peer(ID_PREFIX + code, peerOptions());
+        peer.on("open", () => { setConn(true); enterRoom(); broadcast(); });
+        peer.on("connection", (conn) => { conns[conn.peer] = conn; conn.on("data", (d) => hostApply(conn.peer, d)); conn.on("close", () => { if (room.players[conn.peer]) room.players[conn.peer].online = false; delete conns[conn.peer]; broadcast(); }); conn.on("error", () => {}); });
+        peer.on("error", (e) => { if (e.type === "unavailable-id") { peer.destroy(); startHost(genCode()); } else { setConn(false); toast("Connection error: " + e.type, "triangle-exclamation", "text-amber-300"); } });
+        peer.on("disconnected", () => { setConn(false); try { peer.reconnect(); } catch (e) {} });
+      }
+      function startClient(code) {
+        isHost = false; room.code = code; peer = new Peer(peerOptions());
+        peer.on("open", () => {
+          hostConn = peer.connect(ID_PREFIX + code, { reliable: true });
+          hostConn.on("open", () => { setConn(true); enterRoom(); hostConn.send({ type: "hello", name: me.name, color: me.color }); });
+          hostConn.on("data", (d) => { if (d.type === "state") applyState(d.state); });
+          hostConn.on("close", () => { setConn(false); toast("Host disconnected — board closed", "triangle-exclamation", "text-amber-300"); });
+          hostConn.on("error", () => setConn(false));
+        });
+        peer.on("error", (e) => { if (e.type === "peer-unavailable") lobbyErr("No board with that code (or the host left)."); else lobbyErr("Connection error: " + e.type); setConn(false); });
+      }
+      function sendToHost(a) { if (isHost) hostApply(me.id, a); else if (hostConn && hostConn.open) hostConn.send(a); }
+      function setConn(ok) { $("connStatus").innerHTML = ok ? '<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span class="text-white/50">connected</span>' : '<span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="text-white/50">connecting…</span>'; }
+
+      // ---------- render ----------
+      let view = null;
+      function applyState(state) { view = state; render(); }
+      function amHost() { return view && view.hostId === me.id; }
+
+      function render() {
+        if (!view) return;
+        $("roomCode").textContent = view.code;
+        // presence
+        $("presence").innerHTML = view.players.map((p) => `<div class="w-7 h-7 rounded-full grid place-items-center text-[11px] font-bold border-2 border-[#06100e] ${p.online ? "" : "opacity-40"}" style="background:${p.color}" title="${esc(p.name)}${p.isHost ? " (facilitator)" : ""}">${esc((p.name || "?")[0].toUpperCase())}</div>`).join("");
+        // host bar
+        $("hostBar").classList.toggle("hidden", !amHost());
+        if (amHost()) { $("tmplSelect").value = view.template; $("maskChk").checked = view.masked; $("sortChk").checked = view.sortByVotes; }
+
+        const cols = TEMPLATES[view.template].cols;
+        const board = $("board"); board.innerHTML = "";
+        cols.forEach((title, ci) => {
+          let cards = view.cards.filter((c) => c.col === ci);
+          if (view.sortByVotes) cards = cards.slice().sort((a, b) => b.votes - a.votes);
+          const col = document.createElement("div");
+          col.className = "glass rounded-2xl w-[300px] flex-shrink-0 flex flex-col max-h-full";
+          col.innerHTML = `
+            <div class="p-3 pb-2 flex items-center justify-between">
+              <p class="font-bold text-sm">${esc(title)}</p>
+              <span class="text-[11px] font-mono text-white/40 bg-white/5 px-1.5 py-0.5 rounded">${cards.length}</span>
+            </div>
+            <div class="px-3"><input class="field !py-2 text-sm" placeholder="+ Add a card" data-add="${ci}" maxlength="280" /></div>
+            <div class="flex-1 overflow-y-auto p-3 space-y-2" data-col="${ci}"></div>`;
+          board.appendChild(col);
+          const body = col.querySelector("[data-col]");
+          cards.forEach((c) => body.appendChild(renderCard(c)));
+          const add = col.querySelector("[data-add]");
+          add.addEventListener("keydown", (e) => { if (e.key === "Enter" && add.value.trim()) { sendToHost({ type: "addCard", col: ci, text: add.value }); add.value = ""; } });
+        });
+
+        // timer
+        renderTimer();
+      }
+
+      function renderCard(c) {
+        const author = (view.players.find((p) => p.id === c.authorId) || {});
+        const el = document.createElement("div");
+        el.className = "glass-soft rounded-xl p-2.5 animate-pop-in";
+        const canEdit = c.mine || amHost();
+        el.innerHTML = `
+          <p class="text-sm leading-snug ${c.hidden ? "masked" : ""}">${c.hidden ? "hidden until reveal" : esc(c.text)}</p>
+          <div class="flex items-center gap-2 mt-2">
+            <span class="w-2 h-2 rounded-full" style="background:${author.color || "#888"}"></span>
+            <span class="text-[11px] text-white/40">${c.mine ? "you" : esc(author.name || "?")}</span>
+            <button data-vote="${c.id}" class="ml-auto flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg transition ${c.votedByMe ? "bg-brand-500/25 text-brand-200" : "glass-soft hover:bg-white/10 text-white/60"}" ${view.masked ? "disabled title='Reveal to vote' style='opacity:.4'" : ""}>
+              <i class="fa-solid fa-arrow-up text-[10px]"></i> ${c.votes}
+            </button>
+            ${canEdit && !c.hidden ? `<button data-edit="${c.id}" class="w-7 h-7 grid place-items-center rounded-lg glass-soft hover:bg-white/10 text-white/50 transition"><i class="fa-solid fa-pen text-[10px]"></i></button>` : ""}
+            ${canEdit ? `<button data-del="${c.id}" class="w-7 h-7 grid place-items-center rounded-lg glass-soft hover:bg-rose-500/20 hover:text-rose-300 text-white/50 transition"><i class="fa-solid fa-trash-can text-[10px]"></i></button>` : ""}
+          </div>`;
+        el.querySelector("[data-vote]").addEventListener("click", () => { if (!view.masked) sendToHost({ type: "vote", id: c.id }); });
+        const eb = el.querySelector("[data-edit]"); if (eb) eb.addEventListener("click", () => { const t = prompt("Edit card", c.text); if (t != null) sendToHost({ type: "editCard", id: c.id, text: t }); });
+        const db = el.querySelector("[data-del]"); if (db) db.addEventListener("click", () => { if (confirm("Delete this card?")) sendToHost({ type: "delCard", id: c.id }); });
+        return el;
+      }
+
+      let timerInt = null;
+      function renderTimer() {
+        clearInterval(timerInt);
+        const box = $("timerBox");
+        if (!view.timerEnds) { box.classList.add("hidden"); box.classList.remove("flex"); return; }
+        box.classList.remove("hidden"); box.classList.add("flex");
+        const upd = () => {
+          const left = Math.max(0, Math.round((view.timerEnds - Date.now()) / 1000));
+          $("timerText").textContent = Math.floor(left / 60) + ":" + String(left % 60).padStart(2, "0");
+          $("timerText").className = left <= 10 ? "text-rose-300" : "";
+          if (left <= 0) { clearInterval(timerInt); $("timerText").textContent = "time's up"; }
+        };
+        upd(); timerInt = setInterval(upd, 500);
+      }
+
+      // ---------- lobby wiring ----------
+      function readIdentity() { me.name = ($("lName").value.trim() || "Player").slice(0, 24); me.color = $("lColor").value; localStorage.setItem("hindsight.me", JSON.stringify({ name: me.name, color: me.color })); }
+      function lobbyErr(m) { const e = $("lobbyErr"); e.querySelector("span").textContent = m; e.classList.remove("hidden"); e.classList.add("flex"); }
+      $("joinBtn").addEventListener("click", () => { if ($("joinBlock").classList.contains("hidden")) { $("joinBlock").classList.remove("hidden"); $("lCode").focus(); return; } const code = $("lCode").value.trim().toUpperCase(); if (code.length < 3) return lobbyErr("Enter the room code your team shared."); readIdentity(); startClient(code); });
+      $("createBtn").addEventListener("click", () => { readIdentity(); startHost(genCode()); });
+      $("lCode").addEventListener("keydown", (e) => { if (e.key === "Enter") $("joinBtn").click(); });
+
+      function enterRoom() { $("lobby").classList.add("hidden"); $("room").classList.remove("hidden"); $("tmplSelect").innerHTML = Object.entries(TEMPLATES).map(([k, t]) => `<option value="${k}">${t.name}</option>`).join(""); history.replaceState(null, "", "?room=" + room.code); }
+      function leave() { try { peer && peer.destroy(); } catch (e) {} location.href = location.pathname; }
+      $("leaveBtn").addEventListener("click", leave);
+      $("copyLink").addEventListener("click", () => { const url = location.origin + location.pathname + "?room=" + room.code; navigator.clipboard.writeText(url).then(() => toast("Invite link copied", "clipboard-check", "text-emerald-300"), () => toast(url, "link")); });
+
+      $("tmplSelect").addEventListener("change", () => { if (confirm("Switching template clears the current cards. Continue?")) sendToHost({ type: "template", value: $("tmplSelect").value }); else $("tmplSelect").value = view.template; });
+      $("maskChk").addEventListener("change", () => sendToHost({ type: "masked", value: $("maskChk").checked }));
+      $("sortChk").addEventListener("change", () => sendToHost({ type: "sort", value: $("sortChk").checked }));
+      document.querySelectorAll("[data-timer]").forEach((b) => b.addEventListener("click", () => sendToHost({ type: "timer", value: +b.dataset.timer })));
+
+      $("exportBtn").addEventListener("click", () => {
+        if (!view) return;
+        const cols = TEMPLATES[view.template].cols;
+        let md = `# Retrospective — ${view.code}\n\n`;
+        cols.forEach((t, ci) => { md += `## ${t}\n`; const cs = view.cards.filter((c) => c.col === ci).sort((a, b) => b.votes - a.votes); if (!cs.length) md += "_(no cards)_\n"; cs.forEach((c) => (md += `- ${c.hidden ? "(hidden)" : c.text} ${c.votes ? `(${c.votes}👍)` : ""}\n`)); md += "\n"; });
+        const blob = new Blob([md], { type: "text/markdown" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `retro-${view.code}.md`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+        toast("Exported Markdown", "circle-check", "text-emerald-300");
+      });
+
+      if (params.get("room")) { $("joinBlock").classList.remove("hidden"); $("lCode").value = params.get("room").toUpperCase(); setTimeout(() => $("lName").focus(), 60); }
+      if (!window.Peer) lobbyErr("Couldn't load the PeerJS library (check your connection).");
+    </script>
+  </body>
+</html>
