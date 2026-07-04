@@ -29,6 +29,7 @@ pulled from a CDN purely for styling. Unless noted, your data never leaves the p
 | [Tempo](Tempo.000.001.000.html) ([Try](https://7bp.github.io/aislop/Tempo.000.001.000.html)) — time tracker | Toggl | Timestamp-based timers with live `setInterval` updates, projects, weekly aggregation, CSV export — all in `localStorage` | ~$108–120/user/yr |
 | [Ember](Ember.000.001.000.html) ([Try](https://7bp.github.io/aislop/Ember.000.001.000.html)) — habit &amp; streak tracker | Streaks | Streak logic over per-day completion sets, GitHub-style heatmap, weekday schedules &amp; a daily progress ring — all in `localStorage` | ~$5 one-time (or Habitica ~$60/yr) |
 | [Trellis](Trellis.000.001.000.html) ([Try](https://7bp.github.io/aislop/Trellis.000.001.000.html)) — kanban board | Trello | Drag-and-drop cards across lists (HTML5 DnD with drop-index math), labels, due dates, search &amp; JSON export/import — board in `localStorage` | ~$60–120/user/yr |
+| [Quorum](Quorum.000.001.000.html) ([Try](https://7bp.github.io/aislop/Quorum.000.001.000.html)) — scrum planning poker (**multiplayer**) | Planning Poker Online | Real-time rooms over **WebRTC** via PeerJS's free public broker (peer-to-peer, host-authoritative) — multiple decks, votes hidden until reveal, avg/median/consensus stats, spectators; no backend of ours | ~$60–100/user/yr |
 
 Swapping the subscription tools above for these clones adds up to **well north of ~$1,000/year** in
 avoided recurring fees for a typical solo user — before counting the one-time-license tools.
