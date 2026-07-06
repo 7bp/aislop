@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Beam — Peer-to-Peer File Transfer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <!-- PeerJS: free public WebRTC broker — files flow peer-to-peer, never through a server -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+    <!-- QR code for the invite link (optional; degrades gracefully) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: { extend: {
+          colors: { brand: { 50:"#eff6ff",100:"#dbeafe",200:"#bfdbfe",300:"#93c5fd",400:"#60a5fa",500:"#3b82f6",600:"#2563eb",700:"#1d4ed8",800:"#1e40af",900:"#1e3a8a" } },
+          fontFamily: { sans:["Plus Jakarta Sans","sans-serif"], brand:["Space Grotesk","sans-serif"], mono:["JetBrains Mono","monospace"] },
+          animation: { "fade-in":"fadeIn 0.3s ease both", "pop-in":"popIn 0.2s cubic-bezier(.2,.9,.3,1.25) both" },
+          keyframes: { fadeIn:{from:{opacity:"0",transform:"translateY(6px)"},to:{opacity:"1",transform:"translateY(0)"}}, popIn:{from:{opacity:"0",transform:"scale(0.96)"},to:{opacity:"1",transform:"scale(1)"}} },
+        } },
+      };
+    </script>
+    <style>
+      body{font-family:"Plus Jakarta Sans",sans-serif;min-height:100vh;background:radial-gradient(1100px 560px at 14% -10%, rgba(59,130,246,.16), transparent 60%),radial-gradient(900px 620px at 110% 8%, rgba(139,92,246,.1), transparent 55%),#070a12}
+      .brand-font{font-family:"Space Grotesk",sans-serif}
+      ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:9999px}
+      .glass{background:rgba(15,18,28,.62);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.08)}
+      .glass-soft{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+      .glow-btn{box-shadow:0 10px 30px -8px rgba(59,130,246,.55),inset 0 1px 0 rgba(255,255,255,.22)}
+      .field{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:.7rem;padding:.6rem .8rem;color:#fff;font-size:.9rem;transition:.15s;outline:none}
+      .field:focus{border-color:rgba(59,130,246,.7);box-shadow:0 0 0 3px rgba(59,130,246,.16)}
+      .field::placeholder{color:rgba(255,255,255,.3)}
+      .lbl{font-size:.72rem;font-weight:600;color:rgba(255,255,255,.45);padding-left:.15rem;text-transform:uppercase;letter-spacing:.03em}
+      .drop{border:2px dashed rgba(255,255,255,.14);transition:.15s}
+      .drop.hot{border-color:rgba(59,130,246,.8);background:rgba(59,130,246,.08)}
+      .grain::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E")}
+    </style>
+  </head>
+  <body class="dark text-white grain">
+    <!-- LOBBY -->
+    <div id="lobby" class="relative z-10 min-h-screen grid place-items-center px-5 py-10">
+      <div class="w-full max-w-md">
+        <div class="text-center mb-7">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 grid place-items-center glow-btn mb-4"><i class="fa-solid fa-satellite-dish text-white text-2xl"></i></div>
+          <h1 class="brand-font text-3xl font-bold tracking-tight">Beam</h1>
+          <p class="text-white/45 text-sm mt-1">Peer-to-peer file transfer · private &amp; direct</p>
+        </div>
+        <div class="glass rounded-3xl p-6 space-y-4 animate-fade-in">
+          <div class="flex gap-3">
+            <div><p class="lbl">Colour</p><input id="lColor" type="color" value="#3b82f6" class="w-[52px] h-[52px] mt-1 rounded-xl bg-transparent border border-white/10 cursor-pointer p-1" /></div>
+            <div class="flex-1"><p class="lbl">This device's name</p><input id="lName" class="field mt-1 !py-3" placeholder="e.g. Alex's Laptop" maxlength="24" /></div>
+          </div>
+          <div class="pt-2 border-t border-white/10">
+            <div id="joinBlock" class="hidden mb-3"><p class="lbl">Room code</p><input id="lCode" class="field mt-1 !py-3 uppercase tracking-[0.3em] font-mono text-center text-lg" placeholder="ABCD" maxlength="6" /></div>
+            <div class="grid grid-cols-2 gap-3">
+              <button id="createBtn" class="flex items-center justify-center gap-2 bg-gradient-to-b from-brand-400 to-brand-600 hover:from-brand-300 text-white font-semibold px-4 py-3 rounded-xl glow-btn transition active:scale-95"><i class="fa-solid fa-tower-broadcast"></i> Create room</button>
+              <button id="joinBtn" class="flex items-center justify-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-3 rounded-xl transition active:scale-95"><i class="fa-solid fa-right-to-bracket"></i> Join room</button>
+            </div>
+            <p id="lobbyErr" class="hidden text-rose-300 text-xs mt-3 px-1 flex items-center gap-1.5"><i class="fa-solid fa-circle-exclamation"></i><span></span></p>
+          </div>
+        </div>
+        <p class="text-center text-[11px] text-white/25 mt-5 leading-relaxed px-4">Files travel directly between browsers over WebRTC via the free PeerJS broker — end-to-end, never uploaded to a server, no size limits beyond your devices. Open the same room on another device (scan the QR) and drop a file.</p>
+      </div>
+    </div>
+
+    <!-- ROOM -->
+    <div id="room" class="hidden relative z-10 min-h-screen flex flex-col">
+      <header class="glass px-5 sm:px-7 py-3 flex items-center gap-3 flex-wrap">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 grid place-items-center glow-btn"><i class="fa-solid fa-satellite-dish text-white text-sm"></i></div>
+          <div class="leading-none"><h1 class="brand-font text-base font-bold tracking-tight">Beam</h1><p class="text-[10px] text-white/40 mt-0.5">P2P File Transfer</p></div>
+        </div>
+        <div class="flex items-center gap-2 glass-soft rounded-xl px-3 py-1.5">
+          <span class="text-[10px] uppercase tracking-wider text-white/40 font-bold">Room</span>
+          <span id="roomCode" class="font-mono font-bold tracking-[0.2em] text-brand-300">----</span>
+          <button id="copyLink" class="text-white/40 hover:text-white transition ml-1" title="Copy invite link"><i class="fa-solid fa-link text-xs"></i></button>
+          <button id="qrBtn" class="text-white/40 hover:text-white transition" title="Show QR"><i class="fa-solid fa-qrcode text-xs"></i></button>
+        </div>
+        <div class="flex items-center gap-1.5 text-xs" id="connStatus"><span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="text-white/50">connecting…</span></div>
+        <div id="presence" class="flex items-center -space-x-1.5 ml-1"></div>
+        <button id="leaveBtn" class="ml-auto glass-soft hover:bg-rose-500/20 hover:text-rose-200 font-semibold px-3.5 py-2 rounded-lg transition text-sm"><i class="fa-solid fa-arrow-right-from-bracket"></i> <span class="hidden sm:inline">Leave</span></button>
+      </header>
+
+      <main class="flex-1 px-5 sm:px-8 py-6 max-w-[820px] w-full mx-auto">
+        <!-- recipient + drop -->
+        <div class="flex items-center gap-3 mb-3 flex-wrap">
+          <span class="text-sm text-white/50">Send to</span>
+          <div class="relative"><select id="target" class="field !py-2 appearance-none pr-9 text-sm min-w-[160px]"></select><i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/40 pointer-events-none"></i></div>
+          <label class="flex items-center gap-2 text-xs text-white/50 cursor-pointer ml-auto"><input type="checkbox" id="autoDl" class="accent-brand-500" checked /> Auto-download received</label>
+        </div>
+
+        <div id="drop" class="drop glass rounded-3xl p-10 text-center cursor-pointer animate-fade-in">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-white/5 border border-white/10 grid place-items-center mb-4"><i class="fa-solid fa-cloud-arrow-up text-2xl text-brand-300"></i></div>
+          <p class="font-semibold text-lg">Drop files to beam them</p>
+          <p class="text-white/40 text-sm mt-1" id="dropSub">Or click to choose. Waiting for someone to join…</p>
+          <input id="fileInput" type="file" multiple class="hidden" />
+        </div>
+
+        <!-- quick text -->
+        <div class="flex items-center gap-2 mt-3">
+          <input id="textInput" class="field" placeholder="…or beam a bit of text / a link" maxlength="4000" />
+          <button id="sendText" class="glass-soft hover:bg-white/10 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+
+        <!-- transfers -->
+        <div id="transfers" class="mt-6 space-y-2.5"></div>
+        <!-- messages -->
+        <div id="messages" class="mt-4 space-y-2"></div>
+      </main>
+    </div>
+
+    <!-- QR modal -->
+    <div id="qrModal" class="hidden fixed inset-0 z-40 grid place-items-center p-4" style="background:rgba(4,6,12,.72);backdrop-filter:blur(6px)">
+      <div class="glass rounded-3xl p-6 animate-pop-in text-center">
+        <div class="flex items-center justify-between mb-4"><h2 class="brand-font font-bold">Scan to join</h2><button id="qrClose" class="w-8 h-8 grid place-items-center glass-soft rounded-lg hover:bg-white/10"><i class="fa-solid fa-xmark"></i></button></div>
+        <div id="qrBox" class="bg-white p-3 rounded-xl inline-block"></div>
+        <p id="qrLink" class="text-[11px] text-white/40 mt-3 font-mono break-all max-w-[240px]"></p>
+      </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-3 glass px-5 py-3 rounded-2xl text-sm font-medium shadow-2xl"><i id="toastIcon" class="fa-solid fa-circle-info text-brand-300"></i><span id="toastMsg"></span></div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const params = new URLSearchParams(location.search);
+      function peerOptions() { const o = { debug: 1 }; if (params.get("ph")) { o.host = params.get("ph"); o.port = +(params.get("pp") || 9000); o.path = params.get("ppath") || "/"; o.secure = params.get("psec") === "1"; o.key = params.get("pkey") || "peerjs"; } return o; }
+      const ID_PREFIX = "aislopbeam-";
+      const CHUNK = 16000; // just under PeerJS chunk MTU to avoid double-chunking
+      const HIGH = 8 * 1024 * 1024, LOW = 1 * 1024 * 1024;
+
+      function toast(msg, icon = "circle-info", color = "text-brand-300") { const t = $("toast"); $("toastMsg").textContent = msg; $("toastIcon").className = `fa-solid fa-${icon} ${color}`; t.classList.remove("hidden"); t.classList.add("flex"); clearTimeout(t._to); t._to = setTimeout(() => { t.classList.add("hidden"); t.classList.remove("flex"); }, 2600); }
+      function esc(s){return (s+"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+      function fmtBytes(b){ if(b<1024)return b+" B"; const k=b/1024; return k<1024?k.toFixed(k<10?1:0)+" KB":(k/1024<1024?(k/1024).toFixed(2)+" MB":(k/1024/1024).toFixed(2)+" GB"); }
+
+      let me = { id: null, name: "", color: "#3b82f6" };
+      try { const s = JSON.parse(localStorage.getItem("beam.me") || "{}"); if (s.name) { me.name = s.name; me.color = s.color || me.color; } } catch (e) {}
+      $("lName").value = me.name; $("lColor").value = me.color;
+
+      let isHost = false, peer = null, roomCode = "";
+      const links = {}; // peerId → { conn, name, color, queue:[], sending:false, in:null, inT:null }
+      let roster = []; // [{id,name,color}] (host authoritative)
+      const transfers = []; // {tid, dir, peer, name, size, moved, done, url, mime}
+      const connecting = {}; // ids we're dialing
+
+      const genCode = () => { const A = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; let s = ""; for (let i = 0; i < 4; i++) s += A[Math.floor(Math.random() * A.length)]; return s; };
+
+      // ---------- connection wiring ----------
+      function wire(conn) {
+        conn.on("open", () => {
+          links[conn.peer] = links[conn.peer] || { conn, name: "", color: "#888", queue: [], sending: false, in: null, inT: null };
+          links[conn.peer].conn = conn;
+          delete connecting[conn.peer];
+          conn.send({ t: "hello", name: me.name, color: me.color });
+          setConn(true); render();
+        });
+        conn.on("data", (d) => onData(conn, d));
+        conn.on("close", () => { delete links[conn.peer]; if (isHost) rebuildRosterAndBroadcast(); render(); });
+        conn.on("error", () => {});
+      }
+      function connectTo(id) { if (id === me.id || links[id] || connecting[id]) return; connecting[id] = true; const c = peer.connect(id, { reliable: true }); wire(c); }
+
+      function onData(conn, d) {
+        const link = links[conn.peer];
+        if (d && d.t) {
+          if (d.t === "hello") { if (link) { link.name = (d.name || "Device").slice(0, 24); link.color = d.color || "#888"; } if (isHost) rebuildRosterAndBroadcast(); render(); }
+          else if (d.t === "roster") { roster = d.members || []; ensureMesh(); render(); }
+          else if (d.t === "text") { addMessage(link ? link.name : "Someone", d.text); }
+          else if (d.t === "start") { const t = { tid: d.tid, dir: "in", peer: link ? link.name : "?", name: d.name, size: d.size, mime: d.type || "application/octet-stream", moved: 0, done: false }; if (link) { link.in = { chunks: [], t }; link.inT = t; } transfers.unshift(t); renderTransfers(); }
+          else if (d.t === "end") { if (link && link.in) { const inc = link.in; const blob = new Blob(inc.chunks, { type: inc.t.mime }); inc.t.url = URL.createObjectURL(blob); inc.t.moved = inc.t.size; inc.t.done = true; link.in = null; link.inT = null; renderTransfers(); if ($("autoDl").checked) triggerDownload(inc.t); toast("Received " + inc.t.name, "circle-check", "text-emerald-300"); } }
+        } else {
+          // binary chunk
+          const u8 = d instanceof ArrayBuffer ? new Uint8Array(d) : ArrayBuffer.isView(d) ? new Uint8Array(d.buffer, d.byteOffset, d.byteLength) : null;
+          if (u8 && link && link.in) { link.in.chunks.push(u8); link.inT.moved += u8.byteLength; updateProgress(link.inT); }
+        }
+      }
+
+      // ---------- roster / mesh ----------
+      function rebuildRosterAndBroadcast() { // host only
+        roster = [{ id: me.id, name: me.name, color: me.color }].concat(Object.entries(links).map(([id, l]) => ({ id, name: l.name || "Device", color: l.color })));
+        Object.values(links).forEach((l) => { if (l.conn.open) try { l.conn.send({ t: "roster", members: roster }); } catch (e) {} });
+        render();
+      }
+      function ensureMesh() { roster.forEach((m) => { if (m.id !== me.id && !links[m.id] && me.id < m.id) connectTo(m.id); }); }
+
+      function memberList() { // for UI: everyone but me, prefer roster, fall back to links
+        const seen = {}; const out = [];
+        roster.forEach((m) => { if (m.id !== me.id) { seen[m.id] = 1; out.push({ id: m.id, name: m.name, color: m.color, online: !!(links[m.id] && links[m.id].conn.open) || (isHost) }); } });
+        Object.entries(links).forEach(([id, l]) => { if (!seen[id]) out.push({ id, name: l.name || "Device", color: l.color, online: l.conn.open }); });
+        return out;
+      }
+
+      // ---------- sending ----------
+      function beam(files) {
+        if (!files.length) return;
+        const targetId = $("target").value;
+        const ids = targetId === "all" ? Object.keys(links) : [targetId];
+        const live = ids.filter((id) => links[id] && links[id].conn.open);
+        if (!live.length) return toast("No one connected to receive yet", "circle-info");
+        live.forEach((id) => { const link = links[id]; [...files].forEach((f) => link.queue.push(f)); pump(link, id); });
+      }
+      function drain(dc) { return new Promise((res) => { const c = () => { if (!dc || dc.bufferedAmount < LOW) res(); else setTimeout(c, 20); }; c(); }); }
+      async function pump(link, id) {
+        if (link.sending) return; link.sending = true;
+        while (link.queue.length) {
+          const file = link.queue.shift();
+          const tid = "T" + Math.random().toString(36).slice(2, 9);
+          const t = { tid, dir: "out", peer: link.name || "device", name: file.name, size: file.size, mime: file.type, moved: 0, done: false };
+          transfers.unshift(t); renderTransfers();
+          try {
+            link.conn.send({ t: "start", tid, name: file.name, size: file.size, type: file.type });
+            let off = 0;
+            while (off < file.size) {
+              const dc = link.conn.dataChannel;
+              if (dc && dc.bufferedAmount > HIGH) await drain(dc);
+              const buf = await file.slice(off, off + CHUNK).arrayBuffer();
+              link.conn.send(new Uint8Array(buf));
+              off += buf.byteLength; t.moved = off; updateProgress(t);
+            }
+            link.conn.send({ t: "end", tid });
+            t.moved = t.size; t.done = true; renderTransfers();
+          } catch (e) { t.error = true; renderTransfers(); }
+        }
+        link.sending = false;
+      }
+
+      // ---------- transfers UI ----------
+      function pct(t) { return t.size ? Math.min(100, Math.round((t.moved / t.size) * 100)) : 0; }
+      function renderTransfers() {
+        const box = $("transfers");
+        box.innerHTML = transfers.map((t) => `
+          <div class="glass-soft rounded-xl p-3 animate-pop-in">
+            <div class="flex items-center gap-2.5">
+              <i class="fa-solid ${t.dir === "in" ? "fa-arrow-down text-emerald-300" : "fa-arrow-up text-brand-300"} text-sm w-4 text-center"></i>
+              <span class="font-medium text-sm truncate flex-1" title="${esc(t.name)}">${esc(t.name)}</span>
+              <span class="text-[11px] text-white/40 font-mono">${fmtBytes(t.size)}</span>
+              ${t.done && t.dir === "in" ? `<button data-dl="${t.tid}" class="text-xs font-semibold bg-brand-500/25 text-brand-200 px-2.5 py-1 rounded-lg hover:bg-brand-500/40 transition"><i class="fa-solid fa-download"></i> Save</button>` : ""}
+              ${t.done ? `<i class="fa-solid fa-circle-check text-emerald-300 text-sm"></i>` : t.error ? `<i class="fa-solid fa-circle-exclamation text-rose-300 text-sm"></i>` : ""}
+            </div>
+            <div class="flex items-center gap-2 mt-1.5">
+              <span class="text-[10px] text-white/35">${t.dir === "in" ? "from" : "to"} ${esc(t.peer)}</span>
+              <div class="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden"><div id="bar-${t.tid}" class="h-full ${t.dir === "in" ? "bg-emerald-400" : "bg-gradient-to-r from-brand-400 to-brand-600"} transition-all" style="width:${pct(t)}%"></div></div>
+              <span id="pct-${t.tid}" class="text-[10px] font-mono text-white/50 w-9 text-right">${pct(t)}%</span>
+            </div>
+          </div>`).join("");
+        box.querySelectorAll("[data-dl]").forEach((b) => b.addEventListener("click", () => { const t = transfers.find((x) => x.tid === b.dataset.dl); if (t) triggerDownload(t); }));
+      }
+      function updateProgress(t) { const bar = $("bar-" + t.tid); if (bar) bar.style.width = pct(t) + "%"; const p = $("pct-" + t.tid); if (p) p.textContent = pct(t) + "%"; }
+      function triggerDownload(t) { if (!t.url) return; const a = document.createElement("a"); a.href = t.url; a.download = t.name; document.body.appendChild(a); a.click(); a.remove(); }
+
+      function addMessage(from, text) {
+        const box = $("messages");
+        const el = document.createElement("div");
+        el.className = "glass-soft rounded-xl p-3 animate-pop-in flex items-start gap-3";
+        el.innerHTML = `<i class="fa-solid fa-comment text-brand-300 mt-0.5"></i><div class="min-w-0 flex-1"><p class="text-[10px] text-white/40 mb-0.5">${esc(from)}</p><p class="text-sm break-words">${esc(text)}</p></div><button class="text-white/40 hover:text-white text-xs" title="Copy"><i class="fa-solid fa-copy"></i></button>`;
+        el.querySelector("button").addEventListener("click", () => navigator.clipboard.writeText(text).then(() => toast("Copied", "clipboard-check", "text-emerald-300")));
+        box.prepend(el);
+      }
+
+      // ---------- render ----------
+      function render() {
+        $("roomCode").textContent = roomCode;
+        const members = memberList();
+        $("presence").innerHTML = [{ id: me.id, name: me.name + " (you)", color: me.color, online: true }].concat(members).map((p) => `<div class="w-7 h-7 rounded-full grid place-items-center text-[11px] font-bold border-2 border-[#070a12] ${p.online ? "" : "opacity-40"}" style="background:${p.color}" title="${esc(p.name)}">${esc((p.name || "?")[0].toUpperCase())}</div>`).join("");
+        // target select
+        const sel = $("target"); const cur = sel.value;
+        sel.innerHTML = `<option value="all">Everyone (${members.length})</option>` + members.map((m) => `<option value="${m.id}">${esc(m.name)}</option>`).join("");
+        if ([...sel.options].some((o) => o.value === cur)) sel.value = cur;
+        $("dropSub").textContent = members.length ? `Click to choose, or drop files for ${members.length} device${members.length > 1 ? "s" : ""}.` : "Or click to choose. Waiting for someone to join…";
+      }
+      function setConn(ok) { $("connStatus").innerHTML = ok ? '<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span class="text-white/50">connected</span>' : '<span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="text-white/50">connecting…</span>'; }
+
+      // ---------- start ----------
+      function startHost(code) {
+        isHost = true; roomCode = code;
+        peer = new Peer(ID_PREFIX + code, peerOptions());
+        peer.on("open", (id) => { me.id = id; setConn(true); enterRoom(); rebuildRosterAndBroadcast(); });
+        peer.on("connection", (conn) => wire(conn));
+        peer.on("error", (e) => { if (e.type === "unavailable-id") { peer.destroy(); startHost(genCode()); } else { setConn(false); toast("Connection error: " + e.type, "triangle-exclamation", "text-amber-300"); } });
+        peer.on("disconnected", () => { setConn(false); try { peer.reconnect(); } catch (e) {} });
+      }
+      function startClient(code) {
+        isHost = false; roomCode = code;
+        peer = new Peer(peerOptions());
+        peer.on("open", (id) => { me.id = id; enterRoom(); connectTo(ID_PREFIX + code); });
+        peer.on("connection", (conn) => wire(conn)); // accept mesh links from others
+        peer.on("error", (e) => { if (e.type === "peer-unavailable") lobbyErr("No room with that code (or the host left)."); else lobbyErr("Connection error: " + e.type); setConn(false); });
+        peer.on("disconnected", () => { setConn(false); try { peer.reconnect(); } catch (e) {} });
+      }
+
+      // ---------- lobby ----------
+      function readIdentity() { me.name = ($("lName").value.trim() || "Device").slice(0, 24); me.color = $("lColor").value; localStorage.setItem("beam.me", JSON.stringify({ name: me.name, color: me.color })); }
+      function lobbyErr(m) { const e = $("lobbyErr"); e.querySelector("span").textContent = m; e.classList.remove("hidden"); e.classList.add("flex"); }
+      $("joinBtn").addEventListener("click", () => { if ($("joinBlock").classList.contains("hidden")) { $("joinBlock").classList.remove("hidden"); $("lCode").focus(); return; } const code = $("lCode").value.trim().toUpperCase(); if (code.length < 3) return lobbyErr("Enter the room code your other device shows."); readIdentity(); startClient(code); });
+      $("createBtn").addEventListener("click", () => { readIdentity(); startHost(genCode()); });
+      $("lCode").addEventListener("keydown", (e) => { if (e.key === "Enter") $("joinBtn").click(); });
+
+      function enterRoom() { $("lobby").classList.add("hidden"); $("room").classList.remove("hidden"); history.replaceState(null, "", "?room=" + roomCode); render(); }
+      function leave() { try { peer && peer.destroy(); } catch (e) {} location.href = location.pathname; }
+      $("leaveBtn").addEventListener("click", leave);
+      function inviteUrl() { return location.origin + location.pathname + "?room=" + roomCode; }
+      $("copyLink").addEventListener("click", () => navigator.clipboard.writeText(inviteUrl()).then(() => toast("Invite link copied", "clipboard-check", "text-emerald-300"), () => toast(inviteUrl(), "link")));
+      $("qrBtn").addEventListener("click", () => {
+        $("qrLink").textContent = inviteUrl(); $("qrBox").innerHTML = "";
+        try { if (window.QRCode) new QRCode($("qrBox"), { text: inviteUrl(), width: 200, height: 200 }); else $("qrBox").innerHTML = '<p class="text-black text-xs p-6">QR unavailable</p>'; } catch (e) { $("qrBox").innerHTML = '<p class="text-black text-xs p-6">QR unavailable</p>'; }
+        $("qrModal").classList.remove("hidden"); $("qrModal").classList.add("grid");
+      });
+      $("qrClose").addEventListener("click", () => { $("qrModal").classList.add("hidden"); $("qrModal").classList.remove("grid"); });
+      $("qrModal").addEventListener("click", (e) => { if (e.target === $("qrModal")) { $("qrModal").classList.add("hidden"); $("qrModal").classList.remove("grid"); } });
+
+      // ---------- drop / pick / text ----------
+      const drop = $("drop");
+      drop.addEventListener("click", () => $("fileInput").click());
+      $("fileInput").addEventListener("change", (e) => { beam(e.target.files); e.target.value = ""; });
+      ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("hot"); }));
+      ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); if (ev !== "drop") drop.classList.remove("hot"); }));
+      drop.addEventListener("drop", (e) => { drop.classList.remove("hot"); if (e.dataTransfer?.files?.length) beam(e.dataTransfer.files); });
+      $("sendText").addEventListener("click", sendText);
+      $("textInput").addEventListener("keydown", (e) => { if (e.key === "Enter") sendText(); });
+      function sendText() {
+        const text = $("textInput").value.trim(); if (!text) return;
+        const ids = $("target").value === "all" ? Object.keys(links) : [$("target").value];
+        const live = ids.filter((id) => links[id] && links[id].conn.open);
+        if (!live.length) return toast("No one connected yet", "circle-info");
+        live.forEach((id) => links[id].conn.send({ t: "text", text }));
+        addMessage("You", text); $("textInput").value = "";
+      }
+
+      if (params.get("room")) { $("joinBlock").classList.remove("hidden"); $("lCode").value = params.get("room").toUpperCase(); setTimeout(() => $("lName").focus(), 60); }
+      if (!window.Peer) lobbyErr("Couldn't load the PeerJS library (check your connection).");
+    </script>
+  </body>
+</html>
