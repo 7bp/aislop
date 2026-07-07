@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Papertrail — Document Scanner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: { extend: {
+          colors: { brand: { 50:"#eef2ff",100:"#e0e7ff",200:"#c7d2fe",300:"#a5b4fc",400:"#818cf8",500:"#6366f1",600:"#4f46e5",700:"#4338ca",800:"#3730a3",900:"#312e81" } },
+          fontFamily: { sans:["Plus Jakarta Sans","sans-serif"], brand:["Space Grotesk","sans-serif"] },
+          animation: { "fade-in":"fadeIn 0.3s ease both", "pop-in":"popIn 0.2s cubic-bezier(.2,.9,.3,1.25) both" },
+          keyframes: { fadeIn:{from:{opacity:"0",transform:"translateY(6px)"},to:{opacity:"1",transform:"translateY(0)"}}, popIn:{from:{opacity:"0",transform:"scale(0.96)"},to:{opacity:"1",transform:"scale(1)"}} },
+        } },
+      };
+    </script>
+    <style>
+      body{font-family:"Plus Jakarta Sans",sans-serif;min-height:100vh;background:radial-gradient(1100px 560px at 14% -10%, rgba(99,102,241,.16), transparent 60%),radial-gradient(900px 620px at 110% 8%, rgba(56,189,248,.1), transparent 55%),#080a12}
+      .brand-font{font-family:"Space Grotesk",sans-serif}
+      ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:9999px}
+      .glass{background:rgba(16,18,30,.62);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.08)}
+      .glass-soft{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+      .glow-btn{box-shadow:0 10px 30px -8px rgba(99,102,241,.55),inset 0 1px 0 rgba(255,255,255,.22)}
+      .drop{border:2px dashed rgba(255,255,255,.14);transition:.15s}
+      .drop.hot{border-color:rgba(99,102,241,.8);background:rgba(99,102,241,.08)}
+      .fbtn{padding:.4rem .7rem;border-radius:.6rem;font-size:.75rem;font-weight:600;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.7);transition:.14s;cursor:pointer}
+      .fbtn:hover{background:rgba(255,255,255,.1);color:#fff}
+      .fbtn.on{background:linear-gradient(180deg,#818cf8,#4f46e5);border-color:transparent;color:#fff}
+      .grain::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E")}
+    </style>
+  </head>
+  <body class="dark text-white grain overflow-x-hidden">
+    <header class="relative z-10 px-5 sm:px-8 pt-5 pb-3 flex items-center justify-between gap-4 flex-wrap">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 grid place-items-center glow-btn"><i class="fa-solid fa-file-lines text-white text-lg"></i></div>
+        <div><h1 class="brand-font text-xl font-bold tracking-tight leading-none">Papertrail</h1><p class="text-[11px] text-white/45 mt-0.5 font-medium">Document Scanner → PDF</p></div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-300 bg-emerald-400/10 border border-emerald-400/20 px-3 py-2 rounded-xl"><i class="fa-solid fa-lock"></i> 100% local · no upload</span>
+      </div>
+    </header>
+
+    <main class="relative z-10 px-5 sm:px-8 pb-16 max-w-[1100px] mx-auto">
+      <!-- Toolbar -->
+      <div class="glass rounded-2xl p-2.5 flex items-center gap-2 flex-wrap sticky top-3 z-30 animate-fade-in">
+        <button id="cameraBtn" class="flex items-center gap-2 bg-gradient-to-b from-brand-400 to-brand-600 hover:from-brand-300 text-white font-semibold px-4 py-2.5 rounded-xl glow-btn transition active:scale-95 text-sm"><i class="fa-solid fa-camera"></i> Scan with camera</button>
+        <button id="importBtn" class="flex items-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm"><i class="fa-solid fa-image"></i> Import images</button>
+        <div class="h-6 w-px bg-white/10 mx-1"></div>
+        <span class="text-xs text-white/40" id="pageStat">No pages yet</span>
+        <div class="ml-auto flex items-center gap-2">
+          <div class="relative">
+            <select id="applyAll" class="fbtn appearance-none pr-7 !py-2.5" title="Apply filter to all pages">
+              <option value="">Apply to all…</option>
+              <option value="none">Original</option>
+              <option value="enhance">Enhance</option>
+              <option value="gray">Grayscale</option>
+              <option value="bw">Scan (B&amp;W)</option>
+            </select>
+          </div>
+          <button id="pngBtn" class="flex items-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm disabled:opacity-40" disabled><i class="fa-solid fa-images"></i> <span class="hidden sm:inline">Images</span></button>
+          <button id="pdfBtn" class="flex items-center gap-2 bg-white text-black hover:bg-white/90 font-semibold px-5 py-2.5 rounded-xl transition active:scale-95 text-sm disabled:opacity-40 disabled:cursor-not-allowed" disabled><i class="fa-solid fa-file-pdf"></i> Export PDF</button>
+        </div>
+      </div>
+
+      <input id="fileInput" type="file" accept="image/*" multiple class="hidden" />
+
+      <!-- Empty / drop -->
+      <div id="drop" class="drop glass rounded-3xl p-10 sm:p-16 text-center mt-5 cursor-pointer animate-fade-in">
+        <div class="w-20 h-20 mx-auto rounded-3xl bg-white/5 border border-white/10 grid place-items-center mb-5"><i class="fa-solid fa-file-arrow-up text-3xl text-brand-300"></i></div>
+        <p class="text-lg font-semibold">Scan or drop document photos</p>
+        <p class="text-white/40 text-sm mt-1.5 max-w-md mx-auto">Use your camera for a live scan, or import photos. Papertrail cleans them up — grayscale, high-contrast black &amp; white, or auto-enhanced — and stitches them into one PDF, all on your device.</p>
+      </div>
+
+      <!-- Pages grid -->
+      <div id="pages" class="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 mt-5"></div>
+    </main>
+
+    <!-- Camera modal -->
+    <div id="camModal" class="hidden fixed inset-0 z-40 bg-black/90 flex flex-col items-center justify-center p-4">
+      <video id="cam" class="max-w-full max-h-[72vh] rounded-2xl bg-black" autoplay playsinline muted></video>
+      <p id="camMsg" class="text-white/60 text-sm mt-3"></p>
+      <div class="flex items-center gap-4 mt-5">
+        <button id="camCancel" class="glass-soft hover:bg-white/10 font-semibold px-5 py-3 rounded-2xl transition">Done</button>
+        <button id="shutter" class="w-16 h-16 rounded-full bg-white grid place-items-center active:scale-90 transition shadow-xl" title="Capture"><span class="w-12 h-12 rounded-full border-4 border-black/80"></span></button>
+        <button id="camFlip" class="glass-soft hover:bg-white/10 font-semibold px-5 py-3 rounded-2xl transition" title="Flip camera"><i class="fa-solid fa-camera-rotate"></i></button>
+      </div>
+      <p class="text-white/30 text-xs mt-3" id="camCount"></p>
+    </div>
+
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-3 glass px-5 py-3 rounded-2xl text-sm font-medium shadow-2xl"><i id="toastIcon" class="fa-solid fa-circle-info text-brand-300"></i><span id="toastMsg"></span></div>
+
+    <script>
+      const { PDFDocument } = PDFLib;
+      const $ = (id) => document.getElementById(id);
+      const FILTERS = { none: "Original", enhance: "Enhance", gray: "Grayscale", bw: "Scan" };
+      let pages = []; // { id, src(canvas), filter, rotation, thumb? }
+      let seq = 0;
+
+      function toast(msg, icon = "circle-info", color = "text-brand-300") { const t = $("toast"); $("toastMsg").textContent = msg; $("toastIcon").className = `fa-solid fa-${icon} ${color}`; t.classList.remove("hidden"); t.classList.add("flex"); clearTimeout(t._to); t._to = setTimeout(() => { t.classList.add("hidden"); t.classList.remove("flex"); }, 2600); }
+
+      // ---------- image processing ----------
+      function toGrayLum(d, i) { return 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; }
+      function otsu(hist, total) {
+        let sum = 0; for (let i = 0; i < 256; i++) sum += i * hist[i];
+        let sumB = 0, wB = 0, max = 0, thr = 127;
+        for (let i = 0; i < 256; i++) { wB += hist[i]; if (!wB) continue; const wF = total - wB; if (!wF) break; sumB += i * hist[i]; const mB = sumB / wB, mF = (sum - sumB) / wF; const between = wB * wF * (mB - mF) * (mB - mF); if (between > max) { max = between; thr = i; } }
+        return thr;
+      }
+      function applyFilter(imgData, filter) {
+        const d = imgData.data, n = d.length;
+        if (filter === "gray" || filter === "bw") {
+          const hist = new Uint32Array(256);
+          for (let i = 0; i < n; i += 4) { const g = toGrayLum(d, i) | 0; d[i] = d[i + 1] = d[i + 2] = g; hist[g]++; }
+          if (filter === "bw") { const thr = otsu(hist, n / 4); for (let i = 0; i < n; i += 4) { const v = d[i] > thr ? 255 : 0; d[i] = d[i + 1] = d[i + 2] = v; } }
+        } else if (filter === "enhance") {
+          // auto-levels: 1st/99th percentile stretch per luminance, applied per channel
+          const hist = new Uint32Array(256); let cnt = n / 4;
+          for (let i = 0; i < n; i += 4) hist[toGrayLum(d, i) | 0]++;
+          let lo = 0, hi = 255, acc = 0; const loT = cnt * 0.01, hiT = cnt * 0.99;
+          for (let i = 0; i < 256; i++) { acc += hist[i]; if (acc >= loT) { lo = i; break; } }
+          acc = 0; for (let i = 0; i < 256; i++) { acc += hist[i]; if (acc >= hiT) { hi = i; break; } }
+          const range = Math.max(1, hi - lo);
+          for (let i = 0; i < n; i += 4) for (let c = 0; c < 3; c++) { let v = (d[i + c] - lo) * 255 / range; d[i + c] = v < 0 ? 0 : v > 255 ? 255 : v; }
+          // gentle contrast bump
+          const f = 1.12;
+          for (let i = 0; i < n; i += 4) for (let c = 0; c < 3; c++) { let v = f * (d[i + c] - 128) + 128; d[i + c] = v < 0 ? 0 : v > 255 ? 255 : v; }
+        }
+        return imgData;
+      }
+
+      // render a page (rotation + filter) into a fresh canvas capped at maxSide
+      function renderPage(page, maxSide) {
+        const s = page.src;
+        let sw = s.width, sh = s.height;
+        const rot = page.rotation % 360;
+        const swap = rot === 90 || rot === 270;
+        let ow = swap ? sh : sw, oh = swap ? sw : sh;
+        const scale = Math.min(1, maxSide / Math.max(ow, oh));
+        ow = Math.round(ow * scale); oh = Math.round(oh * scale);
+        const cv = document.createElement("canvas"); cv.width = ow; cv.height = oh;
+        const cx = cv.getContext("2d");
+        cx.save();
+        cx.translate(ow / 2, oh / 2);
+        cx.rotate((rot * Math.PI) / 180);
+        const dw = swap ? oh : ow, dh = swap ? ow : oh;
+        cx.drawImage(s, -dw / 2, -dh / 2, dw, dh);
+        cx.restore();
+        if (page.filter && page.filter !== "none") { const id = cx.getImageData(0, 0, ow, oh); applyFilter(id, page.filter); cx.putImageData(id, 0, 0); }
+        return cv;
+      }
+
+      // ---------- add pages ----------
+      function addFromImage(img) {
+        const src = document.createElement("canvas");
+        // cap source at 2400px long side to keep memory sane
+        const scale = Math.min(1, 2400 / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height));
+        src.width = Math.round((img.naturalWidth || img.width) * scale);
+        src.height = Math.round((img.naturalHeight || img.height) * scale);
+        src.getContext("2d").drawImage(img, 0, 0, src.width, src.height);
+        pages.push({ id: "p" + seq++, src, filter: "enhance", rotation: 0 });
+        render();
+      }
+      function loadFile(file) {
+        return new Promise((res) => { const url = URL.createObjectURL(file); const img = new Image(); img.onload = () => { addFromImage(img); URL.revokeObjectURL(url); res(); }; img.onerror = () => { URL.revokeObjectURL(url); res(); }; img.src = url; });
+      }
+      async function handleFiles(list) { for (const f of [...list]) if (/^image\//.test(f.type) || /\.(png|jpe?g|webp|bmp|gif)$/i.test(f.name)) await loadFile(f); }
+      $("fileInput").addEventListener("change", (e) => { handleFiles(e.target.files); e.target.value = ""; });
+      const pick = () => $("fileInput").click();
+      $("importBtn").addEventListener("click", pick);
+      $("drop").addEventListener("click", pick);
+      ["dragenter", "dragover"].forEach((ev) => $("drop").addEventListener(ev, (e) => { e.preventDefault(); $("drop").classList.add("hot"); }));
+      ["dragleave", "drop"].forEach((ev) => $("drop").addEventListener(ev, (e) => { e.preventDefault(); if (ev !== "drop") $("drop").classList.remove("hot"); }));
+      $("drop").addEventListener("drop", (e) => { $("drop").classList.remove("hot"); if (e.dataTransfer?.files?.length) handleFiles(e.dataTransfer.files); });
+      window.addEventListener("dragover", (e) => e.preventDefault());
+      window.addEventListener("drop", (e) => e.preventDefault());
+
+      // ---------- render grid ----------
+      function render() {
+        const has = pages.length > 0;
+        $("drop").classList.toggle("hidden", has);
+        $("pdfBtn").disabled = !has; $("pngBtn").disabled = !has;
+        $("pageStat").textContent = has ? `${pages.length} page${pages.length > 1 ? "s" : ""}` : "No pages yet";
+        const grid = $("pages"); grid.innerHTML = "";
+        pages.forEach((page, idx) => {
+          const card = document.createElement("div");
+          card.className = "glass rounded-2xl overflow-hidden animate-pop-in";
+          card.dataset.id = page.id;
+          card.innerHTML = `
+            <div class="relative bg-white/5 aspect-[3/4] grid place-items-center overflow-hidden p-2">
+              <canvas class="max-w-full max-h-full rounded shadow-lg bg-white"></canvas>
+              <span class="absolute top-1.5 left-1.5 text-[10px] font-bold bg-black/60 backdrop-blur px-1.5 py-0.5 rounded">${idx + 1}</span>
+              <div class="absolute top-1.5 right-1.5 flex gap-1">
+                <button data-rot="${page.id}" class="w-7 h-7 grid place-items-center bg-black/60 hover:bg-black/80 backdrop-blur rounded text-xs" title="Rotate"><i class="fa-solid fa-rotate-right"></i></button>
+                <button data-del="${page.id}" class="w-7 h-7 grid place-items-center bg-black/60 hover:bg-rose-500/80 backdrop-blur rounded text-xs" title="Delete"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+              <div class="absolute bottom-1.5 left-1.5 flex gap-1">
+                ${idx > 0 ? `<button data-left="${page.id}" class="w-6 h-6 grid place-items-center bg-black/60 hover:bg-black/80 backdrop-blur rounded text-[10px]"><i class="fa-solid fa-chevron-left"></i></button>` : ""}
+                ${idx < pages.length - 1 ? `<button data-right="${page.id}" class="w-6 h-6 grid place-items-center bg-black/60 hover:bg-black/80 backdrop-blur rounded text-[10px]"><i class="fa-solid fa-chevron-right"></i></button>` : ""}
+              </div>
+            </div>
+            <div class="flex gap-1 p-2">
+              ${Object.keys(FILTERS).map((f) => `<button data-filter="${page.id}:${f}" class="fbtn flex-1 !px-1 !py-1 text-center ${page.filter === f ? "on" : ""}">${FILTERS[f]}</button>`).join("")}
+            </div>`;
+          grid.appendChild(card);
+          // draw thumbnail
+          const target = card.querySelector("canvas");
+          const rc = renderPage(page, 300);
+          target.width = rc.width; target.height = rc.height; target.getContext("2d").drawImage(rc, 0, 0);
+        });
+
+        grid.querySelectorAll("[data-rot]").forEach((b) => b.addEventListener("click", () => { const p = pages.find((x) => x.id === b.dataset.rot); p.rotation = (p.rotation + 90) % 360; render(); }));
+        grid.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => { pages = pages.filter((x) => x.id !== b.dataset.del); render(); }));
+        grid.querySelectorAll("[data-left]").forEach((b) => b.addEventListener("click", () => move(b.dataset.left, -1)));
+        grid.querySelectorAll("[data-right]").forEach((b) => b.addEventListener("click", () => move(b.dataset.right, 1)));
+        grid.querySelectorAll("[data-filter]").forEach((b) => b.addEventListener("click", () => { const [id, f] = b.dataset.filter.split(":"); const p = pages.find((x) => x.id === id); p.filter = f; render(); }));
+      }
+      function move(id, dir) { const i = pages.findIndex((x) => x.id === id); const j = i + dir; if (j < 0 || j >= pages.length) return; [pages[i], pages[j]] = [pages[j], pages[i]]; render(); }
+      $("applyAll").addEventListener("change", (e) => { const f = e.target.value; if (!f) return; pages.forEach((p) => (p.filter = f)); e.target.value = ""; render(); toast("Applied " + FILTERS[f] + " to all", "wand-magic-sparkles"); });
+
+      // ---------- camera ----------
+      let stream = null, facing = "environment", captured = 0;
+      $("cameraBtn").addEventListener("click", startCamera);
+      async function startCamera() {
+        if (!navigator.mediaDevices?.getUserMedia) return toast("Camera not supported here — import photos instead", "triangle-exclamation", "text-amber-300");
+        $("camModal").classList.remove("hidden"); $("camMsg").textContent = "Starting camera…"; captured = 0; updateCamCount();
+        await openStream();
+      }
+      async function openStream() {
+        try {
+          if (stream) stream.getTracks().forEach((t) => t.stop());
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing } }, audio: false });
+          $("cam").srcObject = stream; $("camMsg").textContent = "Line up the document and tap the shutter";
+        } catch (e) { $("camMsg").textContent = "Couldn't access the camera. Close and import photos instead."; }
+      }
+      $("camFlip").addEventListener("click", () => { facing = facing === "environment" ? "user" : "environment"; openStream(); });
+      $("shutter").addEventListener("click", () => {
+        const v = $("cam"); if (!v.videoWidth) return;
+        const c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight; c.getContext("2d").drawImage(v, 0, 0);
+        const img = new Image(); img.onload = () => { addFromImage(img); }; img.src = c.toDataURL("image/jpeg", 0.92);
+        captured++; updateCamCount(); toast("Captured page " + captured, "circle-check", "text-emerald-300");
+      });
+      function updateCamCount() { $("camCount").textContent = captured ? captured + " captured — tap Done when finished" : ""; }
+      $("camCancel").addEventListener("click", () => { if (stream) stream.getTracks().forEach((t) => t.stop()); stream = null; $("camModal").classList.add("hidden"); });
+
+      // ---------- export ----------
+      function canvasToBytes(canvas, quality) { return new Promise((res) => canvas.toBlob((b) => b.arrayBuffer().then((a) => res(new Uint8Array(a))), "image/jpeg", quality)); }
+      $("pdfBtn").addEventListener("click", async () => {
+        if (!pages.length) return;
+        const btn = $("pdfBtn"); const orig = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Building…';
+        try {
+          const doc = await PDFDocument.create();
+          const A4 = { w: 595.28, h: 841.89 }, margin = 20;
+          for (const page of pages) {
+            const cv = renderPage(page, 2000);
+            const bytes = await canvasToBytes(cv, 0.82);
+            const jpg = await doc.embedJpg(bytes);
+            const landscape = cv.width > cv.height;
+            const pw = landscape ? A4.h : A4.w, ph = landscape ? A4.w : A4.h;
+            const pdfPage = doc.addPage([pw, ph]);
+            const maxW = pw - margin * 2, maxH = ph - margin * 2;
+            const s = Math.min(maxW / jpg.width, maxH / jpg.height);
+            const w = jpg.width * s, h = jpg.height * s;
+            pdfPage.drawImage(jpg, { x: (pw - w) / 2, y: (ph - h) / 2, width: w, height: h });
+          }
+          doc.setProducer("Papertrail"); doc.setCreator("Papertrail — Document Scanner");
+          const out = await doc.save();
+          downloadBlob(new Blob([out], { type: "application/pdf" }), `scan-${new Date().toISOString().slice(0, 10)}.pdf`);
+          toast(`Exported ${pages.length}-page PDF`, "circle-check", "text-emerald-300");
+        } catch (e) { console.error(e); toast("PDF export failed", "triangle-exclamation", "text-amber-300"); }
+        finally { btn.disabled = false; btn.innerHTML = orig; }
+      });
+      $("pngBtn").addEventListener("click", async () => {
+        for (let i = 0; i < pages.length; i++) { const cv = renderPage(pages[i], 2000); const bytes = await canvasToBytes(cv, 0.92); downloadBlob(new Blob([bytes], { type: "image/jpeg" }), `scan-${String(i + 1).padStart(2, "0")}.jpg`); await new Promise((r) => setTimeout(r, 200)); }
+        toast(`Saved ${pages.length} image${pages.length > 1 ? "s" : ""}`, "circle-check", "text-emerald-300");
+      });
+      function downloadBlob(blob, name) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
+
+      render();
+    </script>
+  </body>
+</html>
