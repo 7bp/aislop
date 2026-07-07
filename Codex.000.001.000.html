@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Codex — Universal Code Scanner &amp; Analyzer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <!-- ZXing: decodes QR, EAN/UPC, Code128/39, ITF, Data Matrix, PDF417, Aztec, … in the browser -->
+    <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: { extend: {
+          colors: { brand: { 50:"#f0fdf4",100:"#dcfce7",200:"#bbf7d0",300:"#86efac",400:"#4ade80",500:"#22c55e",600:"#16a34a",700:"#15803d",800:"#166534",900:"#14532d" } },
+          fontFamily: { sans:["Plus Jakarta Sans","sans-serif"], brand:["Space Grotesk","sans-serif"], mono:["JetBrains Mono","monospace"] },
+          animation: { "fade-in":"fadeIn 0.3s ease both", "pop-in":"popIn 0.2s cubic-bezier(.2,.9,.3,1.25) both", "scan":"scan 2s ease-in-out infinite" },
+          keyframes: { fadeIn:{from:{opacity:"0",transform:"translateY(6px)"},to:{opacity:"1",transform:"translateY(0)"}}, popIn:{from:{opacity:"0",transform:"scale(0.96)"},to:{opacity:"1",transform:"scale(1)"}}, scan:{ "0%,100%":{top:"6%"}, "50%":{top:"92%"} } },
+        } },
+      };
+    </script>
+    <style>
+      body{font-family:"Plus Jakarta Sans",sans-serif;min-height:100vh;background:radial-gradient(1100px 560px at 14% -10%, rgba(34,197,94,.16), transparent 60%),radial-gradient(900px 620px at 110% 8%, rgba(16,185,129,.1), transparent 55%),#07110b}
+      .brand-font{font-family:"Space Grotesk",sans-serif}
+      ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:9999px}
+      .glass{background:rgba(14,22,16,.62);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.08)}
+      .glass-soft{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+      .glow-btn{box-shadow:0 10px 30px -8px rgba(34,197,94,.5),inset 0 1px 0 rgba(255,255,255,.22)}
+      .drop{border:2px dashed rgba(255,255,255,.14);transition:.15s}
+      .drop.hot{border-color:rgba(34,197,94,.8);background:rgba(34,197,94,.08)}
+      .field{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:.7rem;padding:.6rem .8rem;color:#fff;font-size:.9rem;outline:none;transition:.15s}
+      .field:focus{border-color:rgba(34,197,94,.7);box-shadow:0 0 0 3px rgba(34,197,94,.16)}
+      .tab{padding:.5rem 1rem;border-radius:.7rem;font-weight:600;font-size:.85rem;cursor:pointer;transition:.14s;color:rgba(255,255,255,.6)}
+      .tab.on{background:linear-gradient(180deg,#4ade80,#16a34a);color:#04140b}
+      .scanline{position:absolute;left:6%;right:6%;height:2px;background:linear-gradient(90deg,transparent,#4ade80,transparent);box-shadow:0 0 12px #4ade80;animation:scan 2s ease-in-out infinite}
+      .grain::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E")}
+    </style>
+  </head>
+  <body class="dark text-white grain overflow-x-hidden">
+    <header class="relative z-10 px-5 sm:px-8 pt-5 pb-3 flex items-center justify-between gap-4 flex-wrap">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 grid place-items-center glow-btn"><i class="fa-solid fa-barcode text-white text-lg"></i></div>
+        <div><h1 class="brand-font text-xl font-bold tracking-tight leading-none">Codex</h1><p class="text-[11px] text-white/45 mt-0.5 font-medium">Universal Code Scanner &amp; Analyzer</p></div>
+      </div>
+      <div class="flex items-center gap-1.5 glass-soft rounded-xl p-1">
+        <button class="tab on" data-tab="scan">Scan</button>
+        <button class="tab" data-tab="morse">Morse</button>
+      </div>
+    </header>
+
+    <main class="relative z-10 px-5 sm:px-8 pb-16 max-w-[980px] mx-auto">
+      <!-- ============ SCAN ============ -->
+      <section id="tab-scan" class="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-2">
+        <div class="space-y-4">
+          <div class="glass rounded-2xl p-2.5 flex items-center gap-2 flex-wrap animate-fade-in">
+            <button id="camBtn" class="flex items-center gap-2 bg-gradient-to-b from-brand-400 to-brand-600 hover:from-brand-300 text-[#04140b] font-semibold px-4 py-2.5 rounded-xl glow-btn transition active:scale-95 text-sm"><i class="fa-solid fa-camera"></i> Scan with camera</button>
+            <button id="imgBtn" class="flex items-center gap-2 glass-soft hover:bg-white/10 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm"><i class="fa-solid fa-image"></i> Decode image</button>
+          </div>
+          <div id="stage" class="drop glass rounded-3xl p-6 relative overflow-hidden aspect-[4/3] grid place-items-center cursor-pointer animate-fade-in">
+            <div id="stagePlaceholder" class="text-center px-4">
+              <div class="w-16 h-16 mx-auto rounded-2xl bg-white/5 border border-white/10 grid place-items-center mb-4"><i class="fa-solid fa-qrcode text-2xl text-brand-300"></i></div>
+              <p class="font-semibold">Point your camera or drop an image</p>
+              <p class="text-white/40 text-sm mt-1">QR, barcodes, Data Matrix, PDF417, Aztec &amp; more.</p>
+            </div>
+            <video id="video" class="hidden absolute inset-0 w-full h-full object-cover" playsinline muted></video>
+            <div id="scanOverlay" class="hidden absolute inset-0"><div class="scanline"></div></div>
+          </div>
+          <input id="fileInput" type="file" accept="image/*" class="hidden" />
+          <div id="engineWarn" class="hidden text-amber-300 text-xs px-1"><i class="fa-solid fa-triangle-exclamation"></i> Decoder library couldn't load — check your connection.</div>
+        </div>
+
+        <div class="space-y-4">
+          <div id="result" class="hidden glass rounded-2xl p-5 animate-pop-in"></div>
+          <div id="noResult" class="glass rounded-2xl p-5 text-center text-white/40 text-sm">Scan or drop a code to see everything it contains.</div>
+          <div id="history" class="space-y-2"></div>
+        </div>
+      </section>
+
+      <!-- ============ MORSE ============ -->
+      <section id="tab-morse" class="hidden mt-2 max-w-[680px] mx-auto animate-fade-in">
+        <div class="glass rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-2">
+            <p class="lbl text-[11px] uppercase tracking-wider text-white/40 font-bold">Text</p>
+            <button id="mSwap" class="text-xs glass-soft hover:bg-white/10 px-3 py-1.5 rounded-lg font-semibold"><i class="fa-solid fa-arrows-up-down"></i> Swap</button>
+          </div>
+          <textarea id="mText" class="field resize-none font-medium" rows="3" placeholder="Type text to convert to Morse…"></textarea>
+          <div class="flex items-center justify-center my-3 text-white/30"><i id="mArrow" class="fa-solid fa-arrow-down"></i></div>
+          <p class="lbl text-[11px] uppercase tracking-wider text-white/40 font-bold mb-2">Morse</p>
+          <textarea id="mCode" class="field resize-none font-mono" rows="3" placeholder="… or paste Morse (dots/dashes) to decode"></textarea>
+          <div class="flex items-center gap-2 mt-3">
+            <button id="mPlay" class="flex items-center gap-2 bg-gradient-to-b from-brand-400 to-brand-600 text-[#04140b] font-semibold px-4 py-2.5 rounded-xl glow-btn transition active:scale-95 text-sm"><i class="fa-solid fa-volume-high"></i> Play</button>
+            <button id="mCopy" class="glass-soft hover:bg-white/10 font-semibold px-4 py-2.5 rounded-xl transition text-sm"><i class="fa-solid fa-copy"></i> Copy Morse</button>
+            <span class="text-[11px] text-white/30 ml-auto">· − with audio, at ~15 WPM</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-3 glass px-5 py-3 rounded-2xl text-sm font-medium shadow-2xl"><i id="toastIcon" class="fa-solid fa-circle-info text-brand-300"></i><span id="toastMsg"></span></div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      function toast(msg, icon = "circle-info", color = "text-brand-300") { const t = $("toast"); $("toastMsg").textContent = msg; $("toastIcon").className = `fa-solid fa-${icon} ${color}`; t.classList.remove("hidden"); t.classList.add("flex"); clearTimeout(t._to); t._to = setTimeout(() => { t.classList.add("hidden"); t.classList.remove("flex"); }, 2600); }
+      function esc(s){return (s+"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
+      // tabs
+      document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === b));
+        $("tab-scan").classList.toggle("hidden", b.dataset.tab !== "scan");
+        $("tab-morse").classList.toggle("hidden", b.dataset.tab !== "morse");
+        if (b.dataset.tab !== "scan") stopCamera();
+      }));
+
+      // ---------- decoder ----------
+      const hasZX = !!window.ZXing;
+      if (!hasZX) $("engineWarn").classList.remove("hidden");
+      const reader = hasZX ? new ZXing.BrowserMultiFormatReader() : null;
+      const fmtName = (f) => (hasZX && ZXing.BarcodeFormat[f] != null ? ZXing.BarcodeFormat[f] : "CODE").replace(/_/g, " ");
+
+      const history = [];
+
+      function decodeImageUrl(url) {
+        if (!reader) return;
+        reader.decodeFromImageUrl(url).then((res) => handleResult(res)).catch(() => { showNoCode(); });
+      }
+      $("fileInput").addEventListener("change", (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) { const u = URL.createObjectURL(f); decodeImageUrl(u); setTimeout(() => URL.revokeObjectURL(u), 8000); } });
+      const pick = () => $("fileInput").click();
+      $("imgBtn").addEventListener("click", pick);
+      $("stage").addEventListener("click", () => { if (!camActive) pick(); });
+      ["dragenter", "dragover"].forEach((ev) => $("stage").addEventListener(ev, (e) => { e.preventDefault(); $("stage").classList.add("hot"); }));
+      ["dragleave", "drop"].forEach((ev) => $("stage").addEventListener(ev, (e) => { e.preventDefault(); if (ev !== "drop") $("stage").classList.remove("hot"); }));
+      $("stage").addEventListener("drop", (e) => { $("stage").classList.remove("hot"); const f = e.dataTransfer?.files?.[0]; if (f) { const u = URL.createObjectURL(f); decodeImageUrl(u); } });
+      window.addEventListener("dragover", (e) => e.preventDefault());
+      window.addEventListener("drop", (e) => e.preventDefault());
+
+      // camera
+      let camActive = false, lastText = "", lastAt = 0;
+      $("camBtn").addEventListener("click", () => (camActive ? stopCamera() : startCamera()));
+      function startCamera() {
+        if (!reader) return toast("Decoder not loaded", "triangle-exclamation", "text-amber-300");
+        if (!navigator.mediaDevices?.getUserMedia) return toast("Camera not supported here", "triangle-exclamation", "text-amber-300");
+        camActive = true;
+        $("video").classList.remove("hidden"); $("scanOverlay").classList.remove("hidden"); $("stagePlaceholder").classList.add("hidden");
+        $("camBtn").innerHTML = '<i class="fa-solid fa-stop"></i> Stop camera';
+        reader.decodeFromConstraints({ video: { facingMode: { ideal: "environment" } } }, $("video"), (result) => {
+          if (result) { const txt = result.getText(); const now = Date.now(); if (txt === lastText && now - lastAt < 2500) return; lastText = txt; lastAt = now; handleResult(result); if (navigator.vibrate) navigator.vibrate(60); }
+        }).catch(() => { toast("Couldn't start camera", "triangle-exclamation", "text-amber-300"); stopCamera(); });
+      }
+      function stopCamera() { if (!camActive) return; camActive = false; try { reader && reader.reset(); } catch (e) {} $("video").classList.add("hidden"); $("scanOverlay").classList.add("hidden"); $("stagePlaceholder").classList.remove("hidden"); $("camBtn").innerHTML = '<i class="fa-solid fa-camera"></i> Scan with camera'; }
+
+      function showNoCode() { toast("No code found in that image", "circle-info"); }
+
+      // ---------- classification ----------
+      function bytesOf(res) {
+        let raw = null; try { raw = res.getRawBytes && res.getRawBytes(); } catch (e) {}
+        if (raw && raw.length) return new Uint8Array(raw.buffer ? raw.buffer.slice(raw.byteOffset || 0, (raw.byteOffset || 0) + raw.length) : raw);
+        return new TextEncoder().encode(res.getText());
+      }
+      function hexDump(u8) { return [...u8].map((b) => b.toString(16).padStart(2, "0")).join(" "); }
+
+      function parsePairs(str, sep, kv) {
+        const out = {}; str.split(sep).forEach((p) => { const i = p.indexOf(kv); if (i > 0) out[p.slice(0, i).trim().toUpperCase()] = p.slice(i + 1).trim(); }); return out;
+      }
+
+      function classify(text) {
+        const t = text.trim();
+        const A = (label, icon, kind) => ({ label, icon, kind });
+        // URL
+        if (/^(https?):\/\//i.test(t)) {
+          let f = []; try { const u = new URL(t); f = [["Scheme", u.protocol.replace(":", "")], ["Host", u.host], ["Path", u.pathname || "/"]]; if (u.search) f.push(["Query", u.search.slice(1)]); } catch (e) {}
+          return { ...A("Website / Link", "link"), fields: f, actions: [["Open link", () => window.open(t, "_blank")], ["Search host", () => window.open("https://duckduckgo.com/?q=" + encodeURIComponent((new URL(t)).host))]] };
+        }
+        // Wi-Fi
+        if (/^WIFI:/i.test(t)) { const d = parsePairs(t.slice(5).replace(/;;\s*$/, ""), ";", ":"); return { ...A("Wi-Fi network", "wifi"), fields: [["Network (SSID)", d.S || "—"], ["Password", d.P || "—"], ["Security", d.T || "—"], ["Hidden", d.H === "true" ? "yes" : "no"]] }; }
+        // Email
+        if (/^mailto:/i.test(t)) { const [addr, q] = t.slice(7).split("?"); return { ...A("Email", "envelope"), fields: [["To", addr]], actions: [["Compose", () => (location.href = t)]] }; }
+        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)) return { ...A("Email address", "envelope"), fields: [["Address", t]], actions: [["Compose", () => (location.href = "mailto:" + t)]] };
+        // Phone / SMS
+        if (/^tel:/i.test(t)) return { ...A("Phone number", "phone"), fields: [["Number", t.slice(4)]], actions: [["Call", () => (location.href = t)]] };
+        if (/^smsto:/i.test(t)) { const [, num, msg] = t.split(":"); return { ...A("SMS message", "comment-sms"), fields: [["To", num || "—"], ["Message", msg || "—"]] }; }
+        // Geo
+        if (/^geo:/i.test(t)) { const c = t.slice(4).split(/[,;]/); return { ...A("Geo location", "location-dot"), fields: [["Latitude", c[0]], ["Longitude", c[1] || "—"]], actions: [["Open map", () => window.open(`https://www.openstreetmap.org/?mlat=${c[0]}&mlon=${c[1]}#map=17/${c[0]}/${c[1]}`)]] }; }
+        // vCard
+        if (/^BEGIN:VCARD/i.test(t)) { const g = (re) => (t.match(re) || [, ""])[1].trim(); return { ...A("Contact (vCard)", "address-card"), fields: [["Name", g(/\nFN:(.*)/i)], ["Phone", g(/\nTEL[^:]*:(.*)/i)], ["Email", g(/\nEMAIL[^:]*:(.*)/i)], ["Org", g(/\nORG:(.*)/i)]].filter((x) => x[1]) }; }
+        if (/^MECARD:/i.test(t)) { const d = parsePairs(t.slice(7), ";", ":"); return { ...A("Contact (MeCard)", "address-card"), fields: [["Name", d.N || "—"], ["Phone", d.TEL || "—"], ["Email", d.EMAIL || "—"]] }; }
+        // Calendar
+        if (/BEGIN:VEVENT/i.test(t)) { const g = (re) => (t.match(re) || [, ""])[1].trim(); return { ...A("Calendar event", "calendar-days"), fields: [["Title", g(/SUMMARY:(.*)/i)], ["Start", g(/DTSTART[^:]*:(.*)/i)], ["End", g(/DTEND[^:]*:(.*)/i)], ["Location", g(/LOCATION:(.*)/i)]].filter((x) => x[1]) }; }
+        // Crypto
+        if (/^bitcoin:/i.test(t)) return { ...A("Bitcoin payment", "bitcoin-sign"), fields: [["Address", t.slice(8).split("?")[0]]] };
+        // Product number
+        if (/^\d{8}$|^\d{12,14}$/.test(t)) return { ...A("Product code", "cart-shopping"), fields: [["Number", t]], actions: [["Look up", () => window.open("https://duckduckgo.com/?q=" + encodeURIComponent(t))]] };
+        // plain
+        return { ...A("Plain text", "font"), fields: [] };
+      }
+
+      function handleResult(res) {
+        const text = res.getText();
+        const format = fmtName(res.getBarcodeFormat());
+        const u8 = bytesOf(res);
+        const info = classify(text);
+        renderResult({ text, format, u8, info });
+        // history (dedupe consecutive)
+        if (!history.length || history[0].text !== text) { history.unshift({ text, format, info }); renderHistory(); }
+        if (navigator.vibrate) navigator.vibrate(40);
+      }
+
+      let showHex = false;
+      function renderResult({ text, format, u8, info }) {
+        $("noResult").classList.add("hidden");
+        const box = $("result"); box.classList.remove("hidden");
+        const utf8 = new TextEncoder().encode(text).length;
+        box.innerHTML = `
+          <div class="flex items-center gap-2 flex-wrap mb-3">
+            <span class="inline-flex items-center gap-1.5 text-xs font-bold bg-brand-500/20 text-brand-200 px-2.5 py-1 rounded-lg"><i class="fa-solid fa-barcode"></i> ${esc(format)}</span>
+            <span class="inline-flex items-center gap-1.5 text-xs font-bold bg-white/10 px-2.5 py-1 rounded-lg"><i class="fa-solid fa-${info.icon}"></i> ${esc(info.label)}</span>
+            <span class="text-[11px] text-white/35 ml-auto font-mono">${u8.length} bytes${utf8 !== u8.length ? " raw · " + utf8 + " utf-8" : ""}</span>
+          </div>
+          <div class="glass-soft rounded-xl p-3 mb-3">
+            <p class="text-[10px] uppercase tracking-wide text-white/40 font-bold mb-1">Decoded value</p>
+            <p class="font-mono text-sm break-all leading-relaxed">${esc(text) || '<span class="text-white/40">(empty)</span>'}</p>
+          </div>
+          ${info.fields && info.fields.length ? `<div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">${info.fields.map(([k, v]) => `<div class="glass-soft rounded-lg px-3 py-2"><p class="text-[10px] uppercase tracking-wide text-white/40 font-bold">${esc(k)}</p><p class="text-sm font-medium break-all">${esc(v || "—")}</p></div>`).join("")}</div>` : ""}
+          <div class="flex items-center gap-2 flex-wrap">
+            <button id="copyVal" class="flex items-center gap-2 glass-soft hover:bg-white/10 font-semibold px-3.5 py-2 rounded-lg transition text-sm"><i class="fa-solid fa-copy"></i> Copy</button>
+            <button id="dlVal" class="flex items-center gap-2 glass-soft hover:bg-white/10 font-semibold px-3.5 py-2 rounded-lg transition text-sm"><i class="fa-solid fa-download"></i> .txt</button>
+            <button id="hexTgl" class="flex items-center gap-2 glass-soft hover:bg-white/10 font-semibold px-3.5 py-2 rounded-lg transition text-sm"><i class="fa-solid fa-1 fa-fw"></i> Bytes</button>
+            <span id="actionSlot" class="flex items-center gap-2 flex-wrap"></span>
+          </div>
+          <pre id="hexBox" class="hidden mt-3 glass-soft rounded-xl p-3 text-[11px] font-mono text-white/70 overflow-x-auto whitespace-pre-wrap break-all"></pre>`;
+        $("copyVal").addEventListener("click", () => navigator.clipboard.writeText(text).then(() => toast("Copied", "clipboard-check", "text-emerald-300")));
+        $("dlVal").addEventListener("click", () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "text/plain" })); a.download = "code.txt"; a.click(); });
+        $("hexTgl").addEventListener("click", () => { showHex = !showHex; $("hexBox").classList.toggle("hidden", !showHex); $("hexBox").textContent = hexDump(u8); });
+        const slot = $("actionSlot");
+        (info.actions || []).forEach(([label, fn]) => { const b = document.createElement("button"); b.className = "flex items-center gap-2 bg-brand-500/20 text-brand-200 hover:bg-brand-500/30 font-semibold px-3.5 py-2 rounded-lg transition text-sm"; b.innerHTML = `<i class="fa-solid fa-arrow-up-right-from-square"></i> ${esc(label)}`; b.addEventListener("click", fn); slot.appendChild(b); });
+      }
+      function renderHistory() {
+        $("history").innerHTML = history.slice(0, 8).map((h, i) => `<div data-h="${i}" class="glass-soft rounded-xl p-2.5 flex items-center gap-2.5 cursor-pointer hover:bg-white/[0.07] transition"><i class="fa-solid fa-${h.info.icon} text-white/40 text-xs w-4 text-center"></i><span class="text-xs truncate flex-1">${esc(h.text)}</span><span class="text-[9px] font-bold text-white/30">${esc(h.format)}</span></div>`).join("");
+        $("history").querySelectorAll("[data-h]").forEach((el) => el.addEventListener("click", () => { const h = history[+el.dataset.h]; renderResult({ text: h.text, format: h.format, u8: new TextEncoder().encode(h.text), info: h.info }); }));
+      }
+
+      // ---------- Morse ----------
+      const MORSE = { A:".-",B:"-...",C:"-.-.",D:"-..",E:".",F:"..-.",G:"--.",H:"....",I:"..",J:".---",K:"-.-",L:".-..",M:"--",N:"-.",O:"---",P:".--.",Q:"--.-",R:".-.",S:"...",T:"-",U:"..-",V:"...-",W:".--",X:"-..-",Y:"-.--",Z:"--..","0":"-----","1":".----","2":"..---","3":"...--","4":"....-","5":".....","6":"-....","7":"--...","8":"---..","9":"----.",".":".-.-.-",",":"--..--","?":"..--..","'":".----.","!":"-.-.--","/":"-..-.","(":"-.--.",")":"-.--.-","&":".-...",":":"---...",";":"-.-.-.","=":"-...-","+":".-.-.","-":"-....-","_":"..--.-",'"':".-..-.","@":".--.-." };
+      const REV = Object.fromEntries(Object.entries(MORSE).map(([k, v]) => [v, k]));
+      function morseEncode(text) { return text.toUpperCase().split(/\s+/).map((w) => w.split("").map((c) => MORSE[c] || "").filter(Boolean).join(" ")).filter(Boolean).join(" / "); }
+      function morseDecode(code) { return code.trim().split(/\s*\/\s*/).map((w) => w.split(/\s+/).map((s) => REV[s] || "").join("")).join(" "); }
+      let mLock = false;
+      $("mText").addEventListener("input", () => { if (mLock) return; mLock = true; $("mCode").value = morseEncode($("mText").value); mLock = false; });
+      $("mCode").addEventListener("input", () => { if (mLock) return; mLock = true; $("mText").value = morseDecode($("mCode").value); mLock = false; });
+      $("mCopy").addEventListener("click", () => navigator.clipboard.writeText($("mCode").value).then(() => toast("Morse copied", "clipboard-check", "text-emerald-300")));
+      $("mSwap").addEventListener("click", () => { const a = $("mText").value; $("mText").value = morseDecode($("mCode").value); $("mCode").value = morseEncode(a || $("mText").value); });
+      $("mPlay").addEventListener("click", playMorse);
+      function playMorse() {
+        const code = $("mCode").value.trim(); if (!code) return;
+        const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+        const ctx = new AC(); const unit = 0.08; let t = ctx.currentTime + 0.05;
+        const beep = (dur) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = 620; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.3, t + 0.005); g.gain.setValueAtTime(0.3, t + dur - 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.start(t); o.stop(t + dur); t += dur; };
+        for (const ch of code) { if (ch === ".") { beep(unit); t += unit; } else if (ch === "-") { beep(unit * 3); t += unit; } else if (ch === " ") t += unit * 2; else if (ch === "/") t += unit * 4; }
+        setTimeout(() => ctx.close(), (t - ctx.currentTime + 0.3) * 1000);
+      }
+    </script>
+  </body>
+</html>
