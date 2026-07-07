@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thump — Beat Machine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet" />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: { extend: {
+          colors: { brand: { 50:"#fdf2f8",100:"#fce7f3",200:"#fbcfe8",300:"#f9a8d4",400:"#f472b6",500:"#ec4899",600:"#db2777",700:"#be185d",800:"#9d174d",900:"#831843" } },
+          fontFamily: { sans:["Plus Jakarta Sans","sans-serif"], brand:["Space Grotesk","sans-serif"], mono:["JetBrains Mono","monospace"] },
+          animation: { "fade-in":"fadeIn 0.3s ease both" },
+          keyframes: { fadeIn:{from:{opacity:"0",transform:"translateY(6px)"},to:{opacity:"1",transform:"translateY(0)"}} },
+        } },
+      };
+    </script>
+    <style>
+      body{font-family:"Plus Jakarta Sans",sans-serif;min-height:100vh;background:radial-gradient(1100px 560px at 14% -10%, rgba(236,72,153,.16), transparent 60%),radial-gradient(900px 620px at 110% 8%, rgba(139,92,246,.12), transparent 55%),#0c0710}
+      .brand-font{font-family:"Space Grotesk",sans-serif}
+      ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:9999px}
+      .glass{background:rgba(20,14,22,.62);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.08)}
+      .glass-soft{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
+      .glow-btn{box-shadow:0 10px 30px -8px rgba(236,72,153,.55),inset 0 1px 0 rgba(255,255,255,.22)}
+      .cell{aspect-ratio:1;border-radius:7px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.06);cursor:pointer;transition:transform .06s ease, background .1s, box-shadow .1s;min-width:0}
+      .cell:hover{background:rgba(255,255,255,.1)}
+      .cell.on{background:linear-gradient(180deg,var(--c1),var(--c2));border-color:transparent;box-shadow:0 4px 14px -4px var(--c2)}
+      .cell.beat{border-color:rgba(255,255,255,.16)}
+      .cell.play{outline:2px solid rgba(255,255,255,.85);outline-offset:1px}
+      .cell.on.hit{transform:scale(.86)}
+      input[type=range]{-webkit-appearance:none;appearance:none;height:5px;border-radius:9999px;background:rgba(255,255,255,.14);outline:none}
+      input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:#ec4899;cursor:pointer;border:2px solid #fff}
+      .grain::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E")}
+    </style>
+  </head>
+  <body class="dark text-white grain overflow-x-hidden">
+    <header class="relative z-10 px-5 sm:px-8 pt-5 pb-3 flex items-center justify-between gap-4 flex-wrap">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 grid place-items-center glow-btn"><i class="fa-solid fa-drum text-white text-lg"></i></div>
+        <div><h1 class="brand-font text-xl font-bold tracking-tight leading-none">Thump</h1><p class="text-[11px] text-white/45 mt-0.5 font-medium">Beat Machine · Step Sequencer</p></div>
+      </div>
+      <span class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-semibold text-brand-200 bg-brand-500/10 border border-brand-400/20 px-3 py-2 rounded-xl"><i class="fa-solid fa-wave-square"></i> Synthesized live · no samples</span>
+    </header>
+
+    <main class="relative z-10 px-4 sm:px-8 pb-16 max-w-[1050px] mx-auto">
+      <!-- Transport -->
+      <div class="glass rounded-2xl p-3 flex items-center gap-3 flex-wrap sticky top-3 z-30 animate-fade-in">
+        <button id="playBtn" class="flex items-center gap-2 bg-gradient-to-b from-brand-400 to-brand-600 hover:from-brand-300 text-white font-semibold px-5 py-2.5 rounded-xl glow-btn transition active:scale-95"><i class="fa-solid fa-play"></i> <span>Play</span></button>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-white/40 font-semibold">BPM</span>
+          <input id="bpm" type="range" min="60" max="180" value="120" class="w-28" />
+          <span id="bpmVal" class="font-mono text-sm w-8">120</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-white/40 font-semibold">Swing</span>
+          <input id="swing" type="range" min="0" max="60" value="0" class="w-20" />
+          <span id="swingVal" class="font-mono text-xs w-8">0%</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-white/40 font-semibold"><i class="fa-solid fa-volume-high"></i></span>
+          <input id="vol" type="range" min="0" max="100" value="85" class="w-20" />
+        </div>
+        <div class="ml-auto flex items-center gap-2">
+          <div class="relative">
+            <select id="preset" class="glass-soft rounded-xl px-3 py-2.5 text-sm font-semibold appearance-none pr-8 cursor-pointer"><option value="">Load preset…</option></select>
+            <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-xs text-white/40 pointer-events-none"></i>
+          </div>
+          <button id="randBtn" class="glass-soft hover:bg-white/10 font-semibold px-3.5 py-2.5 rounded-xl transition text-sm" title="Randomize"><i class="fa-solid fa-dice"></i></button>
+          <button id="clearBtn" class="glass-soft hover:bg-white/10 font-semibold px-3.5 py-2.5 rounded-xl transition text-sm" title="Clear"><i class="fa-solid fa-eraser"></i></button>
+          <button id="wavBtn" class="flex items-center gap-2 bg-white text-black hover:bg-white/90 font-semibold px-4 py-2.5 rounded-xl transition active:scale-95 text-sm"><i class="fa-solid fa-file-audio"></i> <span class="hidden sm:inline">WAV</span></button>
+        </div>
+      </div>
+
+      <!-- Sequencer -->
+      <div class="glass rounded-2xl p-3 sm:p-4 mt-4 overflow-x-auto animate-fade-in">
+        <div id="grid" class="min-w-[560px]"></div>
+      </div>
+      <p class="text-center text-[11px] text-white/30 mt-3">Click steps to build a beat · <kbd class="px-1.5 py-0.5 rounded bg-white/10 font-mono">Space</kbd> play/stop · every sound is generated with the Web Audio API and rendered to WAV in your browser.</p>
+    </main>
+
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden items-center gap-3 glass px-5 py-3 rounded-2xl text-sm font-medium shadow-2xl"><i id="toastIcon" class="fa-solid fa-circle-info text-brand-300"></i><span id="toastMsg"></span></div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      function toast(msg, icon = "circle-info", color = "text-brand-300") { const t = $("toast"); $("toastMsg").textContent = msg; $("toastIcon").className = `fa-solid fa-${icon} ${color}`; t.classList.remove("hidden"); t.classList.add("flex"); clearTimeout(t._to); t._to = setTimeout(() => { t.classList.add("hidden"); t.classList.remove("flex"); }, 2400); }
+
+      const STEPS = 16;
+      // each track: name, synth type, colour pair, default gain
+      const TRACKS = [
+        { id: "kick", name: "Kick", c1: "#fb7185", c2: "#e11d48", gain: 1.0 },
+        { id: "snare", name: "Snare", c1: "#fca5a5", c2: "#ef4444", gain: 0.8 },
+        { id: "clap", name: "Clap", c1: "#fdba74", c2: "#f97316", gain: 0.8 },
+        { id: "hat", name: "Hat", c1: "#fde047", c2: "#eab308", gain: 0.55 },
+        { id: "openhat", name: "Open Hat", c1: "#86efac", c2: "#22c55e", gain: 0.5 },
+        { id: "tom", name: "Tom", c1: "#93c5fd", c2: "#3b82f6", gain: 0.8 },
+        { id: "rim", name: "Rim", c1: "#c4b5fd", c2: "#8b5cf6", gain: 0.7 },
+        { id: "cowbell", name: "Cowbell", c1: "#f9a8d4", c2: "#ec4899", gain: 0.5 },
+      ];
+      let pattern = TRACKS.map(() => new Array(STEPS).fill(false));
+      const mutes = TRACKS.map(() => false);
+      let bpm = 120, swing = 0, master = 0.85;
+
+      // ---------- drum synthesis ----------
+      function noiseBuffer(ctx) {
+        const len = Math.floor(ctx.sampleRate * 0.4);
+        const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+        return buf;
+      }
+      function env(ctx, node, t, peak, dur) { const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); node.connect(g); return g; }
+
+      function playDrum(ctx, dest, type, t, vol) {
+        vol = vol == null ? 1 : vol;
+        if (type === "kick") {
+          const o = ctx.createOscillator(); o.type = "sine";
+          o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.13);
+          const g = env(ctx, o, t, vol, 0.34); g.connect(dest); o.start(t); o.stop(t + 0.36);
+        } else if (type === "snare") {
+          const n = ctx.createBufferSource(); n.buffer = noiseBuffer(ctx);
+          const bp = ctx.createBiquadFilter(); bp.type = "highpass"; bp.frequency.value = 1200; n.connect(bp);
+          const g = env(ctx, bp, t, vol * 0.9, 0.2); g.connect(dest); n.start(t); n.stop(t + 0.22);
+          const o = ctx.createOscillator(); o.type = "triangle"; o.frequency.setValueAtTime(200, t); o.frequency.exponentialRampToValueAtTime(160, t + 0.12);
+          const g2 = env(ctx, o, t, vol * 0.5, 0.14); g2.connect(dest); o.start(t); o.stop(t + 0.16);
+        } else if (type === "clap") {
+          [0, 0.012, 0.024, 0.05].forEach((off, i) => {
+            const n = ctx.createBufferSource(); n.buffer = noiseBuffer(ctx);
+            const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1100; bp.Q.value = 0.7; n.connect(bp);
+            const g = env(ctx, bp, t + off, vol * (i === 3 ? 0.8 : 0.5), i === 3 ? 0.18 : 0.04); g.connect(dest); n.start(t + off); n.stop(t + off + 0.2);
+          });
+        } else if (type === "hat" || type === "openhat") {
+          const dur = type === "hat" ? 0.045 : 0.3;
+          const n = ctx.createBufferSource(); n.buffer = noiseBuffer(ctx);
+          const hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 7000; n.connect(hp);
+          const g = env(ctx, hp, t, vol * 0.6, dur); g.connect(dest); n.start(t); n.stop(t + dur + 0.02);
+        } else if (type === "tom") {
+          const o = ctx.createOscillator(); o.type = "sine"; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(90, t + 0.2);
+          const g = env(ctx, o, t, vol, 0.3); g.connect(dest); o.start(t); o.stop(t + 0.32);
+        } else if (type === "rim") {
+          const o = ctx.createOscillator(); o.type = "square"; o.frequency.setValueAtTime(1700, t);
+          const g = env(ctx, o, t, vol * 0.5, 0.03); g.connect(dest); o.start(t); o.stop(t + 0.04);
+        } else if (type === "cowbell") {
+          [540, 800].forEach((f) => { const o = ctx.createOscillator(); o.type = "square"; o.frequency.value = f; const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 640; o.connect(bp); const g = env(ctx, bp, t, vol * 0.4, 0.25); g.connect(dest); o.start(t); o.stop(t + 0.27); });
+        }
+      }
+
+      // ---------- live playback ----------
+      let ac = null, master_g = null, isPlaying = false, current16 = 0, nextNoteTime = 0, timerId = null;
+      const queue = [];
+      function ensureCtx() { if (!ac) { ac = new (window.AudioContext || window.webkitAudioContext)(); master_g = ac.createGain(); master_g.gain.value = master; master_g.connect(ac.destination); } if (ac.state === "suspended") ac.resume(); }
+      function stepDur() { return (60 / bpm) / 4; }
+      function scheduleStep(step, time) {
+        TRACKS.forEach((tr, ti) => { if (pattern[ti][step] && !mutes[ti]) playDrum(ac, master_g, tr.id, time, tr.gain); });
+        queue.push({ step, time });
+      }
+      function advance() { let d = stepDur(); if (current16 % 2 === 1) d += stepDur() * (swing / 100); nextNoteTime += d; current16 = (current16 + 1) % STEPS; }
+      function scheduler() { while (nextNoteTime < ac.currentTime + 0.1) { scheduleStep(current16, nextNoteTime); advance(); } }
+      function startPlay() {
+        ensureCtx(); isPlaying = true; current16 = 0; nextNoteTime = ac.currentTime + 0.06;
+        timerId = setInterval(scheduler, 25); requestAnimationFrame(drawPlayhead);
+        $("playBtn").innerHTML = '<i class="fa-solid fa-stop"></i> <span>Stop</span>';
+      }
+      function stopPlay() { isPlaying = false; clearInterval(timerId); timerId = null; $("playBtn").innerHTML = '<i class="fa-solid fa-play"></i> <span>Play</span>'; document.querySelectorAll(".cell.play").forEach((c) => c.classList.remove("play")); }
+      function togglePlay() { isPlaying ? stopPlay() : startPlay(); }
+      let shownStep = -1;
+      function drawPlayhead() {
+        if (!isPlaying) return;
+        while (queue.length && queue[0].time <= ac.currentTime) { shownStep = queue.shift().step; }
+        if (shownStep >= 0) {
+          document.querySelectorAll(".cell.play").forEach((c) => c.classList.remove("play"));
+          document.querySelectorAll(`[data-step="${shownStep}"]`).forEach((c) => { c.classList.add("play"); if (c.classList.contains("on")) { c.classList.add("hit"); setTimeout(() => c.classList.remove("hit"), 90); } });
+        }
+        requestAnimationFrame(drawPlayhead);
+      }
+
+      // ---------- grid ----------
+      function buildGrid() {
+        const g = $("grid");
+        g.innerHTML = TRACKS.map((tr, ti) => `
+          <div class="flex items-center gap-2 mb-1.5">
+            <button data-mute="${ti}" class="w-[92px] flex-shrink-0 text-left text-xs font-bold px-2 py-1.5 rounded-lg glass-soft hover:bg-white/10 transition flex items-center gap-1.5" title="Mute">
+              <span class="w-2.5 h-2.5 rounded-full" style="background:${tr.c2}"></span>${tr.name}
+            </button>
+            <div class="grid flex-1 gap-1" style="grid-template-columns:repeat(16,1fr)">
+              ${Array.from({ length: STEPS }, (_, s) => `<div class="cell ${s % 4 === 0 ? "beat" : ""}" data-t="${ti}" data-step="${s}" style="--c1:${tr.c1};--c2:${tr.c2}"></div>`).join("")}
+            </div>
+          </div>`).join("");
+        g.querySelectorAll(".cell").forEach((c) => c.addEventListener("click", () => { const ti = +c.dataset.t, s = +c.dataset.step; pattern[ti][s] = !pattern[ti][s]; c.classList.toggle("on", pattern[ti][s]); if (pattern[ti][s]) { ensureCtx(); playDrum(ac, master_g, TRACKS[ti].id, ac.currentTime, TRACKS[ti].gain); } }));
+        g.querySelectorAll("[data-mute]").forEach((b) => b.addEventListener("click", () => { const ti = +b.dataset.mute; mutes[ti] = !mutes[ti]; b.style.opacity = mutes[ti] ? "0.4" : "1"; }));
+        syncGrid();
+      }
+      function syncGrid() { document.querySelectorAll(".cell").forEach((c) => c.classList.toggle("on", pattern[+c.dataset.t][+c.dataset.step])); }
+
+      // ---------- controls ----------
+      $("playBtn").addEventListener("click", togglePlay);
+      $("bpm").addEventListener("input", (e) => { bpm = +e.target.value; $("bpmVal").textContent = bpm; });
+      $("swing").addEventListener("input", (e) => { swing = +e.target.value; $("swingVal").textContent = swing + "%"; });
+      $("vol").addEventListener("input", (e) => { master = +e.target.value / 100; if (master_g) master_g.gain.value = master; });
+      $("clearBtn").addEventListener("click", () => { pattern = TRACKS.map(() => new Array(STEPS).fill(false)); syncGrid(); toast("Cleared", "eraser"); });
+      $("randBtn").addEventListener("click", () => {
+        const dens = [0.5, 0.25, 0.2, 0.5, 0.12, 0.15, 0.2, 0.1];
+        pattern = TRACKS.map((_, ti) => Array.from({ length: STEPS }, (_, s) => (ti === 0 ? s % 4 === 0 || Math.random() < 0.12 : Math.random() < dens[ti])));
+        syncGrid(); toast("Randomized", "dice");
+      });
+      document.addEventListener("keydown", (e) => { if (e.code === "Space" && e.target.tagName !== "INPUT" && e.target.tagName !== "SELECT") { e.preventDefault(); togglePlay(); } });
+
+      // ---------- presets ----------
+      const PRESETS = {
+        "Four on the floor": { kick: [0,4,8,12], hat: [2,6,10,14], openhat: [], clap: [4,12], snare: [], tom: [], rim: [], cowbell: [] },
+        "Boom bap": { kick: [0,7,8], snare: [4,12], hat: [0,2,4,6,8,10,12,14], clap: [], openhat: [14], tom: [], rim: [10], cowbell: [] },
+        "Trap": { kick: [0,3,8,11], snare: [8], clap: [4,12], hat: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], openhat: [7,15], tom: [], rim: [], cowbell: [6] },
+        "House groove": { kick: [0,4,8,12], clap: [4,12], hat: [2,6,10,14], openhat: [2,6,10,14], snare: [], tom: [], rim: [], cowbell: [0,8] },
+        "Breakbeat": { kick: [0,10], snare: [4,12], hat: [0,2,4,6,8,10,12,14], openhat: [], clap: [], tom: [15], rim: [7,14], cowbell: [] },
+      };
+      const psel = $("preset");
+      Object.keys(PRESETS).forEach((k) => { const o = document.createElement("option"); o.value = k; o.textContent = k; psel.appendChild(o); });
+      psel.addEventListener("change", () => { const p = PRESETS[psel.value]; if (!p) return; pattern = TRACKS.map((tr) => { const arr = new Array(STEPS).fill(false); (p[tr.id] || []).forEach((s) => (arr[s] = true)); return arr; }); syncGrid(); toast("Loaded “" + psel.value + "”", "wand-magic-sparkles"); psel.value = ""; });
+
+      // ---------- WAV export (offline render) ----------
+      function audioBufferToWav(buffer) {
+        const numCh = buffer.numberOfChannels, sr = buffer.sampleRate, len = buffer.length;
+        const blockAlign = numCh * 2, dataLen = len * blockAlign;
+        const ab = new ArrayBuffer(44 + dataLen), view = new DataView(ab);
+        const ws = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+        ws(0, "RIFF"); view.setUint32(4, 36 + dataLen, true); ws(8, "WAVE"); ws(12, "fmt ");
+        view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, numCh, true);
+        view.setUint32(24, sr, true); view.setUint32(28, sr * blockAlign, true); view.setUint16(32, blockAlign, true); view.setUint16(34, 16, true);
+        ws(36, "data"); view.setUint32(40, dataLen, true);
+        const chans = []; for (let c = 0; c < numCh; c++) chans.push(buffer.getChannelData(c));
+        let off = 44; for (let i = 0; i < len; i++) for (let c = 0; c < numCh; c++) { let s = Math.max(-1, Math.min(1, chans[c][i])); view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true); off += 2; }
+        return new Blob([ab], { type: "audio/wav" });
+      }
+      async function renderWav(loops) {
+        loops = loops || 2;
+        const sr = 44100, sd = (60 / bpm) / 4;
+        // total duration: loops * 16 steps, + tail for ringing
+        const total = loops * STEPS * sd + 0.5;
+        const off = new OfflineAudioContext(2, Math.ceil(total * sr), sr);
+        const mg = off.createGain(); mg.gain.value = master; mg.connect(off.destination);
+        let t = 0.02, step = 0;
+        for (let n = 0; n < loops * STEPS; n++) {
+          TRACKS.forEach((tr, ti) => { if (pattern[ti][step] && !mutes[ti]) playDrum(off, mg, tr.id, t, tr.gain); });
+          let d = sd; if (step % 2 === 1) d += sd * (swing / 100);
+          t += d; step = (step + 1) % STEPS;
+        }
+        const buf = await off.startRendering();
+        return audioBufferToWav(buf);
+      }
+      $("wavBtn").addEventListener("click", async () => {
+        const btn = $("wavBtn"); const orig = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+        try {
+          const blob = await renderWav(2);
+          const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `thump-${bpm}bpm.wav`;
+          document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+          toast("Exported WAV (2 bars)", "circle-check", "text-emerald-300");
+        } catch (e) { console.error(e); toast("Export failed", "triangle-exclamation", "text-amber-300"); }
+        finally { btn.innerHTML = orig; }
+      });
+
+      // init
+      buildGrid();
+      // start with a simple beat so it's alive on load
+      (function seed(){ const p=PRESETS["Four on the floor"]; pattern=TRACKS.map((tr)=>{const arr=new Array(STEPS).fill(false);(p[tr.id]||[]).forEach(s=>arr[s]=true);return arr;}); syncGrid(); })();
+    </script>
+      <!-- aislop repository badge -->
+    <style>
+      #aislop-gh{position:fixed;right:14px;bottom:14px;z-index:35;display:inline-flex;align-items:center;gap:7px;padding:8px 12px;border-radius:9999px;background:rgba(18,18,26,.74);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.16);color:#fff;font:600 12px/1 'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;text-decoration:none;box-shadow:0 8px 24px -8px rgba(0,0,0,.6);opacity:.68;transition:opacity .15s ease,transform .15s ease}
+      #aislop-gh:hover{opacity:1;transform:translateY(-1px)}
+      #aislop-gh svg{width:15px;height:15px;flex:0 0 auto}
+      @media print{#aislop-gh{display:none!important}}
+      @media (max-width:560px){#aislop-gh span{display:none}#aislop-gh{padding:9px}}
+    </style>
+    <a id="aislop-gh" href="https://github.com/7bp/aislop" target="_blank" rel="noopener noreferrer" aria-label="View aislop source on GitHub" title="View aislop source on GitHub"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.65 7.65 0 0 1 8 4.58c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg><span>View on GitHub</span></a>
+  </body>
+</html>
